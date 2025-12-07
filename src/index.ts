@@ -187,7 +187,9 @@ program
     if (pendingGoals.length > 0) {
       const goal = pendingGoals[0];
       const agentId = sessionManager.createAgent(goal.id, goal.description);
-      runAgent(sessionManager, agentId, projectPath, goal.id, goal.description);
+      runAgent(sessionManager, agentId, projectPath, goal.id, goal.description).catch(err => {
+        console.error('Agent execution error:', err);
+      });
     }
 
     await waitUntilExit();
