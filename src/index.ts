@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { existsSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import { input, confirm } from '@inquirer/prompts';
@@ -112,6 +112,36 @@ program
     if (!existsSync(autogoalsDir)) {
       mkdirSync(autogoalsDir, { recursive: true });
       mkdirSync(join(autogoalsDir, 'logs'), { recursive: true });
+    }
+
+    // Create .env.example
+    const envExample = join(projectPath, '.env.example');
+    if (!existsSync(envExample)) {
+      const exampleContent = `# AutoGoals Environment Variables
+# Copy this file to .env and fill in your values
+
+# Anthropic API Key (required)
+ANTHROPIC_API_KEY=your_api_key_here
+
+# Optional: Custom Docker image
+# AUTOGOALS_DOCKER_IMAGE=autogoals/devbox:latest
+`;
+      writeFileSync(envExample, exampleContent);
+      console.log(chalk.green('✓ Created .env.example'));
+    }
+
+    // Check if .env is in .gitignore
+    const gitignorePath = join(projectPath, '.gitignore');
+    let gitignoreContent = '';
+
+    if (existsSync(gitignorePath)) {
+      gitignoreContent = readFileSync(gitignorePath, 'utf-8');
+    }
+
+    if (!gitignoreContent.includes('.env')) {
+      const newContent = gitignoreContent + '\n# Environment\n.env\n';
+      writeFileSync(gitignorePath, newContent);
+      console.log(chalk.green('✓ Added .env to .gitignore'));
     }
 
     console.log(chalk.green(`\n✓ Created ${goals.length} goal(s) in goals.yaml`));
