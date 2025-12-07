@@ -1,0 +1,25 @@
+version: "1.0"
+project_name: "test-project"
+
+goals:
+  - id: "backend"
+    name: "Backend Setup"
+    description: "Create backend"
+    dependencies: []
+    acceptance_criteria:
+      - "npm test passes"
+    verification_commands:
+      - "npm test"
+    max_retries: 2
+    branch_name: "goal/backend"
+
+  - id: "frontend"
+    name: "Frontend Setup"
+    description: "Create frontend"
+    dependencies: ["backend"]
+    acceptance_criteria:
+      - "npm run build succeeds"
+    verification_commands:
+      - "npm run build"
+    max_retries: 2
+    branch_name: "goal/frontend"
