@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { basename, resolve } from 'path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { DockerClient } from './DockerClient.js';
 import type { ContainerConfig, ContainerState } from './types.js';
@@ -94,6 +94,16 @@ export class ContainerManager {
       }
 
       return containerName;
+    }
+
+    // Check for stale state file
+    const staleState = this.loadContainerState(workspacePath);
+    if (staleState && !container) {
+      // Container was removed but state file remains - clean up
+      const stateFile = join(workspacePath, '.autogoals', 'container.json');
+      if (existsSync(stateFile)) {
+        unlinkSync(stateFile);
+      }
     }
 
     // Create new container
