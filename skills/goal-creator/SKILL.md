@@ -89,7 +89,7 @@ goals:
       - "Tests pass"
     verification_commands:
       - "npm test"
-    max_retries: 2
+    max_retries: 100
     branch_name: "goal/{goal1-id}"
 
   - id: "{goal2-id}"
@@ -102,7 +102,7 @@ goals:
       - "Tests pass"
     verification_commands:
       - "npm test"
-    max_retries: 2
+    max_retries: 100
     branch_name: "goal/{goal2-id}"
 ```
 
@@ -114,7 +114,7 @@ goals:
 - `dependencies: []` (no dependencies by default)
 - `acceptance_criteria`: Generic placeholder that Claude will refine during planning
 - `verification_commands`: Simple default `["npm test"]` - Claude will determine appropriate commands during planning
-- `max_retries: 2` (standard retry count)
+- `max_retries: 100` (high retry count for autonomous debugging)
 - `branch_name: "goal/{id}"` (auto-generated from ID)
 
 **Important:** These are minimal placeholders. During the planning phase, Claude will:
