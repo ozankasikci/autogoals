@@ -1,0 +1,6 @@
+{
+  "SessionStart": {
+    "command": "./hooks/session-start.sh",
+    "description": "AutoGoals orchestrator bootstrap"
+  }
+}
