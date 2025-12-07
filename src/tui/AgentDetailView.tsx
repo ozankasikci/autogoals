@@ -7,6 +7,15 @@ interface Props {
   scrollOffset: number;
 }
 
+function getStatusColor(status: AgentState['status']): string {
+  switch (status) {
+    case 'running': return 'green';
+    case 'completed': return 'gray';
+    case 'failed': return 'red';
+    case 'paused': return 'yellow';
+  }
+}
+
 function formatDuration(start: Date, end?: Date): string {
   const endTime = end || new Date();
   const diff = Math.floor((endTime.getTime() - start.getTime()) / 1000);
@@ -33,7 +42,7 @@ export default function AgentDetailView({ agent, scrollOffset }: Props) {
         </Box>
         <Box paddingX={1}>
           <Text>
-            Status: <Text color="green">{agent.status.toUpperCase()}</Text>
+            Status: <Text color={getStatusColor(agent.status)}>{agent.status.toUpperCase()}</Text>
             {' • '}
             {agent.endedAt ? `Duration: ${duration}` : `Started: ${duration} ago`}
           </Text>
