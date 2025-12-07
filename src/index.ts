@@ -11,6 +11,9 @@ import React from 'react';
 import AutoGoalsTUI from './tui/index.js';
 import { SessionManager } from './session/SessionManager.js';
 import { runAgent } from './session/AgentRunner.js';
+import { ContainerManager } from './docker/ContainerManager.js';
+import { EnvLoader } from './docker/EnvLoader.js';
+import { DockerClient } from './docker/DockerClient.js';
 
 const program = new Command();
 
@@ -195,6 +198,119 @@ program
     }
 
     await waitUntilExit();
+  });
+
+program
+  .command('stop')
+  .description('Stop the workspace container')
+  .action(async () => {
+    const projectPath = process.cwd();
+
+    console.log(chalk.blue('🛑 Stopping workspace container...'));
+
+    try {
+      const containerManager = new ContainerManager();
+      await containerManager.stopContainer(projectPath);
+      console.log(chalk.green('✓ Container stopped'));
+    } catch (error: any) {
+      console.error(chalk.red(`Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('clean')
+  .description('Remove stopped containers')
+  .option('--all', 'Remove all AutoGoals containers (including running)')
+  .action(async (options: { all?: boolean }) => {
+    const projectPath = process.cwd();
+
+    if (options.all) {
+      console.log(chalk.yellow('⚠️  This will remove all AutoGoals containers'));
+      const proceed = await confirm({
+        message: 'Are you sure?',
+        default: false
+      });
+
+      if (!proceed) {
+        console.log(chalk.gray('Cancelled'));
+        return;
+      }
+    }
+
+    console.log(chalk.blue('🧹 Cleaning containers...'));
+
+    try {
+      const containerManager = new ContainerManager();
+
+      if (options.all) {
+        // Remove workspace container
+        await containerManager.removeContainer(projectPath, true);
+        console.log(chalk.green('✓ Removed workspace container'));
+      } else {
+        // Just stop and remove if stopped
+        await containerManager.stopContainer(projectPath);
+        await containerManager.removeContainer(projectPath, false);
+        console.log(chalk.green('✓ Cleaned workspace container'));
+      }
+    } catch (error: any) {
+      console.error(chalk.red(`Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('doctor')
+  .description('Diagnose Docker and container issues')
+  .action(async () => {
+    console.log(chalk.blue('🔍 AutoGoals Doctor\n'));
+
+    const projectPath = process.cwd();
+    const containerManager = new ContainerManager();
+    const dockerClient = new DockerClient();
+
+    // Check Docker daemon
+    const dockerRunning = await dockerClient.isDockerRunning();
+    console.log(
+      dockerRunning
+        ? chalk.green('✓ Docker daemon is running')
+        : chalk.red('✗ Docker daemon not found')
+    );
+
+    if (!dockerRunning) {
+      console.log(chalk.yellow('  Install Docker: https://docs.docker.com/get-docker/'));
+      return;
+    }
+
+    // Check .env file
+    const envFile = join(projectPath, '.env');
+    const hasEnv = existsSync(envFile);
+    console.log(
+      hasEnv
+        ? chalk.green('✓ .env file found')
+        : chalk.yellow('⚠ No .env file (will use host environment)')
+    );
+
+    // Check .env in .gitignore
+    if (hasEnv) {
+      const isIgnored = EnvLoader.isEnvIgnored(projectPath);
+      console.log(
+        isIgnored
+          ? chalk.green('✓ .env is in .gitignore')
+          : chalk.red('✗ .env NOT in .gitignore (security risk!)')
+      );
+    }
+
+    // Check container state
+    const stateFile = join(projectPath, '.autogoals', 'container.json');
+    const hasState = existsSync(stateFile);
+    console.log(
+      hasState
+        ? chalk.green('✓ Container state found')
+        : chalk.gray('  No container created yet')
+    );
+
+    console.log(chalk.green('\n✓ Diagnosis complete'));
   });
 
 program.parse();
