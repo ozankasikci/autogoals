@@ -1,6 +1,9 @@
-import { parseGoalsConfig, validateDependencies } from '../../lib/goals-core.js';
-import { describe, it } from 'node:test';
+import { parseGoalsConfig, validateDependencies, initializeState, loadState, saveState, updateGoalStatus } from '../../lib/goals-core.js';
+import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 describe('parseGoalsConfig', () => {
   it('should parse valid goals.yaml', () => {
@@ -49,5 +52,55 @@ describe('validateDependencies', () => {
       () => validateDependencies(goals),
       /Unknown dependency.*nonexistent/
     );
+  });
+});
+
+describe('State Management', () => {
+  let tempDir;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'autogoals-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('should initialize state from goals', () => {
+    const goals = [
+      { id: 'backend', dependencies: [] },
+      { id: 'frontend', dependencies: ['backend'] }
+    ];
+    const state = initializeState(goals);
+
+    assert.strictEqual(state.version, '1.0');
+    assert.strictEqual(state.current_goal_id, 'backend');
+    assert.strictEqual(state.goals_status.backend.status, 'pending');
+    assert.strictEqual(state.goals_status.frontend.status, 'pending');
+  });
+
+  it('should save and load state', () => {
+    const goals = [{ id: 'test', dependencies: [] }];
+    const state = initializeState(goals);
+    const statePath = join(tempDir, '.goals-state.json');
+
+    saveState(statePath, state);
+    const loaded = loadState(statePath);
+
+    assert.deepStrictEqual(loaded, state);
+  });
+
+  it('should update goal status', () => {
+    const state = {
+      goals_status: {
+        'backend': { status: 'pending' }
+      },
+      execution_log: []
+    };
+
+    const updated = updateGoalStatus('backend', 'in_progress', state);
+    assert.strictEqual(updated.goals_status.backend.status, 'in_progress');
+    assert.strictEqual(updated.execution_log.length, 1);
+    assert.strictEqual(updated.execution_log[0].event, 'status_changed');
   });
 });
