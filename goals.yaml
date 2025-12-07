@@ -1,0 +1,41 @@
+version: "1.0"
+project_name: "autogoals-test"
+
+goals:
+  - id: "add-license"
+    name: "Add LICENSE File"
+    description: |
+      Create a LICENSE file with MIT license text.
+      Use standard MIT license format with Ozan as the copyright holder.
+
+    dependencies: []
+
+    acceptance_criteria:
+      - "LICENSE file exists"
+      - "File contains MIT license text"
+
+    verification_commands:
+      - "test -f LICENSE"
+      - "grep -q 'MIT License' LICENSE"
+
+    max_retries: 1
+    branch_name: "goal/add-license"
+
+  - id: "add-contributing"
+    name: "Add CONTRIBUTING.md"
+    description: |
+      Create a CONTRIBUTING.md file explaining how to contribute to AutoGoals.
+      Include: how to report bugs, submit features, code style guidelines.
+
+    dependencies: ["add-license"]
+
+    acceptance_criteria:
+      - "CONTRIBUTING.md file exists"
+      - "File contains contribution guidelines"
+
+    verification_commands:
+      - "test -f CONTRIBUTING.md"
+      - "grep -q 'Contributing' CONTRIBUTING.md"
+
+    max_retries: 1
+    branch_name: "goal/add-contributing"
