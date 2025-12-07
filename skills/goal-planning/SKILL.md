@@ -34,46 +34,50 @@ const goal = {
 };
 ```
 
-### Phase 2: Ask Clarifying Questions
+### Phase 2: Ask Clarifying Questions (Requirements Only!)
 
-**One question at a time, Socratic method:**
+**CRITICAL: Only ask about WHAT to build, NOT HOW to build it!**
 
-1. **Architecture preferences**
-   ```
-   For the Node.js backend structure, which architecture would you prefer?
+**Ask about requirements and features:**
+- What features are needed?
+- What user flows should work?
+- What data needs to be stored?
+- What are the edge cases?
+- What's in scope vs out of scope?
 
-   A) Layered architecture (controllers → services → repositories)
-   B) Feature-based modules (each feature is self-contained)
-   C) Hexagonal architecture (ports and adapters)
-   D) Other approach you have in mind?
-   ```
+**NEVER ask about:**
+- Framework choices ❌
+- Library selections ❌
+- Architecture patterns ❌
+- Testing strategies ❌
+- File structure ❌
 
-2. **Tech stack details**
-   ```
-   For the PostgreSQL integration, which ORM would you like to use?
+**Claude decides all implementation details autonomously!**
 
-   A) Prisma (type-safe, modern)
-   B) TypeORM (decorator-based)
-   C) Sequelize (traditional)
-   D) Raw SQL with pg library
-   ```
+**Example GOOD questions:**
+```
+What user authentication features are needed?
+- Login/logout
+- Password reset
+- Email verification
+- OAuth (Google, GitHub)?
+- Multi-factor authentication?
+```
 
-3. **Testing approach**
-   ```
-   What testing strategy should we follow?
+```
+What API endpoints should exist?
+- User CRUD operations?
+- What other resources need APIs?
+```
 
-   A) Unit tests for all layers + integration tests for API
-   B) Focus on integration tests, minimal unit tests
-   C) E2E tests primarily
-   D) Comprehensive coverage at all levels
-   ```
+**Example BAD questions (DO NOT ASK):**
+```
+Which ORM should we use? ❌ (Claude decides)
+What architecture pattern? ❌ (Claude decides)
+Which testing framework? ❌ (Claude decides)
+```
 
-**Continue until clear understanding of:**
-- Directory structure
-- File organization
-- Testing strategy
-- Third-party libraries
-- Configuration approach
+**Keep questions minimal (2-3 max)** - only ask if genuinely unclear from the description.
 
 ### Phase 3: Create Implementation Plan
 
