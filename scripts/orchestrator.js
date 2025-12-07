@@ -8,9 +8,30 @@
  * 3. Continue until all complete or failure
  */
 
-import { parseGoalsConfig, validateDependencies, loadState, saveState, getNextGoal } from '../lib/goals-core.js';
 import { existsSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+// Auto-install dependencies if needed
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pluginRoot = resolve(__dirname, '..');
+const nodeModulesPath = resolve(pluginRoot, 'node_modules');
+
+if (!existsSync(nodeModulesPath)) {
+  console.log('📦 Installing plugin dependencies...');
+  try {
+    execSync('npm install', { cwd: pluginRoot, stdio: 'inherit' });
+    console.log('✓ Dependencies installed\n');
+  } catch (error) {
+    console.error('❌ Failed to install dependencies');
+    console.error('   Run: cd ~/.claude/plugins/cache/autogoals && npm install');
+    process.exit(1);
+  }
+}
+
+import { parseGoalsConfig, validateDependencies, loadState, saveState, getNextGoal } from '../lib/goals-core.js';
 
 const GOALS_FILE = 'goals.yaml';
 const STATE_FILE = '.goals-state.json';
