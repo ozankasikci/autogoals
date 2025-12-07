@@ -162,6 +162,18 @@ program
     console.log(chalk.blue('🚀 AutoGoals'));
     console.log(chalk.gray(`📁 Working Directory: ${projectPath}\n`));
 
+    // Check Docker daemon
+    const dockerClient = new DockerClient();
+    const dockerRunning = await dockerClient.isDockerRunning();
+
+    if (!dockerRunning) {
+      console.log(chalk.red('✗ Docker daemon not found'));
+      console.log(chalk.yellow('AutoGoals requires Docker to run agents in isolated containers.'));
+      console.log(chalk.gray('Install Docker: https://docs.docker.com/get-docker/'));
+      console.log(chalk.gray('Or run: autogoals doctor'));
+      process.exit(1);
+    }
+
     if (options.tui === false) {
       // Original plain output mode
 
