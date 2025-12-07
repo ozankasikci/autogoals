@@ -1,4 +1,4 @@
-import { parseGoalsConfig, validateDependencies, initializeState, loadState, saveState, updateGoalStatus } from '../../lib/goals-core.js';
+import { parseGoalsConfig, validateDependencies, initializeState, loadState, saveState, updateGoalStatus, getNextGoal, canExecuteGoal } from '../../lib/goals-core.js';
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { mkdtempSync, rmSync } from 'fs';
@@ -102,5 +102,71 @@ describe('State Management', () => {
     assert.strictEqual(updated.goals_status.backend.status, 'in_progress');
     assert.strictEqual(updated.execution_log.length, 1);
     assert.strictEqual(updated.execution_log[0].event, 'status_changed');
+  });
+});
+
+describe('Goal Selection', () => {
+  it('should return first goal with no dependencies', () => {
+    const goals = [
+      { id: 'backend', dependencies: [] },
+      { id: 'frontend', dependencies: ['backend'] }
+    ];
+    const state = {
+      goals_status: {
+        'backend': { status: 'pending' },
+        'frontend': { status: 'pending' }
+      }
+    };
+
+    const next = getNextGoal(goals, state);
+    assert.strictEqual(next.id, 'backend');
+  });
+
+  it('should return goal after dependencies complete', () => {
+    const goals = [
+      { id: 'backend', dependencies: [] },
+      { id: 'frontend', dependencies: ['backend'] }
+    ];
+    const state = {
+      goals_status: {
+        'backend': { status: 'completed' },
+        'frontend': { status: 'pending' }
+      }
+    };
+
+    const next = getNextGoal(goals, state);
+    assert.strictEqual(next.id, 'frontend');
+  });
+
+  it('should return null when no goals eligible', () => {
+    const goals = [
+      { id: 'frontend', dependencies: ['backend'] }
+    ];
+    const state = {
+      goals_status: {
+        'frontend': { status: 'pending' }
+      }
+    };
+
+    const next = getNextGoal(goals, state);
+    assert.strictEqual(next, null);
+  });
+
+  it('should check if goal dependencies are satisfied', () => {
+    const goals = [
+      { id: 'backend', dependencies: [] },
+      { id: 'frontend', dependencies: ['backend'] }
+    ];
+    const state = {
+      goals_status: {
+        'backend': { status: 'completed' },
+        'frontend': { status: 'pending' }
+      }
+    };
+
+    assert.strictEqual(canExecuteGoal('frontend', goals, state), true);
+
+    state.goals_status.backend.status = 'pending';
+    assert.strictEqual(canExecuteGoal('frontend', goals, state), false);
   });
 });
