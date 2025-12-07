@@ -44,7 +44,7 @@ async function main() {
     console.log(`✓ Loaded existing state`);
   } else {
     const { initializeState } = await import('../lib/goals-core.js');
-    state = initializeState(config);
+    state = initializeState(config.goals);
     saveState(STATE_FILE, state);
     console.log(`✓ Initialized fresh state`);
   }
