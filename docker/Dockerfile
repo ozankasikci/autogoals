@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
 # Set up working directory
 WORKDIR /workspace
 

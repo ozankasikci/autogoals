@@ -1,81 +1,6 @@
-import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { SessionManager } from './SessionManager.js';
 import { ContainerManager } from '../docker/ContainerManager.js';
 import { EnvLoader } from '../docker/EnvLoader.js';
-
-/**
- * Format SDK messages into human-readable text
- */
-function formatMessage(message: SDKMessage): string {
-  switch (message.type) {
-    case 'assistant': {
-      // Extract text content from assistant messages
-      const content = message.message.content;
-      const textParts: string[] = [];
-
-      for (const block of content) {
-        if (block.type === 'text') {
-          textParts.push(block.text);
-        } else if (block.type === 'tool_use') {
-          textParts.push(`[Using tool: ${block.name}]`);
-        }
-      }
-
-      return textParts.length > 0 ? textParts.join('\n') : '[Assistant response]';
-    }
-
-    case 'user': {
-      // For synthetic user messages (tool results), show brief status
-      if (message.isSynthetic) {
-        return '[Tool result received]';
-      }
-      return '[User message]';
-    }
-
-    case 'result': {
-      if (message.subtype === 'success') {
-        return `Completed in ${(message.duration_ms / 1000).toFixed(1)}s - ${message.num_turns} turns - $${message.total_cost_usd.toFixed(4)}`;
-      } else {
-        const errorMsg = 'errors' in message && message.errors.length > 0
-          ? message.errors.join(', ')
-          : message.subtype;
-        return `Failed: ${errorMsg}`;
-      }
-    }
-
-    case 'system': {
-      if (message.subtype === 'init') {
-        return `Session initialized - Model: ${message.model}`;
-      } else if (message.subtype === 'status') {
-        return message.status ? `Status: ${message.status}` : '';
-      } else if (message.subtype === 'compact_boundary') {
-        return `[Context compacted - ${message.compact_metadata.trigger}]`;
-      } else if (message.subtype === 'hook_response') {
-        return message.stdout || message.stderr || `[Hook: ${message.hook_name}]`;
-      }
-      return '[System message]';
-    }
-
-    case 'tool_progress': {
-      return `[${message.tool_name}: ${message.elapsed_time_seconds}s]`;
-    }
-
-    case 'auth_status': {
-      if (message.error) {
-        return `Auth error: ${message.error}`;
-      }
-      return message.output.join('\n') || '[Authenticating...]';
-    }
-
-    case 'stream_event': {
-      // Skip partial streaming events for cleaner output
-      return '';
-    }
-
-    default:
-      return '';
-  }
-}
 
 export async function runAgent(
   sessionManager: SessionManager,
@@ -115,28 +40,33 @@ Start by reading goals.yaml now.`;
 
     sessionManager.appendLog(agentId, `Using container: ${containerName}`);
 
-    // Execute Claude Code inside container
-    // For now, we'll use the SDK directly but set up for future docker exec integration
-    // TODO: Wrap this in docker exec once Claude Code is installed in container
+    // Execute Claude Code inside container using docker exec
+    const dockerClient = new (await import('../docker/DockerClient.js')).DockerClient();
 
-    const result = query({
-      prompt,
-      options: {
-        cwd: projectPath,
-        model: 'claude-opus-4-5-20251101',
-        settingSources: ['project', 'local'],
-      },
-    });
+    // Escape prompt for shell
+    const escapedPrompt = prompt.replace(/'/g, "'\\''");
 
-    // Stream output to SessionManager
-    for await (const message of result) {
-      const output = formatMessage(message);
-      if (output) {
-        sessionManager.appendLog(agentId, output);
-      }
+    // Build claude CLI command
+    const claudeCommand = `claude query --model claude-opus-4-5-20251101 '${escapedPrompt}'`;
+
+    sessionManager.appendLog(agentId, 'Starting Claude agent in container...');
+
+    // Execute in container
+    const execResult = await dockerClient.exec(containerName, claudeCommand, { env });
+
+    // Log output
+    if (execResult.stdout) {
+      sessionManager.appendLog(agentId, execResult.stdout);
+    }
+    if (execResult.stderr) {
+      sessionManager.appendLog(agentId, `[stderr] ${execResult.stderr}`);
     }
 
-    sessionManager.updateStatus(agentId, 'completed', 0);
+    if (execResult.exitCode === 0) {
+      sessionManager.updateStatus(agentId, 'completed', 0);
+    } else {
+      sessionManager.updateStatus(agentId, 'failed', execResult.exitCode);
+    }
   } catch (error) {
     sessionManager.appendLog(agentId, `Error: ${error}`);
     sessionManager.updateStatus(agentId, 'failed', 1);
