@@ -30,13 +30,17 @@ Master orchestration skill that manages autonomous execution of multiple goals d
    - Initialize fresh state if missing
    - Validate state consistency
 
-3. **Determine next goal**
-   - Check dependency satisfaction
-   - Find first eligible goal (pending/retrying/ready_for_execution)
-   - Return null if no goals can execute
+3. **CRITICAL: Plan ALL goals upfront**
+   - Count how many goals have status=pending
+   - If ANY pending goals exist:
+     - For EACH pending goal (goal 1, 2, 3, etc.):
+       1. Delegate to goal-planning skill
+       2. Wait for planning to complete (status → ready_for_execution)
+       3. Continue to NEXT pending goal
+     - DO NOT start execution until ALL goals are planned
+   - This ensures user answers all questions upfront
 
-4. **Delegate to appropriate skill**
-   - **pending** → Use goal-planning skill
+4. **Execute goals sequentially**
    - **ready_for_execution** → Use goal-execution skill
    - **ready_for_verification** → Use goal-verification skill
    - **completed** → Move to next goal
@@ -60,8 +64,13 @@ Load/Initialize .goals-state.json
   ↓
 Check if ANY goals need planning (status = pending)
   ↓ YES
-Plan ALL goals upfront (call goal-planning for each pending goal)
-  ↓ ALL PLANNED
+**Plan ALL pending goals before ANY execution:**
+  - For EACH goal with status=pending:
+    1. Call goal-planning skill
+    2. Wait for planning to complete
+    3. Move to next pending goal
+  - Continue until NO goals have status=pending
+  ↓ ALL PLANNED (all goals now ready_for_execution)
 Get next executable goal
   ↓
 Delegate to skill based on status:
