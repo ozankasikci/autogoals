@@ -1,0 +1,12 @@
+goals:
+  - id: "goal-1-create-hello-file"
+    description: "Create a hello.txt file with 'Hello Docker!' content"
+    status: "pending"
+
+# Goal Status Lifecycle:
+# - pending: Not started
+# - ready_for_execution: Plan complete, ready to implement
+# - in_progress: Currently being worked on
+# - ready_for_verification: Implementation done, needs testing
+# - completed: Done and verified
+# - failed: Encountered errors

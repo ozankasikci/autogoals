@@ -1,0 +1,6 @@
+# AutoGoals test workspace
+.autogoals/
+hello.txt
+
+# Environment
+.env
