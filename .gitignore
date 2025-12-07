@@ -2,6 +2,10 @@
 .autogoals/
 .worktrees/
 
+# Test workspaces
+goals.yaml
+examples/test/
+
 # Environment
 .env
 

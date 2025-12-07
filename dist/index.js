@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { existsSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import { input, confirm } from '@inquirer/prompts';
@@ -11,6 +11,9 @@ import React from 'react';
 import AutoGoalsTUI from './tui/index.js';
 import { SessionManager } from './session/SessionManager.js';
 import { runAgent } from './session/AgentRunner.js';
+import { ContainerManager } from './docker/ContainerManager.js';
+import { EnvLoader } from './docker/EnvLoader.js';
+import { DockerClient } from './docker/DockerClient.js';
 const program = new Command();
 program
     .name('autogoals')
@@ -19,8 +22,8 @@ program
 program
     .command('init')
     .description('Initialize a new AutoGoals project')
-    .argument('[path]', 'Project directory', '.')
-    .action(async (projectPath) => {
+    .action(async () => {
+    const projectPath = process.cwd();
     console.log(chalk.blue('🎯 AutoGoals - Interactive Setup\n'));
     const goalsPath = join(projectPath, 'goals.yaml');
     const autogoalsDir = join(projectPath, '.autogoals');
@@ -91,6 +94,32 @@ program
         mkdirSync(autogoalsDir, { recursive: true });
         mkdirSync(join(autogoalsDir, 'logs'), { recursive: true });
     }
+    // Create .env.example
+    const envExample = join(projectPath, '.env.example');
+    if (!existsSync(envExample)) {
+        const exampleContent = `# AutoGoals Environment Variables
+# Copy this file to .env and fill in your values
+
+# Anthropic API Key (required)
+ANTHROPIC_API_KEY=your_api_key_here
+
+# Optional: Custom Docker image
+# AUTOGOALS_DOCKER_IMAGE=autogoals/devbox:latest
+`;
+        writeFileSync(envExample, exampleContent);
+        console.log(chalk.green('✓ Created .env.example'));
+    }
+    // Check if .env is in .gitignore
+    const gitignorePath = join(projectPath, '.gitignore');
+    let gitignoreContent = '';
+    if (existsSync(gitignorePath)) {
+        gitignoreContent = readFileSync(gitignorePath, 'utf-8');
+    }
+    if (!gitignoreContent.includes('.env')) {
+        const newContent = gitignoreContent + '\n# Environment\n.env\n';
+        writeFileSync(gitignorePath, newContent);
+        console.log(chalk.green('✓ Added .env to .gitignore'));
+    }
     console.log(chalk.green(`\n✓ Created ${goals.length} goal(s) in goals.yaml`));
     console.log(chalk.green('✓ Created .autogoals/ directory'));
     console.log(chalk.blue('\n📝 Next steps:'));
@@ -100,13 +129,23 @@ program
 program
     .command('start')
     .description('Start autonomous execution of goals')
-    .argument('[path]', 'Project directory', '.')
     .option('--no-tui', 'Disable TUI, use plain output')
-    .action(async (projectPath, options) => {
+    .action(async (options) => {
+    const projectPath = process.cwd();
+    console.log(chalk.blue('🚀 AutoGoals'));
+    console.log(chalk.gray(`📁 Working Directory: ${projectPath}\n`));
+    // Check Docker daemon
+    const dockerClient = new DockerClient();
+    const dockerRunning = await dockerClient.isDockerRunning();
+    if (!dockerRunning) {
+        console.log(chalk.red('✗ Docker daemon not found'));
+        console.log(chalk.yellow('AutoGoals requires Docker to run agents in isolated containers.'));
+        console.log(chalk.gray('Install Docker: https://docs.docker.com/get-docker/'));
+        console.log(chalk.gray('Or run: autogoals doctor'));
+        process.exit(1);
+    }
     if (options.tui === false) {
         // Original plain output mode
-        console.log(chalk.blue('🚀 AutoGoals Runner - TypeScript + Claude SDK'));
-        console.log(chalk.gray(`📁 Project: ${projectPath}\n`));
         const goalsPath = join(projectPath, 'goals.yaml');
         if (!existsSync(goalsPath)) {
             console.error(chalk.red(`Error: No goals.yaml found in ${projectPath}`));
@@ -156,5 +195,96 @@ program
         });
     }
     await waitUntilExit();
+});
+program
+    .command('stop')
+    .description('Stop the workspace container')
+    .action(async () => {
+    const projectPath = process.cwd();
+    console.log(chalk.blue('🛑 Stopping workspace container...'));
+    try {
+        const containerManager = new ContainerManager();
+        await containerManager.stopContainer(projectPath);
+        console.log(chalk.green('✓ Container stopped'));
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+program
+    .command('clean')
+    .description('Remove stopped containers')
+    .option('--all', 'Remove all AutoGoals containers (including running)')
+    .action(async (options) => {
+    const projectPath = process.cwd();
+    if (options.all) {
+        console.log(chalk.yellow('⚠️  This will remove all AutoGoals containers'));
+        const proceed = await confirm({
+            message: 'Are you sure?',
+            default: false
+        });
+        if (!proceed) {
+            console.log(chalk.gray('Cancelled'));
+            return;
+        }
+    }
+    console.log(chalk.blue('🧹 Cleaning containers...'));
+    try {
+        const containerManager = new ContainerManager();
+        if (options.all) {
+            // Remove workspace container
+            await containerManager.removeContainer(projectPath, true);
+            console.log(chalk.green('✓ Removed workspace container'));
+        }
+        else {
+            // Just stop and remove if stopped
+            await containerManager.stopContainer(projectPath);
+            await containerManager.removeContainer(projectPath, false);
+            console.log(chalk.green('✓ Cleaned workspace container'));
+        }
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+program
+    .command('doctor')
+    .description('Diagnose Docker and container issues')
+    .action(async () => {
+    console.log(chalk.blue('🔍 AutoGoals Doctor\n'));
+    const projectPath = process.cwd();
+    const containerManager = new ContainerManager();
+    const dockerClient = new DockerClient();
+    // Check Docker daemon
+    const dockerRunning = await dockerClient.isDockerRunning();
+    console.log(dockerRunning
+        ? chalk.green('✓ Docker daemon is running')
+        : chalk.red('✗ Docker daemon not found'));
+    if (!dockerRunning) {
+        console.log(chalk.yellow('  Install Docker: https://docs.docker.com/get-docker/'));
+        return;
+    }
+    // Check .env file
+    const envFile = join(projectPath, '.env');
+    const hasEnv = existsSync(envFile);
+    console.log(hasEnv
+        ? chalk.green('✓ .env file found')
+        : chalk.yellow('⚠ No .env file (will use host environment)'));
+    // Check .env in .gitignore
+    if (hasEnv) {
+        const isIgnored = EnvLoader.isEnvIgnored(projectPath);
+        console.log(isIgnored
+            ? chalk.green('✓ .env is in .gitignore')
+            : chalk.red('✗ .env NOT in .gitignore (security risk!)'));
+    }
+    // Check container state
+    const stateFile = join(projectPath, '.autogoals', 'container.json');
+    const hasState = existsSync(stateFile);
+    console.log(hasState
+        ? chalk.green('✓ Container state found')
+        : chalk.gray('  No container created yet'));
+    console.log(chalk.green('\n✓ Diagnosis complete'));
 });
 program.parse();
