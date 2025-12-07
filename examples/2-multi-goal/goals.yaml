@@ -1,0 +1,16 @@
+goals:
+  - id: "setup-project"
+    description: "Create a basic Node.js project with package.json"
+    status: "pending"
+
+  - id: "add-dependencies"
+    description: "Add express and nodemon as dependencies"
+    status: "pending"
+
+  - id: "create-server"
+    description: "Create a simple Express server in server.js"
+    status: "pending"
+
+  - id: "add-readme"
+    description: "Create a README.md with usage instructions"
+    status: "pending"

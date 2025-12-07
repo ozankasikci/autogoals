@@ -1,0 +1,12 @@
+goals:
+  - id: "goal-1"
+    description: "First completed goal"
+    status: "completed"
+
+  - id: "goal-2"
+    description: "Second completed goal"
+    status: "completed"
+
+  - id: "goal-3"
+    description: "Third completed goal"
+    status: "completed"

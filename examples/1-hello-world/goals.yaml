@@ -1,0 +1,4 @@
+goals:
+  - id: "create-hello-file"
+    description: "Create a hello.txt file with 'Hello, World!' content"
+    status: "pending"

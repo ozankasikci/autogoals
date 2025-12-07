@@ -1,0 +1,20 @@
+goals:
+  - id: "completed-goal"
+    description: "This goal is already done"
+    status: "completed"
+
+  - id: "in-progress-goal"
+    description: "Currently being worked on"
+    status: "in_progress"
+
+  - id: "ready-for-execution"
+    description: "Planned and ready to implement"
+    status: "ready_for_execution"
+
+  - id: "ready-for-verification"
+    description: "Implemented, needs verification"
+    status: "ready_for_verification"
+
+  - id: "pending-goal"
+    description: "Not started yet"
+    status: "pending"
