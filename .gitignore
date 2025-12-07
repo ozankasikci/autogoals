@@ -1,5 +1,6 @@
 # AutoGoals Runtime
 .autogoals/
+.worktrees/
 
 # Environment
 .env
