@@ -33,6 +33,16 @@ Or install directly:
 
 ### 2. Create goals.yaml
 
+**Option A: Use the interactive wizard** (Recommended for beginners)
+
+```bash
+/create
+```
+
+The wizard will guide you through creating your goals.yaml file step-by-step.
+
+**Option B: Create manually**
+
 Create `goals.yaml` in your project root:
 
 ```yaml
@@ -153,6 +163,9 @@ Automatic quality gates:
   - If retry >= max_retries: marks goal as failed, stops
 
 ## Commands
+
+### /create
+Interactive wizard for creating goals.yaml files. Guides you through defining goals step-by-step with validation.
 
 ### /start
 Initialize and begin goal execution
