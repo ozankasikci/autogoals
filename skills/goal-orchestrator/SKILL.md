@@ -58,15 +58,22 @@ Validate dependencies
   ↓
 Load/Initialize .goals-state.json
   ↓
+Check if ANY goals need planning (status = pending)
+  ↓ YES
+Plan ALL goals upfront (call goal-planning for each pending goal)
+  ↓ ALL PLANNED
 Get next executable goal
   ↓
 Delegate to skill based on status:
-  - pending → goal-planning
   - ready_for_execution → goal-execution
   - ready_for_verification → goal-verification
   - completed → next goal
   - failed → stop
+
+Loop: After each goal completes, get next goal and delegate
 ```
+
+**IMPORTANT: Plan ALL goals before starting execution!**
 
 ## Error Handling
 

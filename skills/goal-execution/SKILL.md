@@ -49,39 +49,65 @@ const tasks = parsePlanTasks(planContent);
 // ]
 ```
 
-### Phase 3: Execute Tasks (TDD Loop)
+### Phase 3: Execute Tasks in Parallel with Subagents
 
-**For each task:**
+**IMPORTANT: Use Task tool to spawn subagents for independent tasks!**
+
+**Step 1: Identify parallelizable tasks**
 
 ```javascript
-for (const task of tasks) {
-  console.log(`\n▶ ${task.name}`);
+// Group tasks by dependencies
+const taskGroups = groupTasksByDependencies(tasks);
+// Returns: [
+//   [task1, task2],  // Can run in parallel (no dependencies)
+//   [task3],         // Depends on task1, task2
+//   [task4, task5]   // Can run in parallel after task3
+// ]
+```
 
-  // Step 1: Write failing test
-  writeFile(task.testFile, task.testCode);
-  console.log(`  ✓ Test written: ${task.testFile}`);
+**Step 2: Execute each group in parallel**
 
-  // Step 2: Run test - verify RED
-  const redResult = runCommand(task.testCommand);
-  if (redResult.exitCode === 0) {
-    throw new Error('Test passed before implementation! Fix test.');
+```javascript
+for (const group of taskGroups) {
+  if (group.length === 1) {
+    // Single task - execute directly
+    executeTaskWithTDD(group[0]);
+  } else {
+    // Multiple tasks - spawn subagents in parallel
+    console.log(`\n▶ Spawning ${group.length} parallel subagents for:`);
+    group.forEach(t => console.log(`  - ${t.name}`));
+
+    // Use Task tool to spawn agents
+    // Each agent implements one task following TDD
+    const agentIds = group.map(task =>
+      spawnTaskAgent(task, worktreePath)
+    );
+
+    // Wait for all agents to complete
+    const results = await Promise.all(
+      agentIds.map(id => waitForAgent(id))
+    );
+
+    // Verify all succeeded
+    results.forEach((result, i) => {
+      if (!result.success) {
+        throw new Error(`Task ${group[i].name} failed: ${result.error}`);
+      }
+    });
   }
-  console.log(`  ✓ Test fails as expected: ${redResult.stderr}`);
+}
 
-  // Step 3: Write minimal implementation
-  writeFile(task.implFile, task.implCode);
-  console.log(`  ✓ Implementation written: ${task.implFile}`);
 
-  // Step 4: Run test - verify GREEN
-  const greenResult = runCommand(task.testCommand);
-  if (greenResult.exitCode !== 0) {
-    // Retry logic or mark for debugging
-    throw new Error(`Test still failing: ${greenResult.stderr}`);
-  }
-  console.log(`  ✓ Test passes!`);
+**Step 3: TDD Implementation within each task/subagent**
 
-  // Step 5: Commit
-  commitChanges(task.commitMessage, worktreePath);
+Each task (whether executed directly or by subagent) follows strict TDD:
+
+1. Write failing test (RED)
+2. Verify test fails
+3. Write minimal implementation (GREEN)
+4. Verify test passes
+5. Refactor if needed
+6. Commit changes
   console.log(`  ✓ Committed: ${task.commitMessage}`);
 
   // Update progress in state
