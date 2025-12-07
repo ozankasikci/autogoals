@@ -18,38 +18,23 @@ Master orchestration skill that manages autonomous execution of multiple goals d
 
 **DO NOT use this skill manually.** It loads automatically via session hook.
 
-## Responsibilities
+## How It Works
 
-1. **Detect and load configuration**
-   - Check for `goals.yaml` in project root
-   - Parse and validate configuration
-   - Validate dependency graph (detect circular dependencies)
+**This skill MUST run the orchestrator script to ensure correct behavior:**
 
-2. **Initialize or resume state**
-   - Load `.goals-state.json` if exists
-   - Initialize fresh state if missing
-   - Validate state consistency
+```bash
+node ~/.claude/plugins/cache/autogoals/scripts/orchestrator.js
+```
 
-3. **CRITICAL: Plan ALL goals upfront**
-   - Count how many goals have status=pending
-   - If ANY pending goals exist:
-     - For EACH pending goal (goal 1, 2, 3, etc.):
-       1. Delegate to goal-planning skill
-       2. Wait for planning to complete (status → ready_for_execution)
-       3. Continue to NEXT pending goal
-     - DO NOT start execution until ALL goals are planned
-   - This ensures user answers all questions upfront
+The script enforces:
+1. Load and validate goals.yaml
+2. Load/initialize state
+3. **Plan ALL pending goals before ANY execution**
+4. Execute goals in loop until all complete
+5. Proper state management and transitions
 
-4. **Execute goals sequentially**
-   - **ready_for_execution** → Use goal-execution skill
-   - **ready_for_verification** → Use goal-verification skill
-   - **completed** → Move to next goal
-   - **failed** → Stop and report
-
-5. **Manage state transitions**
-   - Update goal status as work progresses
-   - Log events to execution_log
-   - Save state after each transition
+**DO NOT try to implement orchestrator logic manually!**
+Use the script - it has the correct control flow hardcoded.
 
 ## Workflow
 
