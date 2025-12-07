@@ -159,8 +159,6 @@ Ready to begin autonomous implementation? (y/n)
 
 Reading goal definition...
 - Dependencies: none
-- Acceptance criteria: 3 items
-- Max retries: 2
 
 Beginning planning session...
 ```
