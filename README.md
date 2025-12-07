@@ -4,7 +4,7 @@ Autonomous coding agent that orchestrates Claude Code sessions to complete compl
 
 ## Status
 
-**Phase 1 (MVP)** - Basic runner implementation complete ✅
+**Phase 2: Session Continuity** - Complete ✅
 
 ## What is AutoGoals?
 
@@ -40,8 +40,6 @@ cargo install --path .
 
 ## Usage
 
-### Phase 1: Basic Runner
-
 Run autonomous goal execution in a project with a `goals.yaml` file:
 
 ```bash
@@ -52,11 +50,13 @@ autogoals start
 autogoals start /path/to/project
 ```
 
-**What it does:**
-- Verifies `goals.yaml` exists
-- Spawns a Claude Code session
-- Waits for completion
-- Exits with status
+**What it does (Phase 2):**
+- Parses `goals.yaml` to check goal status
+- Shows progress: X/Y goals completed
+- Spawns Claude Code sessions automatically
+- After each session, re-checks goals.yaml
+- Continues spawning new sessions until all goals are complete
+- Handles multi-session execution seamlessly
 
 ## Goals File Format
 
@@ -76,7 +76,7 @@ goals:
 ## Development Roadmap
 
 - [x] **Phase 1: Basic Runner** - Single session execution
-- [ ] **Phase 2: Session Continuity** - Multi-session execution with state management
+- [x] **Phase 2: Session Continuity** - Multi-session execution with state management
 - [ ] **Phase 3: Logging** - Structured logs and session outputs
 - [ ] **Phase 4: TUI** - Real-time terminal interface
 - [ ] **Phase 5: Error Handling** - Smart retry and failure recovery
@@ -90,13 +90,19 @@ AutoGoals is built in Rust with:
 - `clap` for CLI
 - `tokio` for async runtime
 - `anyhow` for error handling
+- `serde` + `serde_yaml` for goals.yaml parsing
 
-Current architecture (Phase 1):
+Current architecture (Phase 2):
 ```
-CLI → Verify goals.yaml → Spawn claude → Wait → Exit
+CLI → Parse goals.yaml → Loop {
+  Check goal status
+  If work remains: Spawn claude session
+  Wait for completion
+  Re-parse goals.yaml
+} → All goals complete
 ```
 
-Future phases will add session management, TUI, logging, and more.
+Future phases will add logging, TUI, error handling, and more.
 
 ## Contributing
 
