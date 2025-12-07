@@ -28,10 +28,7 @@ export class SessionManager {
     const buffer = this.logBuffers.get(agentId);
     if (buffer) {
       buffer.append(line);
-      const agent = this.agents.get(agentId);
-      if (agent) {
-        agent.logBuffer = buffer.getLines();
-      }
+      // Log synchronization is lazy - only happens when getAgent/getAgents is called
     }
   }
 
@@ -53,10 +50,25 @@ export class SessionManager {
   }
 
   getAgents(): AgentState[] {
+    // Lazy sync: update all log buffers before returning
+    for (const [agentId, agent] of this.agents) {
+      const buffer = this.logBuffers.get(agentId);
+      if (buffer) {
+        agent.logBuffer = buffer.getLines();
+      }
+    }
     return Array.from(this.agents.values());
   }
 
   getAgent(agentId: number): AgentState | undefined {
-    return this.agents.get(agentId);
+    const agent = this.agents.get(agentId);
+    if (agent) {
+      // Lazy sync: update log buffer before returning
+      const buffer = this.logBuffers.get(agentId);
+      if (buffer) {
+        agent.logBuffer = buffer.getLines();
+      }
+    }
+    return agent;
   }
 }
