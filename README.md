@@ -18,11 +18,17 @@ Define multiple interconnected project goals in YAML, and let Claude Code work a
 ### 1. Install Plugin
 
 ```bash
-# Add marketplace (if not already added)
-/plugin marketplace add <your-marketplace>
+# Add marketplace
+/plugin marketplace add ozankasikci/claude-plugins
 
 # Install AutoGoals
-/plugin install autogoals@<your-marketplace>
+/plugin install autogoals@ozankasikci-plugins
+```
+
+Or install directly:
+
+```bash
+/plugin install ozankasikci/autogoals
 ```
 
 ### 2. Create goals.yaml
