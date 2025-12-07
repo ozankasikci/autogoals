@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
+import { input, confirm } from '@inquirer/prompts';
 import { parseGoals, getGoalStatus, hasPendingWork } from './goals.js';
 import { runAgentSession } from './agent.js';
 
@@ -17,8 +18,8 @@ program
   .command('init')
   .description('Initialize a new AutoGoals project')
   .argument('[path]', 'Project directory', '.')
-  .action((projectPath: string) => {
-    console.log(chalk.blue('🎯 Initializing AutoGoals project...\n'));
+  .action(async (projectPath: string) => {
+    console.log(chalk.blue('🎯 AutoGoals - Interactive Setup\n'));
 
     const goalsPath = join(projectPath, 'goals.yaml');
     const autogoalsDir = join(projectPath, '.autogoals');
@@ -35,44 +36,81 @@ program
       process.exit(1);
     }
 
-    // Create goals.yaml template
-    const template = `goals:
-  - id: "example-goal-1"
-    description: "Your first goal - describe what you want to build"
-    status: "pending"
+    // Interactive goal collection
+    const goals: Array<{ id: string; description: string; status: string }> = [];
+    let goalNum = 1;
 
-  - id: "example-goal-2"
-    description: "Another goal - AutoGoals will work through these sequentially"
-    status: "pending"
+    console.log(chalk.gray('Enter your goals one by one. Be specific about what you want to build.\n'));
 
-# Goal Status Lifecycle:
-# - pending: Not started
-# - ready_for_execution: Plan complete, ready to implement
-# - in_progress: Currently being worked on
-# - ready_for_verification: Implementation done, needs testing
-# - completed: Done and verified
-# - failed: Encountered errors
+    while (true) {
+      const description = await input({
+        message: `Goal ${goalNum}:`,
+        validate: (value) => {
+          if (!value.trim()) {
+            return 'Goal description cannot be empty';
+          }
+          return true;
+        }
+      });
 
-# Tips:
-# 1. Be specific in your goal descriptions
-# 2. Break large features into smaller goals
-# 3. AutoGoals will update this file as it completes goals
-# 4. You can edit this file anytime to add/modify goals
-`;
+      // Generate ID from description (lowercase, hyphenated)
+      const id = description
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
 
-    writeFileSync(goalsPath, template);
-    console.log(chalk.green('✓ Created goals.yaml'));
+      goals.push({
+        id: `goal-${goalNum}-${id}`,
+        description: description.trim(),
+        status: 'pending'
+      });
+
+      goalNum++;
+
+      const addMore = await confirm({
+        message: 'Add another goal?',
+        default: true
+      });
+
+      if (!addMore) {
+        break;
+      }
+
+      console.log(); // Empty line for readability
+    }
+
+    // Generate goals.yaml
+    let yamlContent = 'goals:\n';
+    goals.forEach((goal) => {
+      yamlContent += `  - id: "${goal.id}"\n`;
+      yamlContent += `    description: "${goal.description}"\n`;
+      yamlContent += `    status: "${goal.status}"\n\n`;
+    });
+
+    // Add helpful comments
+    yamlContent += `# Goal Status Lifecycle:\n`;
+    yamlContent += `# - pending: Not started\n`;
+    yamlContent += `# - ready_for_execution: Plan complete, ready to implement\n`;
+    yamlContent += `# - in_progress: Currently being worked on\n`;
+    yamlContent += `# - ready_for_verification: Implementation done, needs testing\n`;
+    yamlContent += `# - completed: Done and verified\n`;
+    yamlContent += `# - failed: Encountered errors\n`;
+
+    writeFileSync(goalsPath, yamlContent);
 
     // Create .autogoals directory
     if (!existsSync(autogoalsDir)) {
       mkdirSync(autogoalsDir, { recursive: true });
       mkdirSync(join(autogoalsDir, 'logs'), { recursive: true });
-      console.log(chalk.green('✓ Created .autogoals/ directory'));
     }
 
+    console.log(chalk.green(`\n✓ Created ${goals.length} goal(s) in goals.yaml`));
+    console.log(chalk.green('✓ Created .autogoals/ directory'));
+
     console.log(chalk.blue('\n📝 Next steps:'));
-    console.log(chalk.gray('   1. Edit goals.yaml to define your goals'));
-    console.log(chalk.gray('   2. Run: autogoals start'));
+    console.log(chalk.gray('   Run: autogoals start'));
     console.log();
   });
 
