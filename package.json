@@ -35,6 +35,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.61",
     "@anthropic-ai/sdk": "^0.71.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",

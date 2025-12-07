@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import { parseGoals, getGoalStatus, hasPendingWork } from './goals.js';
+import { runAgentSession } from './agent.js';
 
 const program = new Command();
 
@@ -51,16 +52,21 @@ program
         break;
       }
 
-      // TODO: Run Claude Agent SDK session here
+      // Run Claude Agent SDK session
       console.log(chalk.yellow(`🤖 Starting Claude Agent session #${sessionNum}...\n`));
-      console.log(chalk.gray('TODO: Integrate Claude Agent SDK'));
-      console.log(chalk.gray('For now, this is a placeholder.\n'));
-      
-      // Exit for now (will loop with real SDK)
-      break;
+
+      try {
+        await runAgentSession(projectPath, sessionNum);
+        console.log(chalk.green(`✅ Session #${sessionNum} completed\n`));
+      } catch (error) {
+        console.error(chalk.red(`⚠️  Session #${sessionNum} error:`), error);
+        break;
+      }
+
+      sessionNum++;
     }
 
-    console.log(chalk.green('✨ Session complete!\n'));
+    console.log(chalk.green('✨ All goals completed successfully!\n'));
   });
 
 program.parse();
