@@ -1,0 +1,118 @@
+version: "1.0"
+project_name: "my-fullstack-app"
+
+goals:
+  - id: "backend-structure"
+    name: "Setup Node.js Backend Structure"
+    description: |
+      Create a maintainable and extensible Node.js backend with:
+      - Express.js for API
+      - TypeScript for type safety
+      - PostgreSQL with Prisma ORM
+      - JWT authentication
+      - Environment-based configuration
+
+    dependencies: []
+
+    acceptance_criteria:
+      - "npm test passes with 100% of tests green"
+      - "npm run build completes without errors"
+      - "API responds to GET /health with 200 OK"
+
+    verification_commands:
+      - "npm install"
+      - "npm run build"
+      - "npm test"
+
+    max_retries: 2
+    branch_name: "goal/backend-structure"
+
+  - id: "frontend-app"
+    name: "Setup React Frontend"
+    description: |
+      Create a modern React frontend with:
+      - Vite for build tooling
+      - TypeScript
+      - Tailwind CSS for styling
+      - React Router for navigation
+      - Axios for API calls
+
+    dependencies: ["backend-structure"]
+
+    acceptance_criteria:
+      - "npm run build succeeds"
+      - "npm test passes"
+      - "App renders without console errors"
+
+    verification_commands:
+      - "npm install"
+      - "npm run build"
+      - "npm test"
+
+    max_retries: 2
+    branch_name: "goal/frontend-app"
+
+  - id: "e2e-tests"
+    name: "End-to-End Testing Suite"
+    description: |
+      Create E2E tests using Playwright that:
+      - Test complete user flows (signup, login, CRUD operations)
+      - Run against both frontend and backend
+      - Include database seeding for test data
+
+    dependencies: ["backend-structure", "frontend-app"]
+
+    acceptance_criteria:
+      - "All E2E tests pass"
+      - "Test coverage > 80% for critical paths"
+
+    verification_commands:
+      - "npm run test:e2e"
+
+    max_retries: 3
+    branch_name: "goal/e2e-tests"
+
+  - id: "admin-dashboard"
+    name: "Admin Dashboard"
+    description: |
+      Create admin dashboard for managing:
+      - Users and permissions
+      - Database records
+      - Configuration settings
+      - System monitoring
+
+    dependencies: ["backend-structure"]
+
+    acceptance_criteria:
+      - "Dashboard accessible at /admin"
+      - "All CRUD operations work"
+      - "Tests pass"
+
+    verification_commands:
+      - "npm install"
+      - "npm test"
+
+    max_retries: 2
+    branch_name: "goal/admin-dashboard"
+
+  - id: "deployment-pipeline"
+    name: "Deployment Pipeline"
+    description: |
+      Setup automated deployment:
+      - Docker containers for all services
+      - GitHub Actions for CI/CD
+      - Deployment to staging environment
+
+    dependencies: ["admin-dashboard", "e2e-tests"]
+
+    acceptance_criteria:
+      - "docker-compose up works"
+      - "GitHub Actions workflow passes"
+
+    verification_commands:
+      - "docker-compose build"
+      - "docker-compose up -d"
+      - "docker-compose down"
+
+    max_retries: 2
+    branch_name: "goal/deployment-pipeline"
