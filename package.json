@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
@@ -40,6 +41,9 @@
     "@inquirer/prompts": "^8.0.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
-    "js-yaml": "^4.1.1"
+    "ink": "^6.5.1",
+    "ink-spinner": "^5.0.0",
+    "js-yaml": "^4.1.1",
+    "react": "^19.2.1"
   }
 }
