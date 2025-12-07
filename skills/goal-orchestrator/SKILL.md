@@ -73,6 +73,15 @@ Delegate to skill based on status:
 Loop: After each goal completes, get next goal and delegate
 ```
 
+**CRITICAL LOOP BEHAVIOR:**
+- **NEVER stop after one goal!**
+- After each goal status change (planning complete, execution complete, verification complete):
+  1. Save state
+  2. Get next executable goal
+  3. If next goal exists → delegate immediately
+  4. If no more goals → show completion summary
+- **Continue autonomously until ALL goals are completed or one fails**
+
 **IMPORTANT: Plan ALL goals before starting execution!**
 
 ## Error Handling
@@ -144,3 +153,50 @@ Delegating to goal-execution skill...
 - Never modifies goals.yaml (read-only)
 - Always saves state before transitioning
 - Graceful degradation on errors (don't corrupt state)
+
+## Continuous Execution Loop
+
+**The orchestrator MUST continue running until ALL goals are complete:**
+
+```javascript
+// Pseudo-code for orchestrator behavior
+while (true) {
+  const nextGoal = getNextGoal(goals, state);
+
+  if (!nextGoal) {
+    // No more executable goals
+    if (allGoalsCompleted(state)) {
+      showCompletionSummary();
+      break; // SUCCESS - all done
+    } else {
+      // Some goals waiting on dependencies or failed
+      showStatus();
+      break; // WAIT - cannot proceed
+    }
+  }
+
+  // Delegate to appropriate skill
+  if (nextGoal.status === 'pending') {
+    await runPlanningSkill(nextGoal);
+    // IMPORTANT: After planning, LOOP BACK to get next goal
+    continue;
+  }
+
+  if (nextGoal.status === 'ready_for_execution') {
+    await runExecutionSkill(nextGoal);
+    // IMPORTANT: After execution, LOOP BACK to get next goal
+    continue;
+  }
+
+  if (nextGoal.status === 'ready_for_verification') {
+    await runVerificationSkill(nextGoal);
+    // IMPORTANT: After verification, LOOP BACK to get next goal
+    continue;
+  }
+}
+```
+
+**Key points:**
+- After EACH skill completes, loop back to find next goal
+- Don't wait for user input between goals
+- Only stop when: all completed OR dependency blocked OR failure
