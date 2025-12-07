@@ -58,6 +58,35 @@ autogoals start /path/to/project
 - Continues spawning new sessions until all goals are complete
 - Handles multi-session execution seamlessly
 
+## Interactive TUI
+
+AutoGoals now includes an interactive terminal UI (TUI) for monitoring agents in real-time.
+
+### Usage
+
+```bash
+# Start with TUI (default)
+autogoals start
+
+# Start without TUI (plain output)
+autogoals start --no-tui
+```
+
+### TUI Features
+
+- **Agent List**: View all running, completed, and failed agents
+- **Log Detail**: Drill into individual agent logs
+- **Keyboard Navigation**:
+  - `↑↓`: Navigate agents or scroll logs
+  - `Enter`: View selected agent's logs
+  - `Esc`/`q`: Go back or quit
+
+### Visual States
+
+- **Running**: Green highlight
+- **Completed**: Gray with ✓
+- **Failed**: Red with ✗
+
 ## Goals File Format
 
 AutoGoals uses the same `goals.yaml` format as the AutoGoals skill:
