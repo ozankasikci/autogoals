@@ -38,6 +38,43 @@ The binary will be available at `./target/release/autogoals`.
 cargo install --path .
 ```
 
+## Requirements
+
+- **Docker Desktop** or **Docker Engine** - Required for container isolation
+  - Install: https://docs.docker.com/get-docker/
+  - AutoGoals runs agents in isolated Docker containers for safety and reproducibility
+
+- **Node.js 18+** - For running AutoGoals CLI
+
+## Docker Setup
+
+AutoGoals uses Docker containers to isolate agent workspaces. Each workspace gets its own persistent container.
+
+**First-time setup:**
+
+```bash
+# Build the base image (or pull from registry)
+cd docker
+docker build -t autogoals/devbox:latest .
+```
+
+**Container lifecycle:**
+
+- `autogoals start` - Creates/reuses container for current workspace
+- `autogoals stop` - Stops the workspace container
+- `autogoals clean` - Removes stopped containers
+- `autogoals doctor` - Diagnose Docker and container issues
+
+**Environment variables:**
+
+Create a `.env` file in your workspace with:
+
+```
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+AutoGoals automatically loads `.env` and passes variables to the container.
+
 ## Usage
 
 Run autonomous goal execution in a project with a `goals.yaml` file:
