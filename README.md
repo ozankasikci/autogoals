@@ -1,291 +1,107 @@
 # AutoGoals
 
-Autonomous long-term goal execution system for Claude Code.
+Autonomous coding agent that orchestrates Claude Code sessions to complete complex development goals.
 
-Define multiple interconnected project goals in YAML, and let Claude Code work autonomously for hours implementing them one by one with interactive planning, autonomous execution, and automated verification.
+## Status
 
-## Features
+**Phase 1 (MVP)** - Basic runner implementation complete ✅
 
-- **Multi-goal execution** - Define 10+ goals with explicit dependencies
-- **Interactive planning** - Socratic questioning before implementation
-- **Autonomous execution** - Hours of work without human intervention
-- **Verification gates** - Automated testing with retry logic
-- **State persistence** - Resume across sessions seamlessly
-- **Git isolation** - Each goal in separate worktree
+## What is AutoGoals?
 
-## Quick Start
+AutoGoals is an open-source tool inspired by AutoGPT, specifically designed to work with Claude Code. It enables autonomous execution of development goals by:
 
-### 1. Install Plugin
+- Reading goals from a `goals.yaml` file
+- Spawning Claude Code sessions to work on those goals
+- Managing session lifecycle and continuity
+- Providing visibility into autonomous execution
 
-```bash
-# Add marketplace
-/plugin marketplace add ozankasikci/claude-plugins
+## Installation
 
-# Install AutoGoals
-/plugin install autogoals@ozankasikci-plugins
-```
+### Prerequisites
 
-Or install directly:
+- [Rust](https://rustup.rs/) (stable)
+- [Claude Code](https://docs.anthropic.com/claude-code) installed and configured
+
+### Build from source
 
 ```bash
-/plugin install ozankasikci/autogoals
-```
-
-### 2. Create goals.yaml
-
-**Option A: Use the interactive wizard** (Recommended for beginners)
-
-```bash
-/create
-```
-
-The wizard will guide you through creating your goals.yaml file step-by-step.
-
-**Option B: Create manually**
-
-Create `goals.yaml` in your project root:
-
-```yaml
-version: "1.0"
-project_name: "my-app"
-
-goals:
-  - id: "backend"
-    name: "Backend Setup"
-    description: "Create Node.js backend with Express and TypeScript"
-    dependencies: []
-    acceptance_criteria:
-      - "npm test passes"
-    verification_commands:
-      - "npm test"
-    max_retries: 2
-    branch_name: "goal/backend"
-
-  - id: "frontend"
-    name: "Frontend Setup"
-    description: "Create React frontend with TypeScript"
-    dependencies: ["backend"]
-    acceptance_criteria:
-      - "npm run build succeeds"
-    verification_commands:
-      - "npm run build"
-    max_retries: 2
-    branch_name: "goal/frontend"
-```
-
-### 3. Start Claude Code
-
-AutoGoals activates automatically when it detects `goals.yaml`.
-
-Or manually start:
-
-```bash
-/start
-```
-
-### 4. Watch It Work
-
-Claude will:
-1. Ask clarifying questions for the first goal
-2. Create implementation plan
-3. Execute autonomously using TDD
-4. Run verification tests
-5. Merge to main on success
-6. Move to next goal automatically
-
-## How It Works
-
-### Goal Lifecycle
-
-Each goal progresses through these states:
-
-```
-pending
-  ↓ (interactive planning with questions)
-planning
-  ↓ (user approves plan)
-ready_for_execution
-  ↓ (autonomous TDD implementation)
-executing
-  ↓ (all tasks complete)
-ready_for_verification
-  ↓ (run verification commands)
-verifying
-  ↓
-├─→ completed (all tests pass) → next goal
-├─→ retrying (tests failed, retry < max_retries) → back to executing
-└─→ failed (tests failed, retry >= max_retries) → STOP
-```
-
-### Interactive Planning Phase
-
-For each goal, Claude:
-- Reads goal description and acceptance criteria
-- Asks clarifying questions (one at a time, Socratic method)
-- Explores architecture options
-- Creates detailed implementation plan
-- Saves plan to `docs/goals/plans/{goal-id}-plan.md`
-- Asks for approval before execution
-
-**Example planning session:**
-```
-Question 1/5: Architecture preferences
-
-For the Node.js backend, which architecture would you prefer?
-
-A) Layered architecture (controllers → services → repositories)
-B) Feature-based modules (each feature is self-contained)
-C) Hexagonal architecture (ports and adapters)
-D) Other approach you have in mind?
-
-> A
-
-Question 2/5: ORM selection
-...
-```
-
-### Autonomous Execution Phase
-
-Claude works autonomously:
-- Creates isolated git worktree
-- Implements plan using TDD (RED-GREEN-REFACTOR)
-- Commits every 15 minutes or after task completion
-- Runs without human intervention
-- Can work for 2-4 hours per goal
-
-### Verification Phase
-
-Automatic quality gates:
-- Runs all verification commands from goals.yaml
-- If all pass: merges to main, deletes worktree, starts next goal
-- If any fail: increments retry count
-  - If retry < max_retries: returns to execution with error context
-  - If retry >= max_retries: marks goal as failed, stops
-
-## Commands
-
-### /create
-Interactive wizard for creating goals.yaml files. Guides you through defining goals step-by-step with validation.
-
-### /start
-Initialize and begin goal execution
-
-### /status
-Show progress dashboard:
-```
-Overall Progress: 2/5 goals completed (40%)
-
-[✓] backend         COMPLETED  (2h 15m)
-[✓] frontend        COMPLETED  (1h 45m)
-[→] e2e-tests      IN_PROGRESS (35m, retry 1/3)
-[ ] admin          PENDING    (waiting: e2e-tests)
-[ ] deployment     PENDING    (waiting: admin)
-```
-
-### /pause
-Pause autonomous execution
-
-### /resume
-Resume from current state
-
-## goals.yaml Format
-
-```yaml
-version: "1.0"
-project_name: "string"
-
-goals:
-  - id: "unique-id"                    # Required, unique identifier
-    name: "Display Name"               # Required, shown in UI
-    description: |                     # Required, used for planning
-      Detailed description of what to build.
-      Include tech stack preferences, architecture notes.
-
-    dependencies: ["other-goal-id"]    # Required, can be empty []
-
-    acceptance_criteria:               # Required, list of criteria
-      - "Tests pass"
-      - "Build succeeds"
-
-    verification_commands:             # Required, shell commands
-      - "npm install"
-      - "npm test"
-
-    max_retries: 2                     # Required, retry limit
-    branch_name: "goal/branch-name"    # Required, git branch
-```
-
-## Examples
-
-See `examples/` directory:
-- `fullstack-app/` - Complete full-stack application (5 goals)
-
-## State Management
-
-AutoGoals tracks state in `.goals-state.json`:
-
-```json
-{
-  "version": "1.0",
-  "current_goal_id": "backend",
-  "goals_status": {
-    "backend": {
-      "status": "in_progress",
-      "started_at": "2025-12-07T10:30:00Z",
-      "retry_count": 0,
-      "branch": "goal/backend"
-    }
-  },
-  "execution_log": [...]
-}
-```
-
-**Important:**
-- Don't edit this file manually
-- Backed up automatically to `.goals-state.json.backup`
-- Committed to `.gitignore` by default
-
-## Design
-
-See `docs/plans/2025-12-07-autogoals-design.md` for complete design specification.
-
-## Troubleshooting
-
-**Goals not starting:**
-- Check `goals.yaml` exists in project root
-- Validate YAML syntax: `npx js-yaml goals.yaml`
-- Check for circular dependencies
-
-**Goal verification keeps failing:**
-- Check error in `.goals-state.json` → `goals_status.{id}.last_error`
-- Review worktree: `./{project}-worktrees/{goal-id}/`
-- Manually inspect and fix, then `/autogoals:resume`
-
-**State file corrupted:**
-- Restore from `.goals-state.json.backup`
-- Or delete and restart: `rm .goals-state.json && /autogoals:start`
-
-## Development
-
-```bash
-# Clone repository
-git clone https://github.com/ozan/autogoals
+git clone https://github.com/yourusername/autogoals.git
 cd autogoals
-
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Watch mode
-npm run test:watch
+cargo build --release
 ```
+
+The binary will be available at `./target/release/autogoals`.
+
+### Install locally
+
+```bash
+cargo install --path .
+```
+
+## Usage
+
+### Phase 1: Basic Runner
+
+Run autonomous goal execution in a project with a `goals.yaml` file:
+
+```bash
+# In a project directory with goals.yaml
+autogoals start
+
+# Or specify a path
+autogoals start /path/to/project
+```
+
+**What it does:**
+- Verifies `goals.yaml` exists
+- Spawns a Claude Code session
+- Waits for completion
+- Exits with status
+
+## Goals File Format
+
+AutoGoals uses the same `goals.yaml` format as the AutoGoals skill:
+
+```yaml
+goals:
+  - id: "auth-system"
+    description: "Implement user authentication"
+    status: "pending"
+
+  - id: "frontend-ui"
+    description: "Build dashboard UI"
+    status: "pending"
+```
+
+## Development Roadmap
+
+- [x] **Phase 1: Basic Runner** - Single session execution
+- [ ] **Phase 2: Session Continuity** - Multi-session execution with state management
+- [ ] **Phase 3: Logging** - Structured logs and session outputs
+- [ ] **Phase 4: TUI** - Real-time terminal interface
+- [ ] **Phase 5: Error Handling** - Smart retry and failure recovery
+- [ ] **Phase 6: Proactive Sessions** - Intelligent session transitions
+
+See [design document](docs/plans/2025-12-07-autogoals-runner-design.md) for complete details.
+
+## Architecture
+
+AutoGoals is built in Rust with:
+- `clap` for CLI
+- `tokio` for async runtime
+- `anyhow` for error handling
+
+Current architecture (Phase 1):
+```
+CLI → Verify goals.yaml → Spawn claude → Wait → Exit
+```
+
+Future phases will add session management, TUI, logging, and more.
+
+## Contributing
+
+This project is in early development. Contributions welcome!
 
 ## License
 
-MIT - see LICENSE file
-
-## Credits
-
-Inspired by [Superpowers](https://github.com/obra/superpowers) by Jesse Vincent.
+MIT
