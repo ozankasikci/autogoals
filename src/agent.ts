@@ -12,12 +12,14 @@ export async function runAgentSession(projectPath: string, sessionNum: number): 
 
 CRITICAL INSTRUCTIONS - Follow these steps exactly:
 
-1. READ goals.yaml to see all goals and their current status
+1. READ goals.yaml in the current directory to see all goals and their current status
 2. FIND the first goal with status "pending" or "in_progress"
 3. WORK on that goal:
    - If status is "pending": Update it to "in_progress" and start planning/implementing
    - If status is "in_progress": Continue working on it
    - Implement the goal, write code, run tests, verify it works
+   - CREATE ALL FILES in the current working directory (${projectPath})
+   - DO NOT navigate to other directories or create files elsewhere
 4. UPDATE goals.yaml:
    - When you complete a goal, change its status to "completed"
    - Use the Edit tool to update the status field in goals.yaml
@@ -28,6 +30,8 @@ GOAL STATUS LIFECYCLE:
 
 This is session #${sessionNum}. You MUST make progress on at least one goal this session.
 If you don't update goals.yaml, this session is wasted.
+
+IMPORTANT: You are working in ${projectPath}. All files must be created here.
 
 Start by reading goals.yaml now.`;
 
@@ -41,7 +45,7 @@ Start by reading goals.yaml now.`;
     prompt,
     options: {
       cwd: projectPath,
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-opus-4-5-20251101',
       // Allow the agent to work autonomously
       settingSources: ['project', 'local'],
     }

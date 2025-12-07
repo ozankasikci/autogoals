@@ -22,8 +22,8 @@ program
 program
   .command('init')
   .description('Initialize a new AutoGoals project')
-  .argument('[path]', 'Project directory', '.')
-  .action(async (projectPath: string) => {
+  .action(async () => {
+    const projectPath = process.cwd();
     console.log(chalk.blue('🎯 AutoGoals - Interactive Setup\n'));
 
     const goalsPath = join(projectPath, 'goals.yaml');
@@ -122,13 +122,15 @@ program
 program
   .command('start')
   .description('Start autonomous execution of goals')
-  .argument('[path]', 'Project directory', '.')
   .option('--no-tui', 'Disable TUI, use plain output')
-  .action(async (projectPath: string, options: { tui: boolean }) => {
+  .action(async (options: { tui: boolean }) => {
+    const projectPath = process.cwd();
+
+    console.log(chalk.blue('🚀 AutoGoals'));
+    console.log(chalk.gray(`📁 Working Directory: ${projectPath}\n`));
+
     if (options.tui === false) {
       // Original plain output mode
-      console.log(chalk.blue('🚀 AutoGoals Runner - TypeScript + Claude SDK'));
-      console.log(chalk.gray(`📁 Project: ${projectPath}\n`));
 
       const goalsPath = join(projectPath, 'goals.yaml');
       if (!existsSync(goalsPath)) {

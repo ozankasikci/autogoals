@@ -86,16 +86,20 @@ export async function runAgent(
 
 CRITICAL INSTRUCTIONS - Follow these steps exactly:
 
-1. READ goals.yaml to see all goals and their current status
+1. READ goals.yaml in the current directory to see all goals and their current status
 2. FIND the goal with id "${goalId}"
 3. WORK on that goal:
    - Update status to "in_progress" in goals.yaml
    - Implement the goal, write code, run tests, verify it works
+   - CREATE ALL FILES in the current working directory (${projectPath})
+   - DO NOT navigate to other directories or create files elsewhere
 4. UPDATE goals.yaml:
    - When complete, change status to "completed"
    - Use the Edit tool to update the status field
 
 Goal to work on: ${goalDescription}
+
+IMPORTANT: You are working in ${projectPath}. All files must be created here.
 
 Start by reading goals.yaml now.`;
 
@@ -104,7 +108,7 @@ Start by reading goals.yaml now.`;
       prompt,
       options: {
         cwd: projectPath,
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-opus-4-5-20251101',
         settingSources: ['project', 'local'],
       },
     });
