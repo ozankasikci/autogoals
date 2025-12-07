@@ -8,15 +8,28 @@ export async function runAgentSession(projectPath: string, sessionNum: number): 
   const hasClaudeMd = existsSync(claudeMdPath);
   
   // Build the prompt
-  let prompt = `You are working on a project with goals defined in goals.yaml.
+  let prompt = `You are an autonomous coding agent working on a project with goals defined in goals.yaml.
 
-Your task is to:
-1. Read and understand the goals.yaml file
-2. Work on any pending or in-progress goals
-3. Update the goals.yaml file as you complete goals
-4. Follow the AutoGoals goal lifecycle (pending → ready_for_execution → in_progress → ready_for_verification → completed)
+CRITICAL INSTRUCTIONS - Follow these steps exactly:
 
-This is session #${sessionNum}. Focus on making meaningful progress.`;
+1. READ goals.yaml to see all goals and their current status
+2. FIND the first goal with status "pending" or "in_progress"
+3. WORK on that goal:
+   - If status is "pending": Update it to "in_progress" and start planning/implementing
+   - If status is "in_progress": Continue working on it
+   - Implement the goal, write code, run tests, verify it works
+4. UPDATE goals.yaml:
+   - When you complete a goal, change its status to "completed"
+   - Use the Edit tool to update the status field in goals.yaml
+   - Be explicit about marking goals as completed
+
+GOAL STATUS LIFECYCLE:
+- pending → in_progress → completed
+
+This is session #${sessionNum}. You MUST make progress on at least one goal this session.
+If you don't update goals.yaml, this session is wasted.
+
+Start by reading goals.yaml now.`;
 
   if (hasClaudeMd) {
     const claudeMd = readFileSync(claudeMdPath, 'utf-8');
