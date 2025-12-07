@@ -1,4 +1,4 @@
-import { parseGoalsConfig } from '../../lib/goals-core.js';
+import { parseGoalsConfig, validateDependencies } from '../../lib/goals-core.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 
@@ -15,6 +15,39 @@ describe('parseGoalsConfig', () => {
     assert.throws(
       () => parseGoalsConfig('tests/fixtures/invalid-goals.yaml'),
       /Failed to parse goals\.yaml/
+    );
+  });
+});
+
+describe('validateDependencies', () => {
+  it('should return execution order for valid dependencies', () => {
+    const goals = [
+      { id: 'backend', dependencies: [] },
+      { id: 'frontend', dependencies: ['backend'] },
+      { id: 'e2e', dependencies: ['backend', 'frontend'] }
+    ];
+    const order = validateDependencies(goals);
+    assert.deepStrictEqual(order, ['backend', 'frontend', 'e2e']);
+  });
+
+  it('should detect circular dependencies', () => {
+    const goals = [
+      { id: 'a', dependencies: ['b'] },
+      { id: 'b', dependencies: ['a'] }
+    ];
+    assert.throws(
+      () => validateDependencies(goals),
+      /Circular dependency detected.*a.*b.*a/
+    );
+  });
+
+  it('should detect unknown dependencies', () => {
+    const goals = [
+      { id: 'backend', dependencies: ['nonexistent'] }
+    ];
+    assert.throws(
+      () => validateDependencies(goals),
+      /Unknown dependency.*nonexistent/
     );
   });
 });
