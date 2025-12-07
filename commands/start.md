@@ -1,7 +1,7 @@
 Initialize AutoGoals system and begin executing goals defined in goals.yaml.
 
 **Usage:**
-/autogoals:start
+/start
 
 **What it does:**
 1. Validates goals.yaml exists
@@ -12,7 +12,7 @@ Initialize AutoGoals system and begin executing goals defined in goals.yaml.
 
 **Example:**
 ```bash
-/autogoals:start
+/start
 ```
 
 **Output:**

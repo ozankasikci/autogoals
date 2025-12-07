@@ -64,7 +64,7 @@ AutoGoals activates automatically when it detects `goals.yaml`.
 Or manually start:
 
 ```bash
-/autogoals:start
+/start
 ```
 
 ### 4. Watch It Work
@@ -148,10 +148,10 @@ Automatic quality gates:
 
 ## Commands
 
-### /autogoals:start
+### /start
 Initialize and begin goal execution
 
-### /autogoals:status
+### /status
 Show progress dashboard:
 ```
 Overall Progress: 2/5 goals completed (40%)
@@ -163,10 +163,10 @@ Overall Progress: 2/5 goals completed (40%)
 [ ] deployment     PENDING    (waiting: admin)
 ```
 
-### /autogoals:pause
+### /pause
 Pause autonomous execution
 
-### /autogoals:resume
+### /resume
 Resume from current state
 
 ## goals.yaml Format

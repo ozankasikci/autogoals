@@ -1,7 +1,7 @@
 Show current AutoGoals execution status and progress.
 
 **Usage:**
-/autogoals:status
+/status
 
 **What it shows:**
 - Overall progress (X/Y goals completed)
@@ -12,7 +12,7 @@ Show current AutoGoals execution status and progress.
 
 **Example:**
 ```bash
-/autogoals:status
+/status
 ```
 
 **Output:**

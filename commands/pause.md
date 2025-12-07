@@ -1,7 +1,7 @@
 Pause autonomous goal execution.
 
 **Usage:**
-/autogoals:pause
+/pause
 
 **What it does:**
 1. Saves current state
@@ -11,7 +11,7 @@ Pause autonomous goal execution.
 
 **Example:**
 ```bash
-/autogoals:pause
+/pause
 ```
 
 **Output:**
@@ -25,6 +25,6 @@ State saved to: .goals-state.json
 You can:
 - Inspect worktree manually
 - Make manual changes
-- Resume with /autogoals:resume
-- Skip current goal with /autogoals:skip e2e-tests
+- Resume with /resume
+- Skip current goal with /skip e2e-tests
 ```

@@ -1,7 +1,7 @@
 Resume autonomous goal execution from current state.
 
 **Usage:**
-/autogoals:resume
+/resume
 
 **What it does:**
 1. Loads .goals-state.json
@@ -11,7 +11,7 @@ Resume autonomous goal execution from current state.
 
 **Example:**
 ```bash
-/autogoals:resume
+/resume
 ```
 
 **Output:**
