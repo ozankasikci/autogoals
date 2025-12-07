@@ -1,0 +1,24 @@
+{
+  "name": "autogoals",
+  "version": "0.1.0",
+  "description": "Autonomous long-term goal execution system for Claude Code",
+  "type": "module",
+  "main": "lib/goals-core.js",
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "autonomous",
+    "goals",
+    "automation",
+    "ai"
+  ],
+  "author": "Ozan",
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {}
+}

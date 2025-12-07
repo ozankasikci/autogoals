@@ -1,0 +1,19 @@
+{
+  "name": "autogoals",
+  "description": "Autonomous long-term goal execution system with interactive planning and automated verification",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ozan"
+  },
+  "homepage": "https://github.com/ozan/autogoals",
+  "repository": "https://github.com/ozan/autogoals",
+  "license": "MIT",
+  "keywords": [
+    "autonomous",
+    "goals",
+    "automation",
+    "tdd",
+    "workflows",
+    "long-running"
+  ]
+}
