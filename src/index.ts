@@ -6,6 +6,11 @@ import chalk from 'chalk';
 import { input, confirm } from '@inquirer/prompts';
 import { parseGoals, getGoalStatus, hasPendingWork } from './goals.js';
 import { runAgentSession } from './agent.js';
+import { render } from 'ink';
+import React from 'react';
+import AutoGoalsTUI from './tui/index.js';
+import { SessionManager } from './session/SessionManager.js';
+import { runAgent } from './session/AgentRunner.js';
 
 const program = new Command();
 
@@ -118,56 +123,74 @@ program
   .command('start')
   .description('Start autonomous execution of goals')
   .argument('[path]', 'Project directory', '.')
-  .action(async (projectPath: string) => {
-    console.log(chalk.blue('🚀 AutoGoals Runner - TypeScript + Claude SDK'));
-    console.log(chalk.gray(`📁 Project: ${projectPath}\n`));
+  .option('--no-tui', 'Disable TUI, use plain output')
+  .action(async (projectPath: string, options: { tui: boolean }) => {
+    if (options.tui === false) {
+      // Original plain output mode
+      console.log(chalk.blue('🚀 AutoGoals Runner - TypeScript + Claude SDK'));
+      console.log(chalk.gray(`📁 Project: ${projectPath}\n`));
 
-    // Verify project exists
-    if (!existsSync(projectPath)) {
-      console.error(chalk.red(`Error: Project path does not exist: ${projectPath}`));
-      process.exit(1);
+      const goalsPath = join(projectPath, 'goals.yaml');
+      if (!existsSync(goalsPath)) {
+        console.error(chalk.red(`Error: No goals.yaml found in ${projectPath}`));
+        process.exit(1);
+      }
+
+      let sessionNum = 1;
+      while (true) {
+        const goalsFile = parseGoals(goalsPath);
+        const status = getGoalStatus(goalsFile);
+
+        console.log(chalk.cyan(`📊 Goal Status: ${status.completed}/${status.total} completed, ${status.inProgress} in progress, ${status.pending} pending\n`));
+
+        if (!hasPendingWork(goalsFile)) {
+          console.log(chalk.green('🎉 All goals completed!\n'));
+          break;
+        }
+
+        console.log(chalk.yellow(`🤖 Starting Claude Agent session #${sessionNum}...\n`));
+
+        try {
+          await runAgentSession(projectPath, sessionNum);
+          console.log(chalk.green(`✅ Session #${sessionNum} completed\n`));
+        } catch (error) {
+          console.error(chalk.red(`⚠️  Session #${sessionNum} error:`), error);
+          break;
+        }
+
+        sessionNum++;
+      }
+
+      console.log(chalk.green('✨ All goals completed successfully!\n'));
+      return;
     }
 
-    // Check for goals.yaml
+    // TUI mode
     const goalsPath = join(projectPath, 'goals.yaml');
     if (!existsSync(goalsPath)) {
       console.error(chalk.red(`Error: No goals.yaml found in ${projectPath}`));
       process.exit(1);
     }
 
-    console.log(chalk.green('✓ Found goals.yaml\n'));
+    const sessionManager = new SessionManager();
 
-    // Session loop
-    let sessionNum = 1;
+    // Start TUI
+    const { waitUntilExit } = render(
+      React.createElement(AutoGoalsTUI, { projectPath, sessionManager })
+    );
 
-    while (true) {
-      // Parse goals
-      const goalsFile = parseGoals(goalsPath);
-      const status = getGoalStatus(goalsFile);
+    // Spawn agents for pending goals
+    const goalsFile = parseGoals(goalsPath);
+    const pendingGoals = goalsFile.goals.filter(g => g.status === 'pending');
 
-      console.log(chalk.cyan(`📊 Goal Status: ${status.completed}/${status.total} completed, ${status.inProgress} in progress, ${status.pending} pending\n`));
-
-      // Check if done
-      if (!hasPendingWork(goalsFile)) {
-        console.log(chalk.green('🎉 All goals completed!\n'));
-        break;
-      }
-
-      // Run Claude Agent SDK session
-      console.log(chalk.yellow(`🤖 Starting Claude Agent session #${sessionNum}...\n`));
-
-      try {
-        await runAgentSession(projectPath, sessionNum);
-        console.log(chalk.green(`✅ Session #${sessionNum} completed\n`));
-      } catch (error) {
-        console.error(chalk.red(`⚠️  Session #${sessionNum} error:`), error);
-        break;
-      }
-
-      sessionNum++;
+    // Start first agent
+    if (pendingGoals.length > 0) {
+      const goal = pendingGoals[0];
+      const agentId = sessionManager.createAgent(goal.id, goal.description);
+      runAgent(sessionManager, agentId, projectPath, goal.id, goal.description);
     }
 
-    console.log(chalk.green('✨ All goals completed successfully!\n'));
+    await waitUntilExit();
   });
 
 program.parse();
