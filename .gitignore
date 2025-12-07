@@ -1,9 +1,9 @@
 # AutoGoals Runtime
 .autogoals/
 
-# Rust
-target/
-Cargo.lock
+# Node
+node_modules/
+dist/
 
 # IDE
 .vscode/
@@ -14,8 +14,3 @@ Cargo.lock
 # OS
 .DS_Store
 Thumbs.db
-
-
-# Added by cargo
-
-/target
