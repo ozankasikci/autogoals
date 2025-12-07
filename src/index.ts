@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import { parseGoals, getGoalStatus, hasPendingWork } from './goals.js';
@@ -12,6 +12,64 @@ program
   .name('autogoals')
   .description('Autonomous coding agent using Claude Agent SDK')
   .version('2.0.0');
+
+program
+  .command('init')
+  .description('Initialize a new AutoGoals project')
+  .argument('[path]', 'Project directory', '.')
+  .action((projectPath: string) => {
+    console.log(chalk.blue('🎯 Initializing AutoGoals project...\n'));
+
+    const goalsPath = join(projectPath, 'goals.yaml');
+    const autogoalsDir = join(projectPath, '.autogoals');
+
+    // Check if goals.yaml already exists
+    if (existsSync(goalsPath)) {
+      console.log(chalk.yellow('⚠️  goals.yaml already exists!'));
+      console.log(chalk.gray(`   ${goalsPath}\n`));
+      process.exit(1);
+    }
+
+    // Create goals.yaml template
+    const template = `goals:
+  - id: "example-goal-1"
+    description: "Your first goal - describe what you want to build"
+    status: "pending"
+
+  - id: "example-goal-2"
+    description: "Another goal - AutoGoals will work through these sequentially"
+    status: "pending"
+
+# Goal Status Lifecycle:
+# - pending: Not started
+# - ready_for_execution: Plan complete, ready to implement
+# - in_progress: Currently being worked on
+# - ready_for_verification: Implementation done, needs testing
+# - completed: Done and verified
+# - failed: Encountered errors
+
+# Tips:
+# 1. Be specific in your goal descriptions
+# 2. Break large features into smaller goals
+# 3. AutoGoals will update this file as it completes goals
+# 4. You can edit this file anytime to add/modify goals
+`;
+
+    writeFileSync(goalsPath, template);
+    console.log(chalk.green('✓ Created goals.yaml'));
+
+    // Create .autogoals directory
+    if (!existsSync(autogoalsDir)) {
+      mkdirSync(autogoalsDir, { recursive: true });
+      mkdirSync(join(autogoalsDir, 'logs'), { recursive: true });
+      console.log(chalk.green('✓ Created .autogoals/ directory'));
+    }
+
+    console.log(chalk.blue('\n📝 Next steps:'));
+    console.log(chalk.gray('   1. Edit goals.yaml to define your goals'));
+    console.log(chalk.gray('   2. Run: autogoals start'));
+    console.log();
+  });
 
 program
   .command('start')
