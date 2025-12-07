@@ -18,3 +18,10 @@ export interface ExecResult {
   stderr: string;
   exitCode: number;
 }
+
+export interface ContainerState {
+  containerId: string;
+  containerName: string;
+  createdAt: string;
+  lastUsed: string;
+}
