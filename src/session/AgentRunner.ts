@@ -1,5 +1,7 @@
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { SessionManager } from './SessionManager.js';
+import { ContainerManager } from '../docker/ContainerManager.js';
+import { EnvLoader } from '../docker/EnvLoader.js';
 
 /**
  * Format SDK messages into human-readable text
@@ -104,6 +106,19 @@ IMPORTANT: You are working in ${projectPath}. All files must be created here.
 Start by reading goals.yaml now.`;
 
   try {
+    // Load environment variables
+    const env = EnvLoader.loadEnvironment(projectPath);
+
+    // Get or create container
+    const containerManager = new ContainerManager();
+    const containerName = await containerManager.getOrCreateContainer(projectPath, env);
+
+    sessionManager.appendLog(agentId, `Using container: ${containerName}`);
+
+    // Execute Claude Code inside container
+    // For now, we'll use the SDK directly but set up for future docker exec integration
+    // TODO: Wrap this in docker exec once Claude Code is installed in container
+
     const result = query({
       prompt,
       options: {
