@@ -83,9 +83,9 @@ autogoals start --no-tui
 
 ### Visual States
 
-- **Running**: Green highlight
-- **Completed**: Gray with ✓
-- **Failed**: Red with ✗
+- **Running**: Green `[RUNNING]` status indicator
+- **Completed**: Gray `[COMPLETED]` status indicator
+- **Failed**: Red `[FAILED]` status indicator
 
 ## Goals File Format
 
