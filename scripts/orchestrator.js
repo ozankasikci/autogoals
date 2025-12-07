@@ -58,28 +58,25 @@ async function main() {
     console.log(`\n📋 Planning Phase: ${pendingGoals.length} goals need planning`);
     console.log('───────────────────────────────────────────────────────');
 
-    for (const goal of pendingGoals) {
-      console.log(`\nPlanning: ${goal.id}`);
-      console.log(`Description: ${goal.description.trim()}`);
-
-      // Signal to Claude: Use goal-planning skill for this goal
-      console.log(`\n[ORCHESTRATOR] PLAN_GOAL: ${goal.id}`);
-      console.log('[ORCHESTRATOR] Waiting for planning to complete...\n');
-
-      // In practice, Claude will see this and activate goal-planning skill
-      // The script will be called again after planning completes
-
-      // Check if this goal is still pending (planning not done yet)
-      const currentState = loadState(STATE_FILE);
-      if (currentState.goals_status[goal.id]?.status === 'pending') {
-        console.log(`⏸️  Pausing orchestrator - waiting for goal-planning skill to complete`);
-        console.log(`   Resume by running this script again after planning is done.\n`);
-        process.exit(0); // Exit and wait for planning
-      }
+    // List all goals that need planning
+    for (let i = 0; i < pendingGoals.length; i++) {
+      const goal = pendingGoals[i];
+      console.log(`\n${i + 1}/${pendingGoals.length} - Planning: ${goal.id}`);
+      console.log(`    Description: ${goal.description.trim()}`);
     }
 
-    console.log('\n✅ All goals planned!\n');
+    // Signal to Claude: Plan ALL these goals
+    console.log(`\n[ORCHESTRATOR] PLAN_ALL_GOALS`);
+    console.log(`[ORCHESTRATOR] Goals to plan: ${pendingGoals.map(g => g.id).join(', ')}`);
+    console.log('[ORCHESTRATOR] Claude should use goal-planning skill for EACH goal above');
+    console.log('[ORCHESTRATOR] DO NOT start execution until ALL goals are planned\n');
+
+    console.log(`⏸️  Pausing orchestrator - waiting for ALL ${pendingGoals.length} goals to be planned`);
+    console.log(`   Run this script again after ALL planning is complete.\n`);
+    process.exit(0); // Exit and wait for ALL planning
   }
+
+  console.log('✅ All goals planned!\n');
 
   // Step 5: Execute goals in loop
   console.log('🚀 Execution Phase');
