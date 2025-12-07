@@ -23,6 +23,11 @@ program
     const goalsPath = join(projectPath, 'goals.yaml');
     const autogoalsDir = join(projectPath, '.autogoals');
 
+    // Create project directory if it doesn't exist
+    if (!existsSync(projectPath)) {
+      mkdirSync(projectPath, { recursive: true });
+    }
+
     // Check if goals.yaml already exists
     if (existsSync(goalsPath)) {
       console.log(chalk.yellow('⚠️  goals.yaml already exists!'));
