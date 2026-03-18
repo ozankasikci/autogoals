@@ -1,5 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
+import { execSync } from "child_process";
 import type { SDKResult } from "./message-handler.js";
 import {
   extractSessionId,
@@ -7,7 +8,17 @@ import {
   extractAssistantText,
   extractToolUse,
 } from "./message-handler.js";
-import type { Logger, LogEvent } from "../modules/logging/index.js";
+import type { Logger, LogEvent, Spinner } from "../modules/logging/index.js";
+
+function findClaudeExecutable(): string {
+  try {
+    return execSync("which claude", { encoding: "utf-8" }).trim();
+  } catch {
+    throw new Error(
+      "Claude Code CLI not found. Install it or ensure 'claude' is in your PATH."
+    );
+  }
+}
 
 export interface QueryOptions {
   prompt: string;
@@ -31,12 +42,16 @@ export async function runQuery(
   options: QueryOptions,
   logger?: Logger,
   callbacks?: QueryCallbacks,
+  spinner?: Spinner,
 ): Promise<SDKResult | null> {
   let lastResult: SDKResult | null = null;
+
+  const claudePath = findClaudeExecutable();
 
   for await (const message of query({
     prompt: options.prompt,
     options: {
+      pathToClaudeCodeExecutable: claudePath,
       systemPrompt: options.systemPrompt,
       allowedTools: options.allowedTools,
       cwd: options.cwd,
@@ -65,6 +80,11 @@ export async function runQuery(
         const event = toolUseToLogEvent(tool.name, tool.input);
         if (event) logger.log(event);
       }
+
+      if (spinner) {
+        const spinnerMsg = toolUseToSpinnerMessage(tool.name, tool.input);
+        if (spinnerMsg) spinner.update(spinnerMsg);
+      }
     }
 
     const result = extractResult(message);
@@ -74,6 +94,21 @@ export async function runQuery(
   }
 
   return lastResult;
+}
+
+function toolUseToSpinnerMessage(
+  name: string,
+  input: Record<string, unknown>
+): string | null {
+  switch (name) {
+    case "Write":
+    case "Edit":
+      return `Creating ${String(input.file_path ?? "file").split("/").pop()}...`;
+    case "Bash":
+      return `Running: ${String(input.command ?? "").slice(0, 60)}...`;
+    default:
+      return null;
+  }
 }
 
 function toolUseToLogEvent(

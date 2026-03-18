@@ -1,6 +1,7 @@
 import type { Phase, PhaseResult, AgentContext } from "../../core/types.js";
 import { runQuery, INTERVIEW_TOOLS } from "../../sdk/index.js";
 import { buildInterviewPrompt } from "./question-builder.js";
+import { createSpinner } from "../logging/index.js";
 import type { InterviewResult } from "./types.js";
 import * as readline from "readline";
 
@@ -26,12 +27,14 @@ export class InterviewPhase implements Phase {
     const notes: string[] = [description];
     let sessionId: string | undefined;
     let interviewDone = false;
+    const spinner = createSpinner();
 
     // Multi-turn interview loop
     let currentPrompt = systemPrompt;
     let isFirstTurn = true;
 
     while (!interviewDone) {
+      spinner.start("Thinking...");
       const result = await runQuery(
         {
           prompt: isFirstTurn ? "Begin the interview." : currentPrompt,
@@ -48,6 +51,7 @@ export class InterviewPhase implements Phase {
             sessionId = id;
           },
           onAssistantText: (text) => {
+            spinner.stop();
             if (text.includes("INTERVIEW_COMPLETE")) {
               interviewDone = true;
               notes.push(text);
@@ -55,6 +59,7 @@ export class InterviewPhase implements Phase {
           },
         }
       );
+      spinner.stop();
 
       isFirstTurn = false;
 

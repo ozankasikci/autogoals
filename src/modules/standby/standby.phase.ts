@@ -1,5 +1,6 @@
 import type { Phase, PhaseResult, AgentContext } from "../../core/types.js";
 import { runQuery, STANDBY_TOOLS } from "../../sdk/index.js";
+import { createSpinner } from "../logging/index.js";
 import * as readline from "readline";
 
 export function buildStandbyPrompt(
@@ -45,6 +46,7 @@ export class StandbyPhase implements Phase {
 
     const systemPrompt = buildStandbyPrompt(spec, goalResults, costInfo);
     let sessionId: string | undefined;
+    const spinner = createSpinner();
 
     console.log(
       `\nAll goals processed. Total cost: $${state.totalCostUsd.toFixed(2)}`
@@ -58,6 +60,7 @@ export class StandbyPhase implements Phase {
         return { next: "done" };
       }
 
+      spinner.start("Thinking...");
       const result = await runQuery(
         {
           prompt: input,
@@ -75,6 +78,7 @@ export class StandbyPhase implements Phase {
           },
         }
       );
+      spinner.stop();
 
       const text = result?.text ?? "";
 

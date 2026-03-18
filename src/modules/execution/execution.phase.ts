@@ -4,6 +4,7 @@ import { runQuery, EXECUTION_TOOLS } from "../../sdk/index.js";
 import { buildExecutionPrompt } from "./planner.js";
 import { verifyGoal } from "./verifier.js";
 import type { Logger } from "../logging/index.js";
+import { createSpinner } from "../logging/index.js";
 import type { ExecutionSummary } from "./types.js";
 
 export class ExecutionPhase implements Phase {
@@ -30,6 +31,7 @@ export class ExecutionPhase implements Phase {
       skipped: [],
       totalCostUsd: 0,
     };
+    const spinner = createSpinner();
 
     while (!tracker.isAllDone()) {
       const next = tracker.getNextPending();
@@ -61,6 +63,7 @@ export class ExecutionPhase implements Phase {
       tracker.start(next.id);
 
       // Execute the goal
+      spinner.start(`Working on Goal ${goalSpec.id}: ${goalSpec.name}...`);
       const executionPrompt = buildExecutionPrompt(goalSpec, completedSummaries);
       const result = await runQuery(
         {
@@ -72,12 +75,15 @@ export class ExecutionPhase implements Phase {
           maxBudgetUsd: Math.min(config.budget.maxPerGoal, remainingBudget),
         },
         this.logger,
+        undefined,
+        spinner,
       );
 
       const executionCost = result?.costUsd ?? 0;
 
       // Verify
       tracker.startVerifying(next.id);
+      spinner.start(`Verifying Goal ${goalSpec.id}...`);
       this.logger.log({ type: "info", message: "Verifying goal..." });
 
       const verification = await verifyGoal(goalSpec, projectPath, config.model);
@@ -88,6 +94,7 @@ export class ExecutionPhase implements Phase {
         completedSummaries.push(`${goalSpec.name}: ${result?.text ?? "completed"}`);
         summary.completed.push(goalSpec.id);
 
+        spinner.succeed(`Goal ${goalSpec.id}: ${goalSpec.name} ($${totalGoalCost.toFixed(2)})`);
         this.logger.log({
           type: "goal_complete",
           message: `Goal ${goalSpec.id}: ${goalSpec.name}`,
@@ -98,12 +105,14 @@ export class ExecutionPhase implements Phase {
         summary.failed.push(goalSpec.id);
 
         if (tracker.canRetry(next.id)) {
+          spinner.fail(`Goal ${goalSpec.id} failed: ${verification.reason}`);
           this.logger.log({
             type: "goal_fail",
             message: `Goal ${goalSpec.id} failed: ${verification.reason}. Retrying...`,
           });
           tracker.retry(next.id);
         } else {
+          spinner.fail(`Goal ${goalSpec.id} failed: ${verification.reason}`);
           tracker.skip(next.id);
           summary.skipped.push(goalSpec.id);
           this.logger.log({

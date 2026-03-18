@@ -1,6 +1,7 @@
 import type { Phase, PhaseResult, AgentContext, Spec } from "../../core/types.js";
 import { runQuery, SPEC_TOOLS } from "../../sdk/index.js";
 import { parseSpec } from "./spec-parser.js";
+import { createSpinner } from "../logging/index.js";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import * as readline from "readline";
@@ -51,8 +52,13 @@ Rules:
     let specMarkdown = "";
     let sessionId: string | undefined;
     let nextPrompt = "Write the project specification now.";
+    const spinner = createSpinner();
+    let isFirstPass = true;
 
     while (!approved) {
+      spinner.start(isFirstPass ? "Writing spec..." : "Revising spec...");
+      isFirstPass = false;
+
       const result = await runQuery(
         {
           prompt: nextPrompt,
@@ -71,6 +77,7 @@ Rules:
         }
       );
 
+      spinner.stop();
       specMarkdown = result?.text ?? "";
       console.log("\n" + specMarkdown);
 
