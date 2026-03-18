@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import {
   GET_PROJECT,
+  GET_PROJECTS,
   START_AGENT,
   STOP_AGENT,
   DELETE_PROJECT,
@@ -52,6 +53,13 @@ interface Project {
   spec: Spec | null;
   goals: Goal[];
   interviewNotes: string[];
+}
+
+interface ProjectListItem {
+  id: string;
+  name: string;
+  phase: string;
+  isRunning: boolean;
 }
 
 type PanelTab = "goals" | "spec" | "activity";
@@ -130,6 +138,143 @@ function IconSpinner({ className = "h-4 w-4" }: { className?: string }) {
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
+  );
+}
+
+function IconSidebar() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+function IconPlus() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────── */
+/*  Phase Indicator                                                            */
+/* ──────────────────────────────────────────────────────────────────────────── */
+
+function PhaseIndicator({ phase }: { phase: string }) {
+  const phases = ["interview", "spec", "execution", "standby"];
+  const currentIdx = phases.indexOf(phase);
+
+  return (
+    <div className="hidden md:flex items-center gap-1">
+      {phases.map((p, i) => (
+        <React.Fragment key={p}>
+          {i > 0 && (
+            <div className={`w-4 h-px ${i <= currentIdx ? "bg-indigo-500/50" : "bg-white/[0.06]"}`} />
+          )}
+          <div className="flex items-center gap-1">
+            <div className={`h-1.5 w-1.5 rounded-full ${
+              i < currentIdx ? "bg-emerald-500" :
+              i === currentIdx ? "bg-indigo-500" :
+              "bg-white/[0.08]"
+            }`} />
+            <span className={`text-[10px] ${
+              i === currentIdx ? "text-foreground font-medium" :
+              i < currentIdx ? "text-muted-foreground/60" :
+              "text-muted-foreground/30"
+            }`}>
+              {p.charAt(0).toUpperCase() + p.slice(1)}
+            </span>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────── */
+/*  Project Sidebar                                                            */
+/* ──────────────────────────────────────────────────────────────────────────── */
+
+function ProjectSidebar({
+  projects,
+  activeProjectId,
+  expanded,
+}: {
+  projects: ProjectListItem[];
+  activeProjectId: string;
+  expanded: boolean;
+}) {
+  return (
+    <aside
+      className={`
+        shrink-0 border-r border-white/[0.06] bg-[hsl(224,71%,3%)] flex flex-col
+        transition-all duration-200 overflow-hidden
+        ${expanded ? "w-[220px]" : "w-12"}
+      `}
+    >
+      <div className="flex-1 overflow-y-auto py-2">
+        {projects.map((p) => {
+          const isActive = p.id === activeProjectId;
+          const initial = p.name.charAt(0).toUpperCase();
+
+          return (
+            <Link
+              key={p.id}
+              to={`/projects/${p.id}`}
+              className={`
+                flex items-center gap-2.5 px-3 py-2 transition-colors relative
+                ${isActive
+                  ? "bg-white/[0.06] border-l-2 border-indigo-500"
+                  : "border-l-2 border-transparent hover:bg-white/[0.03]"
+                }
+              `}
+              title={p.name}
+            >
+              {/* Status dot + initial */}
+              <div className="shrink-0 relative">
+                <div className={`
+                  h-6 w-6 rounded-md flex items-center justify-center text-[11px] font-semibold
+                  ${isActive ? "bg-indigo-500/20 text-indigo-400" : "bg-white/[0.06] text-muted-foreground/60"}
+                `}>
+                  {initial}
+                </div>
+                <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[hsl(224,71%,3%)] ${
+                  p.isRunning ? "bg-emerald-500" : "bg-zinc-600"
+                }`} />
+              </div>
+
+              {/* Name + phase (only when expanded) */}
+              {expanded && (
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs truncate ${isActive ? "text-foreground font-medium" : "text-muted-foreground/70"}`}>
+                    {p.name}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/40 truncate">
+                    {p.phase}
+                  </div>
+                </div>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* New Project link */}
+      <div className="shrink-0 border-t border-white/[0.06] py-2 px-3">
+        <Link
+          to="/projects/new"
+          className={`
+            flex items-center gap-2 py-1.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors
+            ${expanded ? "" : "justify-center"}
+          `}
+          title="New Project"
+        >
+          <IconPlus />
+          {expanded && <span className="text-[11px]">New Project</span>}
+        </Link>
+      </div>
+    </aside>
   );
 }
 
@@ -265,6 +410,9 @@ export function ProjectDetail() {
   const navigate = useNavigate();
 
   const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  const { data: projectsData } = useQuery<{ projects: ProjectListItem[] }>(GET_PROJECTS);
 
   const { data, loading, error } = useQuery<{ project: Project | null }>(
     GET_PROJECT,
@@ -292,9 +440,17 @@ export function ProjectDetail() {
     setActivePanel((prev) => (prev === panel ? null : panel));
   }, []);
 
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // Don't trigger shortcuts when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isInput = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
+
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === "1") {
         e.preventDefault();
@@ -305,13 +461,16 @@ export function ProjectDetail() {
       } else if (mod && e.key === "3") {
         e.preventDefault();
         togglePanel("activity");
+      } else if (e.key === "[" && !mod && !isInput) {
+        e.preventDefault();
+        toggleSidebar();
       } else if (e.key === "Escape") {
         setActivePanel(null);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [togglePanel]);
+  }, [togglePanel, toggleSidebar]);
 
   /* ── Loading ── */
   if (loading) {
@@ -354,8 +513,15 @@ export function ProjectDetail() {
     <div className="flex flex-col h-screen">
       {/* ─── Top Bar ─── */}
       <header className="shrink-0 flex items-center justify-between gap-4 px-4 h-12 border-b border-border/60 bg-background z-30">
-        {/* Left: back + name + path */}
+        {/* Left: sidebar toggle + back + name + path */}
         <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={toggleSidebar}
+            className="shrink-0 flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+            title="Toggle sidebar ( [ )"
+          >
+            <IconSidebar />
+          </button>
           <button
             onClick={() => navigate("/")}
             className="shrink-0 flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -372,8 +538,14 @@ export function ProjectDetail() {
           </div>
         </div>
 
-        {/* Center-right: status indicators */}
+        {/* Center-right: phase + status indicators */}
         <div className="flex items-center gap-3 shrink-0">
+          {/* Phase indicator */}
+          <PhaseIndicator phase={project.phase} />
+
+          {/* Divider */}
+          <span className="hidden md:block h-4 w-px bg-white/[0.06]" />
+
           {/* Status pill */}
           {project.isRunning ? (
             <span className="flex items-center gap-1.5 text-xs text-emerald-400">
@@ -448,6 +620,13 @@ export function ProjectDetail() {
 
       {/* ─── Main Area ─── */}
       <div className="flex-1 flex min-h-0">
+        {/* ── Project Sidebar ── */}
+        <ProjectSidebar
+          projects={projectsData?.projects ?? []}
+          activeProjectId={project.id}
+          expanded={sidebarExpanded}
+        />
+
         {/* ── Chat Area (fills remaining space) ── */}
         <main className="flex-1 min-w-0 flex flex-col bg-background transition-all duration-200 ease-out">
           <div
