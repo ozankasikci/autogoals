@@ -1,0 +1,2 @@
+[  791158ms] [ERROR] WebSocket connection to 'ws://localhost:4000/graphql' failed:  @ http://localhost:5891/node_modules/.vite/deps/graphql-ws.js?v=cccb9494:5747
+[  791161ms] [ERROR] WebSocket connection to 'ws://localhost:5891/?token=lIynRsRRGw7C' failed:  @ http://localhost:5891/@vite/client:840

@@ -9,8 +9,18 @@ import {
 } from "@small-singularity/core";
 import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
+import { homedir } from "os";
+import { resolve } from "path";
+import { mkdirSync } from "fs";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
+
+function resolvePath(p: string): string {
+  if (p.startsWith("~/") || p === "~") {
+    p = p.replace("~", homedir());
+  }
+  return resolve(p);
+}
 
 interface GoalView {
   id: string;
@@ -156,7 +166,9 @@ export function createResolvers(
             systemPrompt += `\n\nGoals:\n${goals.map((g) => `- ${g.id}: ${g.status}`).join("\n")}`;
           }
 
-          agentManager.start(args.projectId, record.path, systemPrompt);
+          const resolvedPath = resolvePath(record.path);
+          mkdirSync(resolvedPath, { recursive: true });
+          agentManager.start(args.projectId, resolvedPath, systemPrompt);
           return projectToView(record, db, store, getRunningIds());
         }
 

@@ -61,7 +61,9 @@ export class AgentManager {
     session: AgentSession,
   ): Promise<void> {
     try {
+      console.log(`[AgentManager] Starting event consumption for project ${projectId}`);
       for await (const event of session.events()) {
+        console.log(`[AgentManager] Event: ${event.type}`, event.type === "text" ? event.text?.slice(0, 80) : event.type === "error" ? event.error : "");
         switch (event.type) {
           case "text": {
             // Store in DB
