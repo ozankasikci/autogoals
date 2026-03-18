@@ -21,12 +21,14 @@ interface Spec {
 interface SpecViewProps {
   spec: Spec | null | undefined;
   projectId: string;
+  compact?: boolean;
 }
 
-export function SpecView({ spec, projectId }: SpecViewProps) {
+export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
   const [editing, setEditing] = useState(false);
   const [overview, setOverview] = useState("");
   const [techDecisions, setTechDecisions] = useState<string[]>([]);
+  const [showMore, setShowMore] = useState(false);
 
   const [updateSpec, { loading: saving }] = useMutation(UPDATE_SPEC, {
     refetchQueries: [{ query: GET_PROJECT, variables: { id: projectId } }],
@@ -70,6 +72,127 @@ export function SpecView({ spec, projectId }: SpecViewProps) {
     setTechDecisions((prev) => [...prev, ""]);
   }
 
+  // ── Compact sidebar mode ──
+  if (compact) {
+    if (!spec) {
+      return (
+        <p className="text-xs text-muted-foreground py-2">
+          No spec yet.
+        </p>
+      );
+    }
+
+    const overviewText = spec.overview || "";
+    const truncated = overviewText.length > 150 && !showMore;
+    const displayText = truncated
+      ? overviewText.slice(0, 150) + "..."
+      : overviewText;
+
+    return (
+      <div className="space-y-3">
+        {/* Overview */}
+        <div>
+          <p className="text-xs leading-relaxed text-foreground/80">
+            {displayText}
+          </p>
+          {overviewText.length > 150 && (
+            <button
+              onClick={() => setShowMore(!showMore)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-1"
+            >
+              {showMore ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
+
+        {/* Tech decisions as pills */}
+        {spec.technicalDecisions.length > 0 && (
+          <div>
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+              Tech Decisions
+            </span>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {spec.technicalDecisions.map((decision, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-foreground/70"
+                  title={decision}
+                >
+                  {decision.length > 40 ? decision.slice(0, 40) + "..." : decision}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Edit button */}
+        <button
+          onClick={startEditing}
+          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          Edit spec
+        </button>
+
+        {/* Inline edit form */}
+        {editing && (
+          <div className="rounded-md border border-border bg-muted/20 p-3 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">Overview</label>
+              <textarea
+                className="flex w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+                value={overview}
+                onChange={(e) => setOverview(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">Technical Decisions</label>
+              <div className="space-y-1.5">
+                {techDecisions.map((decision, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <Input
+                      className="h-7 text-xs"
+                      value={decision}
+                      onChange={(e) => updateDecision(i, e.target.value)}
+                      placeholder="Technical decision..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeDecision(i)}
+                      className="shrink-0 h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-400 hover:bg-muted transition-colors"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDecision}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  + Add decision
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-1.5 pt-1">
+              <Button variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={cancelEditing} disabled={saving}>
+                Cancel
+              </Button>
+              <Button size="sm" className="h-6 text-[11px] px-2" onClick={saveEdits} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Full mode (unchanged) ──
   if (!spec) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">

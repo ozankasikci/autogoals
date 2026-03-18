@@ -15,15 +15,11 @@ interface Message {
 
 interface ChatPanelProps {
   projectId: string;
-  isOpen: boolean;
-  onClose: () => void;
   isAgentRunning: boolean;
 }
 
 export function ChatPanel({
   projectId,
-  isOpen,
-  onClose,
   isAgentRunning: _isAgentRunning,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,7 +30,6 @@ export function ChatPanel({
 
   const { data, loading } = useQuery<{ messages: Message[] }>(GET_MESSAGES, {
     variables: { projectId, limit: 100 },
-    skip: !isOpen,
     fetchPolicy: "network-only",
   });
 
@@ -42,7 +37,6 @@ export function ChatPanel({
 
   useSubscription(NEW_MESSAGE, {
     variables: { projectId },
-    skip: !isOpen,
     onData: ({ data: subData }) => {
       if (subData.data?.newMessage) {
         const incoming = subData.data.newMessage as Message;
@@ -68,12 +62,12 @@ export function ChatPanel({
     }
   }, [messages]);
 
-  // Focus input when panel opens
+  // Focus input on mount
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [isOpen]);
+  }, []);
 
   const handleSend = useCallback(async () => {
     const content = inputValue.trim();
@@ -93,7 +87,6 @@ export function ChatPanel({
       }
     } catch (err) {
       console.error("Failed to send message:", err);
-      // Restore the input so user can retry
       setInputValue(content);
     }
   }, [inputValue, sending, sendMessage, projectId]);
@@ -106,173 +99,142 @@ export function ChatPanel({
   };
 
   return (
-    <>
-      {/* Panel */}
+    <div className="flex flex-col h-full">
+      {/* Messages */}
       <div
-        className={cn(
-          "fixed top-14 right-0 bottom-0 z-50 w-[380px] max-w-full flex flex-col",
-          "border-l border-border bg-background",
-          "transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "translate-x-full"
-        )}
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-6 py-4 space-y-3"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">Chat with Agent</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
-        >
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-sm text-muted-foreground">
-                Loading messages...
-              </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-sm text-muted-foreground">
+              Loading messages...
             </div>
-          ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-2">
-                <svg
-                  className="h-8 w-8 mx-auto text-muted-foreground/40"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-3">
+              <svg
+                className="h-10 w-10 mx-auto text-muted-foreground/30"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+              <div>
                 <p className="text-sm text-muted-foreground">No messages yet</p>
-                <p className="text-xs text-muted-foreground/60">
+                <p className="text-xs text-muted-foreground/60 mt-1">
                   Send a message to communicate with the agent
                 </p>
               </div>
             </div>
-          ) : (
-            messages.map((msg) => (
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={cn(
+                "flex",
+                msg.role === "user" ? "justify-end" : "justify-start"
+              )}
+            >
               <div
-                key={msg.id}
                 className={cn(
-                  "flex",
-                  msg.role === "user" ? "justify-end" : "justify-start"
+                  "max-w-[70%] rounded-lg px-4 py-2.5",
+                  msg.role === "user"
+                    ? "bg-indigo-600/80 text-white"
+                    : "bg-muted/80 text-foreground"
                 )}
               >
-                <div
+                <p
                   className={cn(
-                    "max-w-[85%] rounded-lg px-3 py-2",
-                    msg.role === "user"
-                      ? "bg-indigo-600/80 text-white"
-                      : "bg-muted/80 text-foreground"
+                    "text-sm whitespace-pre-wrap break-words leading-relaxed",
+                    msg.role === "agent" && "font-mono text-[13px]"
                   )}
                 >
-                  <p
-                    className={cn(
-                      "text-sm whitespace-pre-wrap break-words",
-                      msg.role === "agent" && "font-mono text-[13px]"
-                    )}
-                  >
-                    {msg.content}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-[10px] mt-1",
-                      msg.role === "user"
-                        ? "text-indigo-200/60"
-                        : "text-muted-foreground/60"
-                    )}
-                  >
-                    {formatTimestamp(msg.createdAt)}
-                  </p>
-                </div>
+                  {msg.content}
+                </p>
+                <p
+                  className={cn(
+                    "text-[10px] mt-1.5",
+                    msg.role === "user"
+                      ? "text-indigo-200/60"
+                      : "text-muted-foreground/60"
+                  )}
+                >
+                  {formatTimestamp(msg.createdAt)}
+                </p>
               </div>
-            ))
-          )}
-          <div ref={bottomRef} />
-        </div>
+            </div>
+          ))
+        )}
+        <div ref={bottomRef} />
+      </div>
 
-        {/* Status hint + Input */}
-        <div className="shrink-0 border-t border-border px-4 py-3 space-y-2">
-          <p className="text-[11px] text-muted-foreground/50 text-center">
-            Agent reads messages between goals
-          </p>
-          <div className="flex items-center gap-2">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="flex-1 h-9 text-sm bg-muted/50 border-border"
-            />
-            <Button
-              size="sm"
-              onClick={handleSend}
-              disabled={sending || !inputValue.trim()}
-              className="h-9 px-3"
-            >
-              {sending ? (
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
+      {/* Input area */}
+      <div className="shrink-0 border-t border-border px-6 py-4 space-y-2">
+        <p className="text-[11px] text-muted-foreground/50 text-center">
+          Agent reads messages between goals
+        </p>
+        <div className="flex items-center gap-2">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            className="flex-1 h-10 text-sm bg-muted/50 border-border"
+          />
+          <Button
+            size="sm"
+            onClick={handleSend}
+            disabled={sending || !inputValue.trim()}
+            className="h-10 px-4"
+          >
+            {sending ? (
+              <svg
+                className="h-4 w-4 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
                   stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 12h14M12 5l7 7-7 7"
-                  />
-                </svg>
-              )}
-            </Button>
-          </div>
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 12h14M12 5l7 7-7 7"
+                />
+              </svg>
+            )}
+          </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Layout() {
   const location = useLocation();
+  const isProjectDetail = /^\/projects\/[^/]+$/.test(location.pathname);
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,9 +48,13 @@ export function Layout() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      {isProjectDetail ? (
         <Outlet />
-      </main>
+      ) : (
+        <main className="mx-auto max-w-6xl px-6 py-8">
+          <Outlet />
+        </main>
+      )}
     </div>
   );
 }

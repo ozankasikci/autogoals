@@ -13,6 +13,7 @@ interface LogEvent {
 
 interface LogStreamProps {
   projectId: string;
+  compact?: boolean;
 }
 
 const logTypeColors: Record<string, string> = {
@@ -25,7 +26,7 @@ const logTypeColors: Record<string, string> = {
   goal: "text-indigo-400",
 };
 
-export function LogStream({ projectId }: LogStreamProps) {
+export function LogStream({ projectId, compact = false }: LogStreamProps) {
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,6 +54,70 @@ export function LogStream({ projectId }: LogStreamProps) {
     setAutoScroll(isAtBottom);
   };
 
+  // ── Compact sidebar mode ──
+  if (compact) {
+    // Show last 20 events
+    const recentLogs = logs.slice(-20);
+
+    return (
+      <div className="flex flex-col">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-[11px] leading-relaxed max-h-[200px]"
+        >
+          {recentLogs.length === 0 ? (
+            <div className="flex items-center justify-center py-4 text-muted-foreground">
+              <div className="text-center space-y-1">
+                <div className="text-sm opacity-50">{">"}_</div>
+                <p className="text-[11px]">Waiting for events...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-px">
+              {recentLogs.map((log, i) => (
+                <div
+                  key={i}
+                  className="flex gap-1.5 py-px hover:bg-white/[0.02] rounded px-1 -mx-1"
+                >
+                  <span
+                    className={cn(
+                      "shrink-0",
+                      logTypeColors[log.type] ?? "text-muted-foreground"
+                    )}
+                  >
+                    [{log.type}]
+                  </span>
+                  <span className="text-foreground/80 break-all line-clamp-2">
+                    {log.message}
+                  </span>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-[10px] text-muted-foreground/60">
+            {logs.length} event{logs.length !== 1 ? "s" : ""}
+          </span>
+          {!autoScroll && recentLogs.length > 0 && (
+            <button
+              onClick={() => {
+                setAutoScroll(true);
+                bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Scroll to bottom
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Full mode (unchanged) ──
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
