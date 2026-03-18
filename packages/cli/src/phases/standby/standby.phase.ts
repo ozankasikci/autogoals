@@ -56,6 +56,44 @@ export class StandbyPhase implements Phase {
     console.log("Waiting for instructions... (type 'quit' to exit)\n");
 
     while (true) {
+      // Check for unread messages from the dashboard before prompting
+      const unread = context.store.getUnreadMessages();
+      if (unread.length > 0) {
+        const messagesText = unread.map(m => `[${m.createdAt}] ${m.content}`).join("\n");
+
+        const inboxPrompt = `The user sent you these messages via the dashboard:\n\n${messagesText}\n\nRespond briefly to acknowledge, then continue waiting for instructions.`;
+
+        spinner.start("Reading messages...");
+
+        const inboxResult = await runQuery(
+          {
+            prompt: inboxPrompt,
+            systemPrompt: sessionId ? undefined : systemPrompt,
+            allowedTools: STANDBY_TOOLS,
+            cwd: projectPath,
+            model: config.model,
+            maxTurns: 1,
+            resume: sessionId,
+          },
+          undefined,
+          {
+            onSessionId: (id) => {
+              sessionId = id;
+              context.store.saveSession("standby", id);
+            },
+          },
+        );
+
+        spinner.stop();
+
+        if (inboxResult?.text) {
+          context.store.addMessage("agent", inboxResult.text);
+          console.log(`\nAgent: ${inboxResult.text}\n`);
+        }
+
+        context.store.markMessagesRead();
+      }
+
       const input = await this.askUser("> ");
 
       if (input.toLowerCase() === "quit" || input.toLowerCase() === "exit") {

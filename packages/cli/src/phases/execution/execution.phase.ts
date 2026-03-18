@@ -118,6 +118,39 @@ export class ExecutionPhase implements Phase {
           });
         }
       }
+
+      // Check for unread messages from the user (e.g. sent via dashboard)
+      const unread = context.store.getUnreadMessages();
+      if (unread.length > 0) {
+        this.logger.log({ type: "info", message: `Processing ${unread.length} message(s) from user...` });
+
+        const messagesText = unread.map(m => `[${m.createdAt}] ${m.content}`).join("\n");
+
+        const inboxPrompt = `The user sent you these messages while you were working:\n\n${messagesText}\n\nRespond briefly to acknowledge, then continue with your work. If any message requires a change in approach, note it.`;
+
+        const inboxSpinner = createSpinner();
+        inboxSpinner.start("Reading messages...");
+
+        const inboxResult = await runQuery(
+          {
+            prompt: inboxPrompt,
+            allowedTools: [],
+            cwd: projectPath,
+            model: config.model,
+            maxTurns: 1,
+          },
+          this.logger,
+        );
+
+        inboxSpinner.stop();
+
+        if (inboxResult?.text) {
+          context.store.addMessage("agent", inboxResult.text);
+          console.log(`\nAgent: ${inboxResult.text}\n`);
+        }
+
+        context.store.markMessagesRead();
+      }
     }
 
     summary.totalCostUsd = tracker.totalCost();
