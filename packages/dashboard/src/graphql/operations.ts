@@ -115,3 +115,38 @@ export const LOG_EVENTS = gql`
     }
   }
 `;
+
+export const GET_MESSAGES = gql`
+  query GetMessages($projectId: ID!, $limit: Int) {
+    messages(projectId: $projectId, limit: $limit) {
+      id
+      role
+      content
+      read
+      createdAt
+    }
+  }
+`;
+
+export const SEND_MESSAGE = gql`
+  mutation SendMessage($projectId: ID!, $content: String!) {
+    sendMessage(projectId: $projectId, content: $content) {
+      id
+      role
+      content
+      createdAt
+    }
+  }
+`;
+
+export const NEW_MESSAGE = gql`
+  subscription NewMessage($projectId: ID!) {
+    newMessage(projectId: $projectId) {
+      id
+      role
+      content
+      read
+      createdAt
+    }
+  }
+`;

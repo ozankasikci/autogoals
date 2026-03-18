@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import {
@@ -6,11 +7,13 @@ import {
   STOP_AGENT,
   DELETE_PROJECT,
   PROJECT_UPDATED,
+  NEW_MESSAGE,
 } from "@/graphql/operations";
 import { GoalTable } from "@/components/GoalTable";
 import { SpecView } from "@/components/SpecView";
 import { LogStream } from "@/components/LogStream";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ChatPanel } from "@/components/ChatPanel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatCost } from "@/lib/utils";
@@ -54,6 +57,9 @@ interface Project {
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const chatWasOpenRef = useRef(false);
 
   const { data, loading, error } = useQuery<{ project: Project | null }>(
     GET_PROJECT,
@@ -65,6 +71,29 @@ export function ProjectDetail() {
     variables: { projectId: id },
     skip: !id,
   });
+
+  // Track unread agent messages when chat panel is closed
+  useSubscription(NEW_MESSAGE, {
+    variables: { projectId: id },
+    skip: !id,
+    onData: ({ data: subData }) => {
+      const msg = subData.data?.newMessage;
+      if (msg && msg.role === "agent" && !chatOpen) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    },
+  });
+
+  const toggleChat = useCallback(() => {
+    setChatOpen((prev) => {
+      const opening = !prev;
+      if (opening) {
+        setUnreadCount(0);
+        chatWasOpenRef.current = true;
+      }
+      return opening;
+    });
+  }, []);
 
   const [startAgent, { loading: starting }] = useMutation(START_AGENT, {
     refetchQueries: [{ query: GET_PROJECT, variables: { id } }],
@@ -137,6 +166,30 @@ export function ProjectDetail() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleChat}
+            className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Chat with Agent"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-indigo-500 text-white text-[10px] font-bold leading-none">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
           <Button
             variant="destructive"
             size="sm"
@@ -319,6 +372,14 @@ export function ProjectDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Chat side panel */}
+      <ChatPanel
+        projectId={project.id}
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        isAgentRunning={project.isRunning}
+      />
     </div>
   );
 }
