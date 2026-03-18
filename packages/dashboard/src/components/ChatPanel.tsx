@@ -217,7 +217,7 @@ export function ChatPanel({
         {/* Status hint + Input */}
         <div className="shrink-0 border-t border-border px-4 py-3 space-y-2">
           <p className="text-[11px] text-muted-foreground/50 text-center">
-            Messages are read between goals
+            Agent reads messages between goals
           </p>
           <div className="flex items-center gap-2">
             <Input
@@ -225,18 +225,13 @@ export function ChatPanel({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                isAgentRunning
-                  ? "Type a message..."
-                  : "Start the agent to chat"
-              }
-              disabled={!isAgentRunning}
+              placeholder="Type a message..."
               className="flex-1 h-9 text-sm bg-muted/50 border-border"
             />
             <Button
               size="sm"
               onClick={handleSend}
-              disabled={!isAgentRunning || sending || !inputValue.trim()}
+              disabled={sending || !inputValue.trim()}
               className="h-9 px-3"
             >
               {sending ? (
