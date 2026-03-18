@@ -23,7 +23,7 @@ export class ExecutionPhase implements Phase {
       throw new Error("No spec available for execution");
     }
 
-    const tracker = new GoalTracker(spec.goals, config.maxRetriesPerGoal);
+    const tracker = new GoalTracker(context.store, spec.goals, config.maxRetriesPerGoal);
     const completedSummaries: string[] = [];
     const summary: ExecutionSummary = {
       completed: [],
@@ -124,9 +124,7 @@ export class ExecutionPhase implements Phase {
     }
 
     summary.totalCostUsd = tracker.totalCost();
-
-    context.state.goals = tracker.getAll();
-    context.state.totalCostUsd = summary.totalCostUsd;
+    context.store.addCost(summary.totalCostUsd);
 
     return {
       next: "standby",

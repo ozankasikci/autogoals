@@ -10,8 +10,8 @@ export class SpecPhase implements Phase {
   name = "spec" as const;
 
   async execute(context: AgentContext): Promise<PhaseResult> {
-    const { config, state, projectPath } = context;
-    const notes = state.interviewNotes.join("\n\n");
+    const { config, projectPath } = context;
+    const notes = context.store.getInterviewNotes().join("\n\n");
 
     const systemPrompt = `You are an expert project architect. Based on the interview notes below, write a complete project specification.
 
@@ -106,7 +106,10 @@ Rules:
     writeFileSync(join(specsDir, "project-spec.md"), specMarkdown, "utf-8");
 
     context.spec = spec;
-    context.state.spec = spec;
+    context.store.saveSpec(spec!);
+    if (sessionId) {
+      context.store.saveSession("spec", sessionId);
+    }
 
     return {
       next: "execution",

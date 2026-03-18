@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { loadConfig } from "../config/index.js";
-import { createInitialState, loadState, saveState } from "../modules/state/index.js";
+import { createStore } from "../modules/state/index.js";
 import { createLogger, formatForTerminal } from "../modules/logging/index.js";
 import type { Logger } from "../modules/logging/index.js";
 import { Agent } from "../core/agent.js";
@@ -8,8 +8,8 @@ import { InterviewPhase } from "../modules/interview/index.js";
 import { SpecPhase } from "../modules/spec/index.js";
 import { ExecutionPhase } from "../modules/execution/index.js";
 import { StandbyPhase } from "../modules/standby/index.js";
-import { printBanner, printPhaseHeader } from "./output.js";
-import { join, resolve } from "path";
+import { printBanner } from "./output.js";
+import { resolve } from "path";
 import { mkdirSync } from "fs";
 
 export function createProgram(): Command {
@@ -44,8 +44,7 @@ export function createProgram(): Command {
         verbose: opts.verbose,
       });
 
-      const specsDir = join(resolvedPath, "specs");
-      const state = loadState(specsDir) ?? createInitialState();
+      const store = createStore(resolvedPath);
 
       const logger: Logger = createLogger({
         sink: (event) => {
@@ -63,14 +62,14 @@ export function createProgram(): Command {
       await agent.run(
         {
           config,
-          state,
+          store,
           projectPath: resolvedPath,
-          spec: state.spec,
+          spec: store.getSpec(),
         },
         logger
       );
 
-      saveState(specsDir, state);
+      store.close();
       console.log("\nAgent stopped. State saved.");
     });
 
@@ -80,20 +79,26 @@ export function createProgram(): Command {
     .argument("<project-path>", "Path to the project directory")
     .action((projectPath: string) => {
       const resolvedPath = resolve(projectPath);
-      const specsDir = join(resolvedPath, "specs");
-      const state = loadState(specsDir);
-
-      if (!state) {
+      let store;
+      try {
+        store = createStore(resolvedPath);
+      } catch {
         console.log("No state found. Run 'start' first.");
         return;
       }
 
-      console.log(`Phase: ${state.currentPhase}`);
-      console.log(`Total cost: $${state.totalCostUsd.toFixed(2)}`);
-      console.log(`Goals: ${state.goals.length}`);
-      for (const goal of state.goals) {
+      const phase = store.getPhase();
+      const totalCost = store.getTotalCost();
+      const goals = store.getGoals();
+
+      console.log(`Phase: ${phase}`);
+      console.log(`Total cost: $${totalCost.toFixed(2)}`);
+      console.log(`Goals: ${goals.length}`);
+      for (const goal of goals) {
         console.log(`  ${goal.id}: ${goal.status} ($${goal.costUsd.toFixed(2)})`);
       }
+
+      store.close();
     });
 
   return program;

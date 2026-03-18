@@ -77,7 +77,10 @@ export class InterviewPhase implements Phase {
       currentPrompt = answer;
     }
 
-    context.state.interviewNotes = notes;
+    notes.forEach((n) => context.store.addInterviewNote(n));
+    if (sessionId) {
+      context.store.saveSession("interview", sessionId);
+    }
 
     return {
       next: "spec",
