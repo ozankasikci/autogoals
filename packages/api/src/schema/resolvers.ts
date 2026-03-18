@@ -7,6 +7,9 @@ import {
   type Spec,
 } from "@small-singularity/core";
 import type Database from "better-sqlite3";
+import { withFilter } from "graphql-subscriptions";
+import { pubsub, EVENTS } from "../subscriptions/index.js";
+import type { AgentManager } from "../agent-manager/index.js";
 
 interface GoalView {
   id: string;
@@ -80,6 +83,7 @@ function projectToView(
 export function createResolvers(
   getDb: () => Database.Database,
   getRunningIds: () => Set<string>,
+  agentManager?: AgentManager,
 ) {
   return {
     Query: {
@@ -123,23 +127,44 @@ export function createResolvers(
       },
 
       startAgent(_: unknown, args: { projectId: string }): ProjectView {
-        // Agent spawning will be wired in Task 5
         const db = getDb();
         const projectStore = new SQLiteProjectStore(db);
         const record = projectStore.getProject(args.projectId);
         if (!record) throw new Error(`Project ${args.projectId} not found`);
+        if (agentManager) {
+          agentManager.start(args.projectId, record.path);
+        }
         const store = new SQLiteStore(db, record.id);
         return projectToView(record, db, store, getRunningIds());
       },
 
       stopAgent(_: unknown, args: { projectId: string }): ProjectView {
-        // Agent stopping will be wired in Task 5
         const db = getDb();
         const projectStore = new SQLiteProjectStore(db);
         const record = projectStore.getProject(args.projectId);
         if (!record) throw new Error(`Project ${args.projectId} not found`);
+        if (agentManager) {
+          agentManager.stop(args.projectId);
+        }
         const store = new SQLiteStore(db, record.id);
         return projectToView(record, db, store, getRunningIds());
+      },
+    },
+
+    Subscription: {
+      projectUpdated: {
+        subscribe: withFilter(
+          () => pubsub.asyncIterableIterator(EVENTS.PROJECT_UPDATED),
+          (payload: any, variables: any) =>
+            payload.projectUpdated.id === variables.projectId,
+        ),
+      },
+      logEvent: {
+        subscribe: withFilter(
+          () => pubsub.asyncIterableIterator(EVENTS.LOG_EVENT),
+          (payload: any, variables: any) =>
+            payload.logEvent.projectId === variables.projectId,
+        ),
       },
     },
   };
