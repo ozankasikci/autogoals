@@ -5,6 +5,12 @@ export function Layout() {
   const location = useLocation();
   const isProjectDetail = /^\/projects\/[^/]+$/.test(location.pathname);
 
+  // Project detail has its own full-screen layout with a built-in top bar,
+  // so we render it without the global navigation header.
+  if (isProjectDetail) {
+    return <Outlet />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top navigation bar */}
@@ -48,13 +54,9 @@ export function Layout() {
       </header>
 
       {/* Main content */}
-      {isProjectDetail ? (
+      <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />
-      ) : (
-        <main className="mx-auto max-w-6xl px-6 py-8">
-          <Outlet />
-        </main>
-      )}
+      </main>
     </div>
   );
 }

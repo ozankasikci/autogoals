@@ -64,7 +64,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-[11px] leading-relaxed max-h-[200px]"
+          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-[11px] leading-relaxed min-h-[200px] max-h-[calc(100vh-200px)]"
         >
           {recentLogs.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-muted-foreground">

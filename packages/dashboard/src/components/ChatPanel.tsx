@@ -18,13 +18,13 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   projectId,
-  isAgentRunning: _isAgentRunning,
+  isAgentRunning,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data, loading } = useQuery<{ messages: Message[] }>(GET_MESSAGES, {
     variables: { projectId, limit: 100 },
@@ -70,6 +70,11 @@ export function ChatPanel({
 
     setInputValue("");
 
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
+
     try {
       const { data: mutData } = await sendMessage({
         variables: { projectId, content },
@@ -86,11 +91,19 @@ export function ChatPanel({
     }
   }, [inputValue, sending, sendMessage, projectId]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
   };
 
   return (
@@ -113,9 +126,9 @@ export function ChatPanel({
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
-              <div className="mx-auto h-12 w-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+              <div className="mx-auto h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
                 <svg
-                  className="h-5 w-5 text-muted-foreground/30"
+                  className="h-6 w-6 text-muted-foreground/20"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -129,35 +142,38 @@ export function ChatPanel({
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground/60">No messages yet</p>
-                <p className="text-xs text-muted-foreground/30 mt-1">
-                  Start the agent and send a message
+                <p className="text-sm font-medium text-muted-foreground/50">No messages yet</p>
+                <p className="text-xs text-muted-foreground/25 mt-1.5 max-w-[240px] mx-auto leading-relaxed">
+                  Start the agent and send a message to begin building your project
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
-                  "flex",
+                  "flex gap-2.5",
                   msg.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
+                {/* Agent avatar */}
                 {msg.role === "agent" && (
-                  <div className="shrink-0 h-6 w-6 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center mr-2.5 mt-1">
-                    <svg className="h-3 w-3 text-violet-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
+                    <svg className="h-3.5 w-3.5 text-violet-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                 )}
+
+                {/* Message bubble */}
                 <div
                   className={cn(
                     "max-w-[85%] rounded-xl px-4 py-3",
                     msg.role === "user"
-                      ? "bg-indigo-500/15 border border-indigo-500/20 text-foreground"
+                      ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
                       : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
                   )}
                 >
@@ -169,14 +185,19 @@ export function ChatPanel({
                   >
                     {msg.content}
                   </p>
-                  <p
-                    className={cn(
-                      "text-[10px] mt-2 opacity-30",
-                    )}
-                  >
+                  <p className="text-[10px] mt-2 opacity-25">
                     {formatTimestamp(msg.createdAt)}
                   </p>
                 </div>
+
+                {/* User avatar */}
+                {msg.role === "user" && (
+                  <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
+                    <svg className="h-3.5 w-3.5 text-indigo-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
               </div>
             ))}
             <div ref={bottomRef} />
@@ -187,18 +208,19 @@ export function ChatPanel({
       {/* Input area */}
       <div className="shrink-0 px-6 pb-5 pt-2">
         <div className="relative">
-          <input
+          <textarea
             ref={inputRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Message the agent..."
-            className="w-full h-11 pl-4 pr-12 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            rows={1}
+            className="w-full min-h-[44px] max-h-[160px] pl-4 pr-12 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none"
           />
           <button
             onClick={handleSend}
             disabled={sending || !inputValue.trim()}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+            className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
           >
             {sending ? (
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -212,8 +234,11 @@ export function ChatPanel({
             )}
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground/25 text-center mt-2">
-          Agent responds in real-time when running
+        <p className="text-[10px] text-muted-foreground/20 text-center mt-2">
+          {isAgentRunning
+            ? "Agent responds in real-time"
+            : "Start the agent to get responses"
+          }
         </p>
       </div>
     </div>
