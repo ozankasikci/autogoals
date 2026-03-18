@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import {
@@ -8,6 +8,8 @@ import {
   STOP_AGENT,
   DELETE_PROJECT,
   PROJECT_UPDATED,
+  LOG_EVENTS,
+  NEW_MESSAGE,
 } from "@/graphql/operations";
 import { GoalTable } from "@/components/GoalTable";
 import { SpecView } from "@/components/SpecView";
@@ -411,6 +413,8 @@ export function ProjectDetail() {
 
   const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const autoOpenedRef = useRef(false);
+  const autoOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: projectsData } = useQuery<{ projects: ProjectListItem[] }>(GET_PROJECTS);
 
@@ -422,6 +426,79 @@ export function ProjectDetail() {
   useSubscription(PROJECT_UPDATED, {
     variables: { projectId: id },
     skip: !id,
+  });
+
+  // Auto-open panel (system triggered, won't override user's choice)
+  const autoOpenPanel = useCallback((panel: PanelTab) => {
+    // Clear any pending auto-open timer
+    if (autoOpenTimerRef.current) {
+      clearTimeout(autoOpenTimerRef.current);
+      autoOpenTimerRef.current = null;
+    }
+    // Small delay to avoid jarring rapid panel changes
+    autoOpenTimerRef.current = setTimeout(() => {
+      autoOpenTimerRef.current = null;
+      setActivePanel((prev) => {
+        if (prev !== null) return prev; // don't override user's choice
+        autoOpenedRef.current = true;
+        return panel;
+      });
+    }, 200);
+  }, []);
+
+  // Auto-close panel (only if it was auto-opened, not manually)
+  const autoClosePanel = useCallback(() => {
+    if (autoOpenedRef.current) {
+      setActivePanel(null);
+      autoOpenedRef.current = false;
+    }
+  }, []);
+
+  // Cleanup auto-open timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-open activity panel when agent uses tools
+  useSubscription(LOG_EVENTS, {
+    variables: { projectId: id },
+    skip: !id || !data?.project?.isRunning,
+    onData: ({ data: subData }) => {
+      const event = subData.data?.logEvent;
+      if (!event?.message) return;
+      // Tool use events: auto-open activity panel
+      if (event.message.startsWith("Using ")) {
+        autoOpenPanel("activity");
+      }
+      // Goal completion: switch to goals panel
+      if (event.message.includes("→ done")) {
+        autoOpenedRef.current = false; // treat goal completion as important
+        setActivePanel("goals");
+      }
+    },
+  });
+
+  // Auto-close panel when agent sends a text message
+  useSubscription(NEW_MESSAGE, {
+    variables: { projectId: id },
+    skip: !id,
+    onData: ({ data: subData }) => {
+      const msg = subData.data?.newMessage;
+      if (msg?.role === "agent") {
+        // Skip tool_use messages (they are JSON with _type)
+        try {
+          const parsed = JSON.parse(msg.content);
+          if (parsed._type === "tool_use") return;
+        } catch {
+          // Not JSON = regular text message
+        }
+        autoClosePanel();
+      }
+    },
   });
 
   const [startAgent, { loading: starting }] = useMutation(START_AGENT, {
@@ -437,7 +514,11 @@ export function ProjectDetail() {
   });
 
   const togglePanel = useCallback((panel: PanelTab) => {
-    setActivePanel((prev) => (prev === panel ? null : panel));
+    setActivePanel((prev) => {
+      const next = prev === panel ? null : panel;
+      autoOpenedRef.current = false; // user took manual control
+      return next;
+    });
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -466,6 +547,7 @@ export function ProjectDetail() {
         toggleSidebar();
       } else if (e.key === "Escape") {
         setActivePanel(null);
+        autoOpenedRef.current = false;
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -657,7 +739,10 @@ export function ProjectDetail() {
               <>
                 <PanelHeader
                   title={panelTitles[activePanel]}
-                  onClose={() => setActivePanel(null)}
+                  onClose={() => {
+                    setActivePanel(null);
+                    autoOpenedRef.current = false;
+                  }}
                   action={
                     activePanel === "goals" ? (
                       <span className="text-[11px] text-muted-foreground/50 tabular-nums">
