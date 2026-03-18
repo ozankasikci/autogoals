@@ -1,6 +1,14 @@
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execSync, type ChildProcess } from "child_process";
 import { resolve } from "path";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
+
+function findExecutable(name: string): string {
+  try {
+    return execSync(`which ${name}`, { encoding: "utf-8" }).trim();
+  } catch {
+    return name; // fallback to bare name
+  }
+}
 
 export class AgentManager {
   private processes = new Map<string, ChildProcess>();
@@ -18,22 +26,21 @@ export class AgentManager {
       throw new Error(`Agent already running for project ${projectId}`);
     }
 
-    // Find the CLI entry point relative to this file's location
-    // From packages/api/src/agent-manager/ -> packages/cli/src/index.ts
     const cliPath = resolve(
       import.meta.dirname,
       "../../../../packages/cli/src/index.ts",
     );
 
-    const child = spawn("npx", ["tsx", cliPath, "start", projectPath], {
+    const npxPath = findExecutable("npx");
+
+    const child = spawn(npxPath, ["tsx", cliPath, "start", projectPath], {
       cwd: projectPath,
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env },
+      env: { ...process.env, PATH: process.env.PATH },
     });
 
     this.processes.set(projectId, child);
 
-    // Stream stdout for log events
     child.stdout?.on("data", (data: Buffer) => {
       const lines = data.toString().split("\n").filter(Boolean);
       for (const line of lines) {
@@ -60,6 +67,19 @@ export class AgentManager {
           },
         });
       }
+    });
+
+    // Handle spawn errors without crashing the server
+    child.on("error", (err) => {
+      this.processes.delete(projectId);
+      pubsub.publish(EVENTS.LOG_EVENT, {
+        logEvent: {
+          type: "error",
+          message: `Failed to start agent: ${err.message}`,
+          timestamp: new Date().toISOString(),
+          projectId,
+        },
+      });
     });
 
     child.on("exit", (code) => {
