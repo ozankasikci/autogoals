@@ -7,3 +7,5 @@ logs/
 tests/test-projects/
 x-clone/
 .small-singularity/
+*.png
+.playwright-mcp/
