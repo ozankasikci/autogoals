@@ -1,6 +1,21 @@
 import { AgentSession, SQLiteStore, type AgentEvent } from "@small-singularity/core";
 import type Database from "better-sqlite3";
+import { basename } from "path";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
+
+function buildToolSummary(tool: string, input: Record<string, unknown>): string {
+  switch (tool) {
+    case "Write": return `Created ${basename(String(input.file_path || "file"))}`;
+    case "Edit": return `Edited ${basename(String(input.file_path || "file"))}`;
+    case "Read": return `Read ${basename(String(input.file_path || "file"))}`;
+    case "Bash": return `$ ${String(input.command || "").slice(0, 80)}`;
+    case "Glob": return `Searched for ${input.pattern || "files"}`;
+    case "Grep": return `Searched for "${String(input.pattern || "").slice(0, 40)}"`;
+    case "WebSearch": return `Searched web: ${String(input.query || "").slice(0, 60)}`;
+    case "WebFetch": return `Fetched ${String(input.url || "URL").slice(0, 60)}`;
+    default: return `Used ${tool}`;
+  }
+}
 
 // Tools that indicate the agent is actively working (not just reading)
 const ACTIVE_TOOLS = new Set(["Write", "Edit", "Bash"]);
@@ -135,6 +150,25 @@ export class AgentManager {
               hasSeenActiveTool = true;
             }
 
+            // Store a tool-use message in the chat stream
+            const toolMsg = JSON.stringify({
+              _type: "tool_use",
+              tool: event.toolName,
+              input: event.toolInput,
+              summary: buildToolSummary(event.toolName!, event.toolInput || {}),
+            });
+
+            {
+              const db = this.getDb();
+              const store = new SQLiteStore(db, projectId);
+              const msg = store.addMessage("agent", toolMsg);
+
+              pubsub.publish(EVENTS.NEW_MESSAGE, {
+                newMessage: { ...msg, projectId },
+              });
+            }
+
+            // Also keep the log event
             pubsub.publish(EVENTS.LOG_EVENT, {
               logEvent: {
                 type: "info",

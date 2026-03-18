@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
@@ -9,6 +9,82 @@ interface Message {
   content: string;
   read: boolean;
   createdAt: string;
+}
+
+interface ToolUseData {
+  _type: "tool_use";
+  tool: string;
+  summary: string;
+  input: Record<string, unknown>;
+}
+
+type GroupedItem = Message | { type: "tool_group"; messages: Message[]; tools: ToolUseData[] };
+
+function parseToolUse(content: string): ToolUseData | null {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed._type === "tool_use") return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function groupMessages(messages: Message[]): GroupedItem[] {
+  const groups: GroupedItem[] = [];
+  let currentToolGroup: Message[] = [];
+  let currentTools: ToolUseData[] = [];
+
+  for (const msg of messages) {
+    const tool = msg.role === "agent" ? parseToolUse(msg.content) : null;
+    if (tool) {
+      currentToolGroup.push(msg);
+      currentTools.push(tool);
+    } else {
+      if (currentToolGroup.length > 0) {
+        groups.push({ type: "tool_group", messages: currentToolGroup, tools: currentTools });
+        currentToolGroup = [];
+        currentTools = [];
+      }
+      groups.push(msg);
+    }
+  }
+  if (currentToolGroup.length > 0) {
+    groups.push({ type: "tool_group", messages: currentToolGroup, tools: currentTools });
+  }
+  return groups;
+}
+
+function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex justify-start ml-9">
+      <div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[11px] text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04] transition-colors"
+        >
+          <svg className="h-3 w-3 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>{tools.length} tool{tools.length > 1 ? "s" : ""} used</span>
+          <svg className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {expanded && (
+          <div className="mt-1.5 ml-1 space-y-0.5">
+            {tools.map((tool, i) => (
+              <div key={i} className="text-[11px] text-muted-foreground/40 font-mono truncate max-w-[400px]">
+                {tool.summary}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 interface ChatPanelProps {
@@ -106,6 +182,8 @@ export function ChatPanel({
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   };
 
+  const grouped = useMemo(() => groupMessages(messages), [messages]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
@@ -151,55 +229,61 @@ export function ChatPanel({
           </div>
         ) : (
           <div className="space-y-5">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex gap-2.5",
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                {/* Agent avatar */}
-                {msg.role === "agent" && (
-                  <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
-                    <svg className="h-3.5 w-3.5 text-violet-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                )}
-
-                {/* Message bubble */}
+            {grouped.map((item) => {
+              if ("type" in item && item.type === "tool_group") {
+                return <ToolUseCard key={`tg-${item.messages[0].id}`} tools={item.tools} />;
+              }
+              const msg = item as Message;
+              return (
                 <div
+                  key={msg.id}
                   className={cn(
-                    "max-w-[85%] rounded-xl px-4 py-3",
-                    msg.role === "user"
-                      ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
-                      : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
+                    "flex gap-2.5",
+                    msg.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
-                  <p
+                  {/* Agent avatar */}
+                  {msg.role === "agent" && (
+                    <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
+                      <svg className="h-3.5 w-3.5 text-violet-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Message bubble */}
+                  <div
                     className={cn(
-                      "text-[13px] whitespace-pre-wrap break-words leading-relaxed",
-                      msg.role === "agent" && "font-mono text-[12.5px] leading-[1.7]"
+                      "max-w-[85%] rounded-xl px-4 py-3",
+                      msg.role === "user"
+                        ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
+                        : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
                     )}
                   >
-                    {msg.content}
-                  </p>
-                  <p className="text-[10px] mt-2 opacity-25">
-                    {formatTimestamp(msg.createdAt)}
-                  </p>
-                </div>
-
-                {/* User avatar */}
-                {msg.role === "user" && (
-                  <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
-                    <svg className="h-3.5 w-3.5 text-indigo-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    <p
+                      className={cn(
+                        "text-[13px] whitespace-pre-wrap break-words leading-relaxed",
+                        msg.role === "agent" && "font-mono text-[12.5px] leading-[1.7]"
+                      )}
+                    >
+                      {msg.content}
+                    </p>
+                    <p className="text-[10px] mt-2 opacity-25">
+                      {formatTimestamp(msg.createdAt)}
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* User avatar */}
+                  {msg.role === "user" && (
+                    <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
+                      <svg className="h-3.5 w-3.5 text-indigo-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div ref={bottomRef} />
           </div>
         )}
