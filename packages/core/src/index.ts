@@ -18,7 +18,7 @@ export { createStore, createProjectStore } from "./state/store.js";
 export { SQLiteStore } from "./state/sqlite-store.js";
 export { SQLiteProjectStore } from "./state/project-store.js";
 export { SCHEMA_SQL } from "./state/migrations.js";
-export type { StateStore, ProjectStore, ProjectRecord } from "./state/types.js";
+export type { StateStore, ProjectStore, ProjectRecord, Message } from "./state/types.js";
 
 // Goals
 export { GoalTracker } from "./goals/tracker.js";

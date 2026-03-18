@@ -6,7 +6,7 @@ import type {
   GoalState,
   GoalStatus,
 } from "../core/types.js";
-import type { StateStore } from "./types.js";
+import type { StateStore, Message } from "./types.js";
 
 export class SQLiteStore implements StateStore {
   private db: Database.Database;
@@ -264,6 +264,94 @@ export class SQLiteStore implements StateStore {
     }
 
     return row?.session_id ?? null;
+  }
+
+  // ── Messages ───────────────────────────────────────────
+
+  getMessages(limit = 100): Message[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, project_id, role, content, read, created_at FROM messages WHERE project_id = ? ORDER BY created_at ASC LIMIT ?",
+      )
+      .all(this.projectId, limit) as {
+      id: number;
+      project_id: string;
+      role: string;
+      content: string;
+      read: number;
+      created_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      id: r.id,
+      projectId: r.project_id,
+      role: r.role as "user" | "agent",
+      content: r.content,
+      read: r.read === 1,
+      createdAt: r.created_at,
+    }));
+  }
+
+  getUnreadMessages(): Message[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, project_id, role, content, read, created_at FROM messages WHERE project_id = ? AND read = 0 ORDER BY created_at ASC",
+      )
+      .all(this.projectId) as {
+      id: number;
+      project_id: string;
+      role: string;
+      content: string;
+      read: number;
+      created_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      id: r.id,
+      projectId: r.project_id,
+      role: r.role as "user" | "agent",
+      content: r.content,
+      read: r.read === 1,
+      createdAt: r.created_at,
+    }));
+  }
+
+  addMessage(role: "user" | "agent", content: string): Message {
+    const result = this.db
+      .prepare(
+        "INSERT INTO messages (project_id, role, content) VALUES (?, ?, ?)",
+      )
+      .run(this.projectId, role, content);
+
+    const row = this.db
+      .prepare(
+        "SELECT id, project_id, role, content, read, created_at FROM messages WHERE id = ?",
+      )
+      .get(result.lastInsertRowid) as {
+      id: number;
+      project_id: string;
+      role: string;
+      content: string;
+      read: number;
+      created_at: string;
+    };
+
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      role: row.role as "user" | "agent",
+      content: row.content,
+      read: row.read === 1,
+      createdAt: row.created_at,
+    };
+  }
+
+  markMessagesRead(): void {
+    this.db
+      .prepare(
+        "UPDATE messages SET read = 1 WHERE project_id = ? AND read = 0",
+      )
+      .run(this.projectId);
   }
 
   // ── Lifecycle ────────────────────────────────────────────

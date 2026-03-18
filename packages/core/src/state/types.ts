@@ -1,5 +1,14 @@
 import type { PhaseName, Spec, SpecGoal, GoalState } from "../core/types.js";
 
+export interface Message {
+  id: number;
+  projectId: string;
+  role: "user" | "agent";
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface StateStore {
   // Project
   getPhase(): PhaseName;
@@ -24,6 +33,12 @@ export interface StateStore {
   // Sessions
   saveSession(phase: string, sessionId: string, goalId?: string): void;
   getLatestSession(phase: string, goalId?: string): string | null;
+
+  // Messages
+  getMessages(limit?: number): Message[];
+  getUnreadMessages(): Message[];
+  addMessage(role: "user" | "agent", content: string): Message;
+  markMessagesRead(): void;
 
   // Lifecycle
   close(): void;
