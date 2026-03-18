@@ -39,7 +39,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
   const httpServer = createHttpServer(app);
 
   const db = getDatabase();
-  const agentManager = new AgentManager();
+  const agentManager = new AgentManager(() => db);
 
   const resolvers = createResolvers(
     () => db,

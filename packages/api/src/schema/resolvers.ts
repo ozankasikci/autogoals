@@ -141,9 +141,25 @@ export function createResolvers(
         const projectStore = new SQLiteProjectStore(db);
         const record = projectStore.getProject(args.projectId);
         if (!record) throw new Error(`Project ${args.projectId} not found`);
+
         if (agentManager) {
-          agentManager.start(args.projectId, record.path);
+          const store = new SQLiteStore(db, record.id);
+          const spec = store.getSpec();
+          const phase = store.getPhase();
+          const goals = store.getGoals();
+
+          let systemPrompt = `You are an autonomous AI agent working on the project "${record.name}" at ${record.path}. Current phase: ${phase}.`;
+          if (spec) {
+            systemPrompt += `\n\nProject spec:\n${spec.overview}`;
+          }
+          if (goals.length > 0) {
+            systemPrompt += `\n\nGoals:\n${goals.map((g) => `- ${g.id}: ${g.status}`).join("\n")}`;
+          }
+
+          agentManager.start(args.projectId, record.path, systemPrompt);
+          return projectToView(record, db, store, getRunningIds());
         }
+
         const store = new SQLiteStore(db, record.id);
         return projectToView(record, db, store, getRunningIds());
       },
@@ -167,8 +183,18 @@ export function createResolvers(
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
         const message = store.addMessage("user", args.content);
+
+        // Push to live agent session if running
+        if (agentManager) {
+          try {
+            agentManager.sendMessage(args.projectId, args.content);
+          } catch {
+            // Agent not running — message is stored for later
+          }
+        }
+
         pubsub.publish(EVENTS.NEW_MESSAGE, {
-          newMessage: message,
+          newMessage: { ...message, projectId: args.projectId },
         });
         return message;
       },

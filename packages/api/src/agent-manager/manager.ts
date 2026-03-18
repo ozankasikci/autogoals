@@ -1,109 +1,146 @@
-import { spawn, execSync, type ChildProcess } from "child_process";
-import { resolve } from "path";
+import { AgentSession, SQLiteStore, type AgentEvent } from "@small-singularity/core";
+import type Database from "better-sqlite3";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 
-function findExecutable(name: string): string {
-  try {
-    return execSync(`which ${name}`, { encoding: "utf-8" }).trim();
-  } catch {
-    return name; // fallback to bare name
-  }
-}
-
 export class AgentManager {
-  private processes = new Map<string, ChildProcess>();
+  private sessions = new Map<string, AgentSession>();
+  private getDb: () => Database.Database;
+
+  constructor(getDb: () => Database.Database) {
+    this.getDb = getDb;
+  }
 
   isRunning(projectId: string): boolean {
-    return this.processes.has(projectId);
+    return this.sessions.has(projectId);
   }
 
   getRunningIds(): Set<string> {
-    return new Set(this.processes.keys());
+    return new Set(this.sessions.keys());
   }
 
-  start(projectId: string, projectPath: string): void {
-    if (this.processes.has(projectId)) {
+  start(projectId: string, projectPath: string, systemPrompt?: string): void {
+    if (this.sessions.has(projectId)) {
       throw new Error(`Agent already running for project ${projectId}`);
     }
 
-    const cliPath = resolve(
-      import.meta.dirname,
-      "../../../../packages/cli/src/index.ts",
-    );
-
-    const npxPath = findExecutable("npx");
-
-    const child = spawn(npxPath, ["tsx", cliPath, "start", projectPath], {
+    const session = new AgentSession({
       cwd: projectPath,
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, PATH: process.env.PATH },
+      model: "sonnet",
+      systemPrompt:
+        systemPrompt ??
+        `You are an autonomous AI agent working on a project at ${projectPath}. Help the user build their project. Ask clarifying questions when needed. Be concise.`,
+      allowedTools: [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+      ],
+      maxTurns: 200,
     });
 
-    this.processes.set(projectId, child);
+    this.sessions.set(projectId, session);
 
-    child.stdout?.on("data", (data: Buffer) => {
-      const lines = data.toString().split("\n").filter(Boolean);
-      for (const line of lines) {
-        pubsub.publish(EVENTS.LOG_EVENT, {
-          logEvent: {
-            type: "info",
-            message: line.trim(),
-            timestamp: new Date().toISOString(),
-            projectId,
-          },
-        });
+    // Start consuming events in the background
+    this.consumeEvents(projectId, session);
+  }
+
+  sendMessage(projectId: string, content: string): void {
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No agent running for project ${projectId}`);
+    }
+    session.send(content);
+  }
+
+  private async consumeEvents(
+    projectId: string,
+    session: AgentSession,
+  ): Promise<void> {
+    try {
+      for await (const event of session.events()) {
+        switch (event.type) {
+          case "text": {
+            // Store in DB
+            const db = this.getDb();
+            const store = new SQLiteStore(db, projectId);
+            const msg = store.addMessage("agent", event.text!);
+
+            // Publish via subscription
+            pubsub.publish(EVENTS.NEW_MESSAGE, {
+              newMessage: { ...msg, projectId },
+            });
+            pubsub.publish(EVENTS.LOG_EVENT, {
+              logEvent: {
+                type: "info",
+                message: event.text!.slice(0, 200),
+                timestamp: new Date().toISOString(),
+                projectId,
+              },
+            });
+            break;
+          }
+
+          case "tool_use":
+            pubsub.publish(EVENTS.LOG_EVENT, {
+              logEvent: {
+                type: "info",
+                message: `Using ${event.toolName}${event.toolInput?.file_path ? `: ${event.toolInput.file_path}` : ""}${event.toolInput?.command ? `: ${String(event.toolInput.command).slice(0, 60)}` : ""}`,
+                timestamp: new Date().toISOString(),
+                projectId,
+              },
+            });
+            break;
+
+          case "result":
+            pubsub.publish(EVENTS.LOG_EVENT, {
+              logEvent: {
+                type: "info",
+                message: `Agent completed (cost: $${event.result?.costUsd.toFixed(4) ?? "?"})`,
+                timestamp: new Date().toISOString(),
+                projectId,
+              },
+            });
+            break;
+
+          case "error":
+            pubsub.publish(EVENTS.LOG_EVENT, {
+              logEvent: {
+                type: "error",
+                message: `Agent error: ${event.error}`,
+                timestamp: new Date().toISOString(),
+                projectId,
+              },
+            });
+            break;
+        }
       }
-    });
-
-    child.stderr?.on("data", (data: Buffer) => {
-      const lines = data.toString().split("\n").filter(Boolean);
-      for (const line of lines) {
-        pubsub.publish(EVENTS.LOG_EVENT, {
-          logEvent: {
-            type: "error",
-            message: line.trim(),
-            timestamp: new Date().toISOString(),
-            projectId,
-          },
-        });
-      }
-    });
-
-    // Handle spawn errors without crashing the server
-    child.on("error", (err) => {
-      this.processes.delete(projectId);
+    } catch (err: any) {
       pubsub.publish(EVENTS.LOG_EVENT, {
         logEvent: {
           type: "error",
-          message: `Failed to start agent: ${err.message}`,
+          message: `Agent crashed: ${err.message}`,
           timestamp: new Date().toISOString(),
           projectId,
         },
       });
-    });
-
-    child.on("exit", (code) => {
-      this.processes.delete(projectId);
-      pubsub.publish(EVENTS.LOG_EVENT, {
-        logEvent: {
-          type: "info",
-          message: `Agent exited with code ${code}`,
-          timestamp: new Date().toISOString(),
-          projectId,
-        },
-      });
-    });
+    } finally {
+      this.sessions.delete(projectId);
+    }
   }
 
   stop(projectId: string): void {
-    const child = this.processes.get(projectId);
-    if (!child) return;
-    child.kill("SIGTERM");
-    this.processes.delete(projectId);
+    const session = this.sessions.get(projectId);
+    if (!session) return;
+    session.close();
+    this.sessions.delete(projectId);
   }
 
   stopAll(): void {
-    for (const [id] of this.processes) {
+    for (const [id] of this.sessions) {
       this.stop(id);
     }
   }
