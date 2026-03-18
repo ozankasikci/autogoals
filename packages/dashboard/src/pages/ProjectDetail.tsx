@@ -57,7 +57,7 @@ interface Project {
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const chatWasOpenRef = useRef(false);
 
