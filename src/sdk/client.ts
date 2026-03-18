@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResult } from "./message-handler.js";
 import {
   extractSessionId,
@@ -6,8 +7,7 @@ import {
   extractAssistantText,
   extractToolUse,
 } from "./message-handler.js";
-import type { Logger } from "../modules/logging/logger.js";
-import type { LogEvent } from "../modules/logging/types.js";
+import type { Logger, LogEvent } from "../modules/logging/index.js";
 
 export interface QueryOptions {
   prompt: string;
@@ -18,7 +18,7 @@ export interface QueryOptions {
   maxTurns?: number;
   maxBudgetUsd?: number;
   resume?: string;
-  permissionMode?: string;
+  permissionMode?: PermissionMode;
 }
 
 export interface QueryCallbacks {
