@@ -40,6 +40,20 @@ export interface StateStore {
   addMessage(role: "user" | "agent", content: string): Message;
   markMessagesRead(): void;
 
+  // Spec editing
+  updateSpec(overview: string, technicalDecisions: string[]): void;
+
+  // Goal editing
+  updateGoal(id: string, updates: Partial<{
+    name: string;
+    description: string;
+    acceptanceCriteria: string[];
+    dependsOn: string[];
+    status: string;
+  }>): void;
+  addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[] }): void;
+  removeGoal(id: string): void;
+
   // Lifecycle
   close(): void;
 }

@@ -354,6 +354,89 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId);
   }
 
+  // ── Spec editing ────────────────────────────────────────
+
+  updateSpec(overview: string, technicalDecisions: string[]): void {
+    this.db
+      .prepare(
+        "UPDATE spec SET overview = ?, technical_decisions = ? WHERE project_id = ?",
+      )
+      .run(overview, JSON.stringify(technicalDecisions), this.projectId);
+  }
+
+  // ── Goal editing ──────────────────────────────────────
+
+  updateGoal(
+    id: string,
+    updates: Partial<{
+      name: string;
+      description: string;
+      acceptanceCriteria: string[];
+      dependsOn: string[];
+      status: string;
+    }>,
+  ): void {
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+
+    if (updates.name !== undefined) {
+      setClauses.push("name = ?");
+      values.push(updates.name);
+    }
+    if (updates.description !== undefined) {
+      setClauses.push("description = ?");
+      values.push(updates.description);
+    }
+    if (updates.acceptanceCriteria !== undefined) {
+      setClauses.push("acceptance_criteria = ?");
+      values.push(JSON.stringify(updates.acceptanceCriteria));
+    }
+    if (updates.dependsOn !== undefined) {
+      setClauses.push("depends_on = ?");
+      values.push(JSON.stringify(updates.dependsOn));
+    }
+    if (updates.status !== undefined) {
+      setClauses.push("status = ?");
+      values.push(updates.status);
+    }
+
+    if (setClauses.length === 0) return;
+
+    values.push(this.projectId, id);
+    this.db
+      .prepare(
+        `UPDATE goals SET ${setClauses.join(", ")} WHERE project_id = ? AND id = ?`,
+      )
+      .run(...values);
+  }
+
+  addGoal(goal: {
+    id: string;
+    name: string;
+    description: string;
+    acceptanceCriteria: string[];
+    dependsOn: string[];
+  }): void {
+    this.db
+      .prepare(
+        "INSERT INTO goals (project_id, id, name, description, acceptance_criteria, depends_on, status, retries, cost_usd) VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0)",
+      )
+      .run(
+        this.projectId,
+        goal.id,
+        goal.name,
+        goal.description,
+        JSON.stringify(goal.acceptanceCriteria),
+        JSON.stringify(goal.dependsOn),
+      );
+  }
+
+  removeGoal(id: string): void {
+    this.db
+      .prepare("DELETE FROM goals WHERE project_id = ? AND id = ?")
+      .run(this.projectId, id);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

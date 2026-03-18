@@ -29,6 +29,9 @@ export const typeDefs = `#graphql
   type Goal {
     id: ID!
     name: String!
+    description: String!
+    acceptanceCriteria: [String!]!
+    dependsOn: [ID!]!
     status: String!
     retries: Int!
     costUsd: Float!
@@ -63,6 +66,10 @@ export const typeDefs = `#graphql
     startAgent(projectId: ID!): Project!
     stopAgent(projectId: ID!): Project!
     sendMessage(projectId: ID!, content: String!): Message!
+    updateSpec(projectId: ID!, overview: String!, technicalDecisions: [String!]!): Spec!
+    updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String): Goal!
+    addGoal(projectId: ID!, name: String!, description: String!, acceptanceCriteria: [String!]!, dependsOn: [ID!]!): Goal!
+    removeGoal(projectId: ID!, goalId: ID!): Boolean!
   }
 
   type Subscription {

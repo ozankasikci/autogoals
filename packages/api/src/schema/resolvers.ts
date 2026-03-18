@@ -9,6 +9,7 @@ import {
 } from "@small-singularity/core";
 import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
+import { randomUUID } from "crypto";
 import { homedir } from "os";
 import { resolve } from "path";
 import { mkdirSync } from "fs";
@@ -25,6 +26,9 @@ function resolvePath(p: string): string {
 interface GoalView {
   id: string;
   name: string;
+  description: string;
+  acceptanceCriteria: string[];
+  dependsOn: string[];
   status: string;
   retries: number;
   costUsd: number;
@@ -47,11 +51,14 @@ interface ProjectView {
 function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
   const rows = db
     .prepare(
-      "SELECT id, name, status, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
+      "SELECT id, name, description, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
     )
     .all(projectId) as {
     id: string;
     name: string;
+    description: string;
+    acceptance_criteria: string;
+    depends_on: string;
     status: string;
     retries: number;
     cost_usd: number;
@@ -62,6 +69,9 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
     const goal: GoalView = {
       id: r.id,
       name: r.name,
+      description: r.description,
+      acceptanceCriteria: JSON.parse(r.acceptance_criteria) as string[],
+      dependsOn: JSON.parse(r.depends_on) as string[],
       status: r.status,
       retries: r.retries,
       costUsd: r.cost_usd,
@@ -69,6 +79,39 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
     if (r.error != null) goal.error = r.error;
     return goal;
   });
+}
+
+function getGoalView(db: Database.Database, projectId: string, goalId: string): GoalView | null {
+  const r = db
+    .prepare(
+      "SELECT id, name, description, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
+    )
+    .get(projectId, goalId) as {
+    id: string;
+    name: string;
+    description: string;
+    acceptance_criteria: string;
+    depends_on: string;
+    status: string;
+    retries: number;
+    cost_usd: number;
+    error: string | null;
+  } | undefined;
+
+  if (!r) return null;
+
+  const goal: GoalView = {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    acceptanceCriteria: JSON.parse(r.acceptance_criteria) as string[],
+    dependsOn: JSON.parse(r.depends_on) as string[],
+    status: r.status,
+    retries: r.retries,
+    costUsd: r.cost_usd,
+  };
+  if (r.error != null) goal.error = r.error;
+  return goal;
 }
 
 function projectToView(
@@ -209,6 +252,120 @@ export function createResolvers(
           newMessage: { ...message, projectId: args.projectId },
         });
         return message;
+      },
+
+      updateSpec(
+        _: unknown,
+        args: {
+          projectId: string;
+          overview: string;
+          technicalDecisions: string[];
+        },
+      ): Spec {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        store.updateSpec(args.overview, args.technicalDecisions);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            agentManager.sendMessage(
+              args.projectId,
+              "[System] The user updated the spec. Please take note of the changes.",
+            );
+          } catch {}
+        }
+
+        return store.getSpec()!;
+      },
+
+      updateGoal(
+        _: unknown,
+        args: {
+          projectId: string;
+          goalId: string;
+          name?: string;
+          description?: string;
+          acceptanceCriteria?: string[];
+          dependsOn?: string[];
+          status?: string;
+        },
+      ): GoalView {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+
+        const updates: Record<string, unknown> = {};
+        if (args.name !== undefined) updates.name = args.name;
+        if (args.description !== undefined) updates.description = args.description;
+        if (args.acceptanceCriteria !== undefined) updates.acceptanceCriteria = args.acceptanceCriteria;
+        if (args.dependsOn !== undefined) updates.dependsOn = args.dependsOn;
+        if (args.status !== undefined) updates.status = args.status;
+
+        store.updateGoal(args.goalId, updates);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            agentManager.sendMessage(
+              args.projectId,
+              `[System] Goal '${args.goalId}' was updated by the user. Please take note of the changes.`,
+            );
+          } catch {}
+        }
+
+        return getGoalView(db, args.projectId, args.goalId)!;
+      },
+
+      addGoal(
+        _: unknown,
+        args: {
+          projectId: string;
+          name: string;
+          description: string;
+          acceptanceCriteria: string[];
+          dependsOn: string[];
+        },
+      ): GoalView {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const id = randomUUID();
+
+        store.addGoal({
+          id,
+          name: args.name,
+          description: args.description,
+          acceptanceCriteria: args.acceptanceCriteria,
+          dependsOn: args.dependsOn,
+        });
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            agentManager.sendMessage(
+              args.projectId,
+              `[System] The user added a new goal '${args.name}'. Please take note of the changes.`,
+            );
+          } catch {}
+        }
+
+        return getGoalView(db, args.projectId, id)!;
+      },
+
+      removeGoal(
+        _: unknown,
+        args: { projectId: string; goalId: string },
+      ): boolean {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        store.removeGoal(args.goalId);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            agentManager.sendMessage(
+              args.projectId,
+              `[System] The user removed goal '${args.goalId}'. Please take note of the changes.`,
+            );
+          } catch {}
+        }
+
+        return true;
       },
     },
 
