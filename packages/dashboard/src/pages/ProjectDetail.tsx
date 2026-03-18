@@ -21,6 +21,9 @@ import { formatCost } from "@/lib/utils";
 interface Goal {
   id: string;
   name: string;
+  description: string;
+  acceptanceCriteria: string[];
+  dependsOn: string[];
   status: string;
   retries: number;
   costUsd: number;
@@ -356,13 +359,13 @@ export function ProjectDetail() {
 
         <TabsContent value="goals" className="mt-4">
           <div className="rounded-lg border border-border bg-card p-6">
-            <GoalTable goals={project.goals} />
+            <GoalTable goals={project.goals} projectId={project.id} />
           </div>
         </TabsContent>
 
         <TabsContent value="spec" className="mt-4">
           <div className="rounded-lg border border-border bg-card p-6">
-            <SpecView spec={project.spec} />
+            <SpecView spec={project.spec} projectId={project.id} />
           </div>
         </TabsContent>
 

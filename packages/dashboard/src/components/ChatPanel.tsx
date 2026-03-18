@@ -24,7 +24,7 @@ export function ChatPanel({
   projectId,
   isOpen,
   onClose,
-  isAgentRunning,
+  isAgentRunning: _isAgentRunning,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");

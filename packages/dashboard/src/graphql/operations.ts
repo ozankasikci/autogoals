@@ -43,6 +43,9 @@ export const GET_PROJECT = gql`
       goals {
         id
         name
+        description
+        acceptanceCriteria
+        dependsOn
         status
         retries
         costUsd
@@ -148,5 +151,36 @@ export const NEW_MESSAGE = gql`
       read
       createdAt
     }
+  }
+`;
+
+export const UPDATE_SPEC = gql`
+  mutation UpdateSpec($projectId: ID!, $overview: String!, $technicalDecisions: [String!]!) {
+    updateSpec(projectId: $projectId, overview: $overview, technicalDecisions: $technicalDecisions) {
+      overview
+      technicalDecisions
+    }
+  }
+`;
+
+export const UPDATE_GOAL = gql`
+  mutation UpdateGoal($projectId: ID!, $goalId: ID!, $name: String, $description: String, $acceptanceCriteria: [String!], $dependsOn: [ID!], $status: String) {
+    updateGoal(projectId: $projectId, goalId: $goalId, name: $name, description: $description, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, status: $status) {
+      id name description acceptanceCriteria dependsOn status retries costUsd error
+    }
+  }
+`;
+
+export const ADD_GOAL = gql`
+  mutation AddGoal($projectId: ID!, $name: String!, $description: String!, $acceptanceCriteria: [String!]!, $dependsOn: [ID!]!) {
+    addGoal(projectId: $projectId, name: $name, description: $description, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn) {
+      id name description acceptanceCriteria dependsOn status retries costUsd
+    }
+  }
+`;
+
+export const REMOVE_GOAL = gql`
+  mutation RemoveGoal($projectId: ID!, $goalId: ID!) {
+    removeGoal(projectId: $projectId, goalId: $goalId)
   }
 `;
