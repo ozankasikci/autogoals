@@ -18,7 +18,7 @@ export class AgentManager {
     return new Set(this.sessions.keys());
   }
 
-  start(projectId: string, projectPath: string, systemPrompt?: string): void {
+  start(projectId: string, projectPath: string, systemPrompt?: string, initialMessage?: string): void {
     if (this.sessions.has(projectId)) {
       throw new Error(`Agent already running for project ${projectId}`);
     }
@@ -46,6 +46,11 @@ export class AgentManager {
 
     // Start consuming events in the background
     this.consumeEvents(projectId, session);
+
+    // Send initial message to kick off the agent
+    if (initialMessage) {
+      session.send(initialMessage);
+    }
   }
 
   sendMessage(projectId: string, content: string): void {

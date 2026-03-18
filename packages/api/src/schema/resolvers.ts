@@ -199,19 +199,28 @@ export function createResolvers(
           const store = new SQLiteStore(db, record.id);
           const spec = store.getSpec();
           const phase = store.getPhase();
-          const goals = store.getGoals();
+          const goalViews = getGoalViews(db, record.id);
 
           let systemPrompt = `You are an autonomous AI agent working on the project "${record.name}" at ${record.path}. Current phase: ${phase}.`;
           if (spec) {
             systemPrompt += `\n\nProject spec:\n${spec.overview}`;
           }
-          if (goals.length > 0) {
-            systemPrompt += `\n\nGoals:\n${goals.map((g) => `- ${g.id}: ${g.status}`).join("\n")}`;
+          if (goalViews.length > 0) {
+            systemPrompt += `\n\nGoals:\n${goalViews.map((g) => `- ${g.name}: ${g.status}`).join("\n")}`;
           }
 
           const resolvedPath = resolvePath(record.path);
           mkdirSync(resolvedPath, { recursive: true });
-          agentManager.start(args.projectId, resolvedPath, systemPrompt);
+          const goalDetails = goalViews
+            .filter(g => g.status === "pending" || g.status === "active")
+            .map(g => `- ${g.name}: ${g.description || "no description"}`)
+            .join("\n");
+
+          const initialMessage = goalViews.length > 0
+            ? `Start working on the project. Here are the pending goals:\n${goalDetails}\n\nBegin with the first pending goal.`
+            : "The project has no goals yet. Introduce yourself and ask what the user wants to build.";
+
+          agentManager.start(args.projectId, resolvedPath, systemPrompt, initialMessage);
           return projectToView(record, db, store, getRunningIds());
         }
 
