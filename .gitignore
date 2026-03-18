@@ -4,3 +4,4 @@ specs/
 logs/
 *.tgz
 .DS_Store
+tests/test-projects/

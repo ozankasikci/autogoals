@@ -10,6 +10,7 @@ import { ExecutionPhase } from "../modules/execution/index.js";
 import { StandbyPhase } from "../modules/standby/index.js";
 import { printBanner, printPhaseHeader } from "./output.js";
 import { join, resolve } from "path";
+import { mkdirSync } from "fs";
 
 export function createProgram(): Command {
   const program = new Command();
@@ -29,6 +30,7 @@ export function createProgram(): Command {
     .option("-v, --verbose", "Verbose logging", false)
     .action(async (projectPath: string, opts) => {
       const resolvedPath = resolve(projectPath);
+      mkdirSync(resolvedPath, { recursive: true });
 
       console.log(printBanner());
 
