@@ -5,6 +5,7 @@ import {
   type StateStore,
   type GoalState,
   type Spec,
+  type Message,
 } from "@small-singularity/core";
 import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
@@ -106,6 +107,15 @@ export function createResolvers(
         const store = new SQLiteStore(db, record.id);
         return projectToView(record, db, store, getRunningIds());
       },
+
+      messages(
+        _: unknown,
+        args: { projectId: string; limit?: number },
+      ): Message[] {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getMessages(args.limit ?? 100);
+      },
     },
 
     Mutation: {
@@ -149,6 +159,19 @@ export function createResolvers(
         const store = new SQLiteStore(db, record.id);
         return projectToView(record, db, store, getRunningIds());
       },
+
+      sendMessage(
+        _: unknown,
+        args: { projectId: string; content: string },
+      ): Message {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const message = store.addMessage("user", args.content);
+        pubsub.publish(EVENTS.NEW_MESSAGE, {
+          newMessage: message,
+        });
+        return message;
+      },
     },
 
     Subscription: {
@@ -164,6 +187,13 @@ export function createResolvers(
           () => pubsub.asyncIterableIterator(EVENTS.LOG_EVENT),
           (payload: any, variables: any) =>
             payload.logEvent.projectId === variables.projectId,
+        ),
+      },
+      newMessage: {
+        subscribe: withFilter(
+          () => pubsub.asyncIterableIterator(EVENTS.NEW_MESSAGE),
+          (payload: any, variables: any) =>
+            payload.newMessage.projectId === variables.projectId,
         ),
       },
     },

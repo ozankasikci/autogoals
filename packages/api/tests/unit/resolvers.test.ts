@@ -63,4 +63,54 @@ describe("resolvers", () => {
       expect(found).toBeNull();
     });
   });
+
+  describe("Messages", () => {
+    it("messages returns empty list initially", () => {
+      const project = resolvers.Mutation.createProject(null, {
+        name: "test",
+        path: "/tmp/test",
+      });
+      const messages = resolvers.Query.messages(null, {
+        projectId: project.id,
+      });
+      expect(messages).toEqual([]);
+    });
+
+    it("sendMessage creates a message and returns it", () => {
+      const project = resolvers.Mutation.createProject(null, {
+        name: "test",
+        path: "/tmp/test",
+      });
+      const message = resolvers.Mutation.sendMessage(null, {
+        projectId: project.id,
+        content: "hello",
+      });
+      expect(message.role).toBe("user");
+      expect(message.content).toBe("hello");
+      expect(message.read).toBe(false);
+      expect(message.id).toBeDefined();
+      expect(message.createdAt).toBeDefined();
+    });
+
+    it("messages returns sent messages", () => {
+      const project = resolvers.Mutation.createProject(null, {
+        name: "test",
+        path: "/tmp/test",
+      });
+      resolvers.Mutation.sendMessage(null, {
+        projectId: project.id,
+        content: "first",
+      });
+      resolvers.Mutation.sendMessage(null, {
+        projectId: project.id,
+        content: "second",
+      });
+      const messages = resolvers.Query.messages(null, {
+        projectId: project.id,
+      });
+      expect(messages).toHaveLength(2);
+      expect(messages[0].content).toBe("first");
+      expect(messages[1].content).toBe("second");
+    });
+  });
 });

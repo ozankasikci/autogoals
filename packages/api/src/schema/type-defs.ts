@@ -43,9 +43,18 @@ export const typeDefs = `#graphql
     projectId: ID!
   }
 
+  type Message {
+    id: ID!
+    role: String!
+    content: String!
+    read: Boolean!
+    createdAt: String!
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
+    messages(projectId: ID!, limit: Int): [Message!]!
   }
 
   type Mutation {
@@ -53,10 +62,12 @@ export const typeDefs = `#graphql
     deleteProject(id: ID!): Boolean!
     startAgent(projectId: ID!): Project!
     stopAgent(projectId: ID!): Project!
+    sendMessage(projectId: ID!, content: String!): Message!
   }
 
   type Subscription {
     projectUpdated(projectId: ID!): Project!
     logEvent(projectId: ID!): LogEvent!
+    newMessage(projectId: ID!): Message!
   }
 `;
