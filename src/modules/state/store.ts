@@ -1,30 +1,16 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import Database from "better-sqlite3";
+import { mkdirSync } from "fs";
 import { join } from "path";
-import type { ProjectState } from "../../core/types.js";
+import { SCHEMA_SQL } from "./migrations.js";
+import { SQLiteStore } from "./sqlite-store.js";
+import type { StateStore } from "./types.js";
 
-const STATE_FILE = "state.json";
-
-export function createInitialState(): ProjectState {
-  return {
-    spec: null,
-    goals: [],
-    totalCostUsd: 0,
-    currentPhase: "interview",
-    interviewNotes: [],
-  };
-}
-
-export function saveState(specsDir: string, state: ProjectState): void {
-  mkdirSync(specsDir, { recursive: true });
-  const filePath = join(specsDir, STATE_FILE);
-  writeFileSync(filePath, JSON.stringify(state, null, 2), "utf-8");
-}
-
-export function loadState(specsDir: string): ProjectState | null {
-  const filePath = join(specsDir, STATE_FILE);
-  if (!existsSync(filePath)) {
-    return null;
-  }
-  const raw = readFileSync(filePath, "utf-8");
-  return JSON.parse(raw) as ProjectState;
+export function createStore(projectPath: string): StateStore {
+  const dir = join(projectPath, ".small-singularity");
+  mkdirSync(dir, { recursive: true });
+  const dbPath = join(dir, "db.sqlite");
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+  db.exec(SCHEMA_SQL);
+  return new SQLiteStore(db);
 }

@@ -6,3 +6,4 @@ logs/
 .DS_Store
 tests/test-projects/
 x-clone/
+.small-singularity/
