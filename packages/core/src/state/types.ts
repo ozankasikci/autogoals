@@ -28,3 +28,20 @@ export interface StateStore {
   // Lifecycle
   close(): void;
 }
+
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  path: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectStore {
+  createProject(name: string, path: string): ProjectRecord;
+  listProjects(): ProjectRecord[];
+  getProject(id: string): ProjectRecord | null;
+  getProjectByPath(path: string): ProjectRecord | null;
+  deleteProject(id: string): boolean;
+  close(): void;
+}

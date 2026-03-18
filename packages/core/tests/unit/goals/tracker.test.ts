@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { GoalTracker } from "../../../src/goals/index.js";
 import { SQLiteStore } from "../../../src/state/index.js";
+import { SQLiteProjectStore } from "../../../src/state/index.js";
 import { SCHEMA_SQL } from "../../../src/state/index.js";
 import type { SpecGoal } from "../../../src/core/types.js";
 import type { StateStore } from "../../../src/state/index.js";
@@ -14,11 +15,16 @@ const makeGoal = (id: string, deps: string[] = []): SpecGoal => ({
   dependsOn: deps,
 });
 
+let pathCounter = 0;
+
 function createMemoryStore(specGoals: SpecGoal[]): StateStore {
   const db = new Database(":memory:");
   db.pragma("journal_mode = WAL");
   db.exec(SCHEMA_SQL);
-  const store = new SQLiteStore(db);
+  // Create a project first so project_state row exists
+  const projectStore = new SQLiteProjectStore(db);
+  const project = projectStore.createProject("test", `/tmp/test-${++pathCounter}`);
+  const store = new SQLiteStore(db, project.id);
   // Save a spec so goals rows exist in the DB
   store.saveSpec({
     overview: "test",

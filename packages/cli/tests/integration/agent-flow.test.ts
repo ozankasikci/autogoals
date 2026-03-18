@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
 import { Agent } from "../../src/agent.js";
-import { GoalTracker, SQLiteStore, SCHEMA_SQL, loadConfig, createLogger } from "@small-singularity/core";
+import { GoalTracker, SQLiteStore, SQLiteProjectStore, SCHEMA_SQL, loadConfig, createLogger } from "@small-singularity/core";
 import type { StateStore, Phase, PhaseResult } from "@small-singularity/core";
 import { parseSpec } from "../../src/phases/spec/index.js";
 import { readFileSync } from "fs";
@@ -14,7 +14,9 @@ function createMemoryStore(): StateStore {
   const db = new Database(":memory:");
   db.pragma("journal_mode = WAL");
   db.exec(SCHEMA_SQL);
-  return new SQLiteStore(db);
+  const projectStore = new SQLiteProjectStore(db);
+  const project = projectStore.createProject("test", "/tmp/test");
+  return new SQLiteStore(db, project.id);
 }
 
 describe("agent flow integration", () => {

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { loadConfig, createStore, createLogger, formatForTerminal } from "@small-singularity/core";
+import { loadConfig, createStore, createProjectStore, createLogger, formatForTerminal } from "@small-singularity/core";
 import type { Logger } from "@small-singularity/core";
 import { Agent } from "./agent.js";
 import { InterviewPhase } from "./phases/interview/index.js";
@@ -42,7 +42,15 @@ export function createProgram(): Command {
         verbose: opts.verbose,
       });
 
-      const store = createStore(resolvedPath);
+      const projectStore = createProjectStore();
+      let project = projectStore.getProjectByPath(resolvedPath);
+      if (!project) {
+        const name = resolvedPath.split("/").pop() || "unnamed";
+        project = projectStore.createProject(name, resolvedPath);
+      }
+      projectStore.close();
+
+      const store = createStore(project.id);
 
       const logger: Logger = createLogger({
         sink: (event) => {
@@ -77,13 +85,17 @@ export function createProgram(): Command {
     .argument("<project-path>", "Path to the project directory")
     .action((projectPath: string) => {
       const resolvedPath = resolve(projectPath);
-      let store;
-      try {
-        store = createStore(resolvedPath);
-      } catch {
-        console.log("No state found. Run 'start' first.");
+
+      const projectStore = createProjectStore();
+      const project = projectStore.getProjectByPath(resolvedPath);
+      if (!project) {
+        console.log("No project found. Run 'start' first.");
+        projectStore.close();
         return;
       }
+      projectStore.close();
+
+      const store = createStore(project.id);
 
       const phase = store.getPhase();
       const totalCost = store.getTotalCost();

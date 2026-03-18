@@ -1,74 +1,88 @@
 import type Database from "better-sqlite3";
-import type { PhaseName, Spec, SpecGoal, GoalState, GoalStatus } from "../core/types.js";
+import type {
+  PhaseName,
+  Spec,
+  SpecGoal,
+  GoalState,
+  GoalStatus,
+} from "../core/types.js";
 import type { StateStore } from "./types.js";
 
 export class SQLiteStore implements StateStore {
   private db: Database.Database;
+  private projectId: string;
 
-  constructor(db: Database.Database) {
+  constructor(db: Database.Database, projectId: string) {
     this.db = db;
+    this.projectId = projectId;
   }
 
   // ── Project ──────────────────────────────────────────────
 
   getPhase(): PhaseName {
     const row = this.db
-      .prepare("SELECT current_phase FROM project WHERE id = 1")
-      .get() as { current_phase: string } | undefined;
+      .prepare("SELECT current_phase FROM project_state WHERE project_id = ?")
+      .get(this.projectId) as { current_phase: string } | undefined;
     return (row?.current_phase ?? "interview") as PhaseName;
   }
 
   setPhase(phase: PhaseName): void {
     this.db
       .prepare(
-        "UPDATE project SET current_phase = ?, updated_at = datetime('now') WHERE id = 1",
+        "UPDATE project_state SET current_phase = ?, updated_at = datetime('now') WHERE project_id = ?",
       )
-      .run(phase);
+      .run(phase, this.projectId);
   }
 
   getTotalCost(): number {
     const row = this.db
-      .prepare("SELECT total_cost_usd FROM project WHERE id = 1")
-      .get() as { total_cost_usd: number } | undefined;
+      .prepare("SELECT total_cost_usd FROM project_state WHERE project_id = ?")
+      .get(this.projectId) as { total_cost_usd: number } | undefined;
     return row?.total_cost_usd ?? 0;
   }
 
   addCost(amount: number): void {
     this.db
       .prepare(
-        "UPDATE project SET total_cost_usd = total_cost_usd + ?, updated_at = datetime('now') WHERE id = 1",
+        "UPDATE project_state SET total_cost_usd = total_cost_usd + ?, updated_at = datetime('now') WHERE project_id = ?",
       )
-      .run(amount);
+      .run(amount, this.projectId);
   }
 
   // ── Interview ────────────────────────────────────────────
 
   getInterviewNotes(): string[] {
     const rows = this.db
-      .prepare("SELECT content FROM interview_notes ORDER BY id")
-      .all() as { content: string }[];
+      .prepare(
+        "SELECT content FROM interview_notes WHERE project_id = ? ORDER BY id",
+      )
+      .all(this.projectId) as { content: string }[];
     return rows.map((r) => r.content);
   }
 
   addInterviewNote(note: string): void {
     this.db
-      .prepare("INSERT INTO interview_notes (content) VALUES (?)")
-      .run(note);
+      .prepare(
+        "INSERT INTO interview_notes (project_id, content) VALUES (?, ?)",
+      )
+      .run(this.projectId, note);
   }
 
   // ── Spec ─────────────────────────────────────────────────
 
   getSpec(): Spec | null {
-    const row = this.db.prepare("SELECT * FROM spec WHERE id = 1").get() as
+    const row = this.db
+      .prepare("SELECT * FROM spec WHERE project_id = ?")
+      .get(this.projectId) as
       | { overview: string; technical_decisions: string }
       | undefined;
     if (!row) return null;
 
     const goalRows = this.db
       .prepare(
-        "SELECT id, name, description, acceptance_criteria, depends_on FROM goals ORDER BY rowid",
+        "SELECT id, name, description, acceptance_criteria, depends_on FROM goals WHERE project_id = ? ORDER BY rowid",
       )
-      .all() as {
+      .all(this.projectId) as {
       id: string;
       name: string;
       description: string;
@@ -91,23 +105,25 @@ export class SQLiteStore implements StateStore {
 
   saveSpec(spec: Spec): void {
     const upsertSpec = this.db.prepare(
-      "INSERT INTO spec (id, overview, technical_decisions) VALUES (1, ?, ?) " +
-        "ON CONFLICT(id) DO UPDATE SET overview = excluded.overview, technical_decisions = excluded.technical_decisions",
+      "INSERT INTO spec (project_id, overview, technical_decisions) VALUES (?, ?, ?) " +
+        "ON CONFLICT(project_id) DO UPDATE SET overview = excluded.overview, technical_decisions = excluded.technical_decisions",
     );
 
     const upsertGoal = this.db.prepare(
-      "INSERT INTO goals (id, name, description, acceptance_criteria, depends_on) VALUES (?, ?, ?, ?, ?) " +
-        "ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, " +
+      "INSERT INTO goals (project_id, id, name, description, acceptance_criteria, depends_on) VALUES (?, ?, ?, ?, ?, ?) " +
+        "ON CONFLICT(project_id, id) DO UPDATE SET name = excluded.name, description = excluded.description, " +
         "acceptance_criteria = excluded.acceptance_criteria, depends_on = excluded.depends_on",
     );
 
     const tx = this.db.transaction(() => {
       upsertSpec.run(
+        this.projectId,
         spec.overview,
         JSON.stringify(spec.technicalDecisions),
       );
       for (const goal of spec.goals) {
         upsertGoal.run(
+          this.projectId,
           goal.id,
           goal.name,
           goal.description,
@@ -125,9 +141,9 @@ export class SQLiteStore implements StateStore {
   getGoals(): GoalState[] {
     const rows = this.db
       .prepare(
-        "SELECT id, status, retries, cost_usd, error, session_id FROM goals ORDER BY rowid",
+        "SELECT id, status, retries, cost_usd, error, session_id FROM goals WHERE project_id = ? ORDER BY rowid",
       )
-      .all() as {
+      .all(this.projectId) as {
       id: string;
       status: string;
       retries: number;
@@ -152,9 +168,9 @@ export class SQLiteStore implements StateStore {
   getGoal(id: string): GoalState | null {
     const r = this.db
       .prepare(
-        "SELECT id, status, retries, cost_usd, error, session_id FROM goals WHERE id = ?",
+        "SELECT id, status, retries, cost_usd, error, session_id FROM goals WHERE project_id = ? AND id = ?",
       )
-      .get(id) as
+      .get(this.projectId, id) as
       | {
           id: string;
           status: string;
@@ -181,7 +197,7 @@ export class SQLiteStore implements StateStore {
   upsertGoal(goal: GoalState): void {
     this.db
       .prepare(
-        "UPDATE goals SET status = ?, retries = ?, cost_usd = ?, error = ?, session_id = ? WHERE id = ?",
+        "UPDATE goals SET status = ?, retries = ?, cost_usd = ?, error = ?, session_id = ? WHERE project_id = ? AND id = ?",
       )
       .run(
         goal.status,
@@ -189,6 +205,7 @@ export class SQLiteStore implements StateStore {
         goal.costUsd,
         goal.error ?? null,
         goal.sessionId ?? null,
+        this.projectId,
         goal.id,
       );
   }
@@ -222,9 +239,9 @@ export class SQLiteStore implements StateStore {
   saveSession(phase: string, sessionId: string, goalId?: string): void {
     this.db
       .prepare(
-        "INSERT INTO sessions (phase, session_id, goal_id) VALUES (?, ?, ?)",
+        "INSERT INTO sessions (project_id, phase, session_id, goal_id) VALUES (?, ?, ?, ?)",
       )
-      .run(phase, sessionId, goalId ?? null);
+      .run(this.projectId, phase, sessionId, goalId ?? null);
   }
 
   getLatestSession(phase: string, goalId?: string): string | null {
@@ -233,15 +250,17 @@ export class SQLiteStore implements StateStore {
     if (goalId != null) {
       row = this.db
         .prepare(
-          "SELECT session_id FROM sessions WHERE phase = ? AND goal_id = ? ORDER BY id DESC LIMIT 1",
+          "SELECT session_id FROM sessions WHERE project_id = ? AND phase = ? AND goal_id = ? ORDER BY id DESC LIMIT 1",
         )
-        .get(phase, goalId) as { session_id: string } | undefined;
+        .get(this.projectId, phase, goalId) as
+        | { session_id: string }
+        | undefined;
     } else {
       row = this.db
         .prepare(
-          "SELECT session_id FROM sessions WHERE phase = ? AND goal_id IS NULL ORDER BY id DESC LIMIT 1",
+          "SELECT session_id FROM sessions WHERE project_id = ? AND phase = ? AND goal_id IS NULL ORDER BY id DESC LIMIT 1",
         )
-        .get(phase) as { session_id: string } | undefined;
+        .get(this.projectId, phase) as { session_id: string } | undefined;
     }
 
     return row?.session_id ?? null;

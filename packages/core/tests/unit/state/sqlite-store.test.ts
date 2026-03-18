@@ -2,17 +2,23 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../../src/state/migrations.js";
 import { SQLiteStore } from "../../../src/state/sqlite-store.js";
+import { SQLiteProjectStore } from "../../../src/state/project-store.js";
 import type { StateStore } from "../../../src/state/types.js";
 import type { Spec, SpecGoal } from "../../../src/core/types.js";
 
 describe("SQLiteStore", () => {
   let store: StateStore;
   let db: Database.Database;
+  let projectId: string;
 
   beforeEach(() => {
     db = new Database(":memory:");
     db.exec(SCHEMA_SQL);
-    store = new SQLiteStore(db);
+    // Create a project first so project_state row exists
+    const projectStore = new SQLiteProjectStore(db);
+    const project = projectStore.createProject("test-project", "/tmp/test");
+    projectId = project.id;
+    store = new SQLiteStore(db, projectId);
   });
 
   afterEach(() => {
@@ -398,6 +404,23 @@ describe("SQLiteStore", () => {
     expect(store.getLatestSession("execution", "g1")).toBe("sess-with-goal");
   });
 
+  // ── Project isolation ─────────────────────────────────
+
+  it("isolates data between projects", () => {
+    // Create a second project
+    const projectStore = new SQLiteProjectStore(db);
+    const project2 = projectStore.createProject("other", "/tmp/other");
+    const store2 = new SQLiteStore(db, project2.id);
+
+    store.addInterviewNote("Note for project 1");
+    store2.addInterviewNote("Note for project 2");
+
+    expect(store.getInterviewNotes()).toEqual(["Note for project 1"]);
+    expect(store2.getInterviewNotes()).toEqual(["Note for project 2"]);
+
+    // Don't close store2 separately since they share the same db
+  });
+
   // ── Close ──────────────────────────────────────────────
 
   it("closes the database without error", () => {
@@ -406,6 +429,8 @@ describe("SQLiteStore", () => {
     // Re-create so afterEach doesn't fail on double-close
     db = new Database(":memory:");
     db.exec(SCHEMA_SQL);
-    store = new SQLiteStore(db);
+    const projectStore = new SQLiteProjectStore(db);
+    const project = projectStore.createProject("test-project-2", "/tmp/test2");
+    store = new SQLiteStore(db, project.id);
   });
 });

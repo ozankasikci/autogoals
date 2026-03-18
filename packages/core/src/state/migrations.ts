@@ -1,26 +1,35 @@
 export const SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS project (
-  id INTEGER PRIMARY KEY DEFAULT 1,
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_state (
+  project_id TEXT PRIMARY KEY REFERENCES projects(id),
   current_phase TEXT NOT NULL DEFAULT 'interview',
   total_cost_usd REAL NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS interview_notes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
   content TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS spec (
-  id INTEGER PRIMARY KEY DEFAULT 1,
+  project_id TEXT PRIMARY KEY REFERENCES projects(id),
   overview TEXT NOT NULL,
   technical_decisions TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS goals (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
+  project_id TEXT NOT NULL REFERENCES projects(id),
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   acceptance_criteria TEXT NOT NULL,
@@ -29,16 +38,16 @@ CREATE TABLE IF NOT EXISTS goals (
   retries INTEGER NOT NULL DEFAULT 0,
   cost_usd REAL NOT NULL DEFAULT 0,
   error TEXT,
-  session_id TEXT
+  session_id TEXT,
+  PRIMARY KEY (project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
   phase TEXT NOT NULL,
   session_id TEXT NOT NULL,
   goal_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
-INSERT OR IGNORE INTO project (id) VALUES (1);
 `;
