@@ -1,7 +1,5 @@
 import type { Phase, PhaseResult, AgentContext, Spec } from "../../core/types.js";
-import { runQuery } from "../../sdk/index.js";
-import { SPEC_TOOLS } from "../../sdk/tool-config.js";
-import { renderSpec } from "./spec-writer.js";
+import { runQuery, SPEC_TOOLS } from "../../sdk/index.js";
 import { parseSpec } from "./spec-parser.js";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -52,13 +50,12 @@ Rules:
     let spec: Spec | null = null;
     let specMarkdown = "";
     let sessionId: string | undefined;
+    let nextPrompt = "Write the project specification now.";
 
     while (!approved) {
       const result = await runQuery(
         {
-          prompt: sessionId
-            ? "Please revise the spec based on my feedback."
-            : "Write the project specification now.",
+          prompt: nextPrompt,
           systemPrompt: sessionId ? undefined : systemPrompt,
           allowedTools: SPEC_TOOLS,
           cwd: projectPath,
@@ -81,6 +78,7 @@ Rules:
         spec = parseSpec(specMarkdown);
       } catch {
         console.log("\nFailed to parse spec. Asking agent to reformat...");
+        nextPrompt = "The spec could not be parsed. Please reformat it using the exact markdown format specified.";
         continue;
       }
 
@@ -91,41 +89,7 @@ Rules:
       if (answer.toLowerCase() === "y" || answer.toLowerCase() === "yes") {
         approved = true;
       } else {
-        // Feed the feedback back as the next prompt
-        const feedbackPrompt = `The user gave this feedback on the spec:\n\n${answer}\n\nPlease revise the spec accordingly. Output the full revised spec in the same format.`;
-        // We'll use resume to continue the conversation
-        const reviseResult = await runQuery(
-          {
-            prompt: feedbackPrompt,
-            allowedTools: SPEC_TOOLS,
-            cwd: projectPath,
-            model: config.model,
-            maxTurns: 10,
-            resume: sessionId,
-          },
-          undefined,
-          {
-            onSessionId: (id) => {
-              sessionId = id;
-            },
-          }
-        );
-        specMarkdown = reviseResult?.text ?? specMarkdown;
-        console.log("\n" + specMarkdown);
-
-        try {
-          spec = parseSpec(specMarkdown);
-        } catch {
-          console.log("\nFailed to parse revised spec. Trying again...");
-          continue;
-        }
-
-        const answer2 = await this.askUser(
-          "\nApprove this revised spec? (y/n/your feedback)\n> "
-        );
-        if (answer2.toLowerCase() === "y" || answer2.toLowerCase() === "yes") {
-          approved = true;
-        }
+        nextPrompt = `The user gave this feedback on the spec:\n\n${answer}\n\nPlease revise the spec accordingly. Output the full revised spec in the same format.`;
       }
     }
 

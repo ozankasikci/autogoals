@@ -1,4 +1,4 @@
-import type { Phase, PhaseName, AgentContext } from "./types.js";
+import type { Phase, PhaseName, PhaseResult, AgentContext } from "./types.js";
 import type { Logger } from "../modules/logging/index.js";
 
 export interface PhaseMap {
@@ -19,7 +19,7 @@ export class Agent {
     let currentPhase: PhaseName = "interview";
 
     while (currentPhase !== "done") {
-      const phase = this.phases[currentPhase as keyof PhaseMap];
+      const phase: Phase = this.phases[currentPhase as keyof PhaseMap];
       if (!phase) {
         throw new Error(`Unknown phase: ${currentPhase}`);
       }
@@ -30,7 +30,7 @@ export class Agent {
       });
 
       context.state.currentPhase = currentPhase;
-      const result = await phase.execute(context);
+      const result: PhaseResult = await phase.execute(context);
       currentPhase = result.next;
     }
 

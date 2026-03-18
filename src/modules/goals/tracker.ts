@@ -53,10 +53,11 @@ export class GoalTracker {
     goal.costUsd += costUsd;
   }
 
-  fail(id: string, error: string): void {
+  fail(id: string, error: string, costUsd: number = 0): void {
     const goal = this.mustGet(id);
     goal.status = "failed";
     goal.error = error;
+    goal.costUsd += costUsd;
   }
 
   canRetry(id: string): boolean {

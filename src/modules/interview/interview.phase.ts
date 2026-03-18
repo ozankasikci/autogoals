@@ -1,6 +1,5 @@
 import type { Phase, PhaseResult, AgentContext } from "../../core/types.js";
-import { runQuery } from "../../sdk/index.js";
-import { INTERVIEW_TOOLS } from "../../sdk/tool-config.js";
+import { runQuery, INTERVIEW_TOOLS } from "../../sdk/index.js";
 import { buildInterviewPrompt } from "./question-builder.js";
 import type { InterviewResult } from "./types.js";
 import * as readline from "readline";

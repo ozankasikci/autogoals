@@ -1,10 +1,9 @@
 import type { Phase, PhaseResult, AgentContext } from "../../core/types.js";
 import { GoalTracker } from "../goals/index.js";
-import { runQuery } from "../../sdk/index.js";
-import { EXECUTION_TOOLS } from "../../sdk/tool-config.js";
+import { runQuery, EXECUTION_TOOLS } from "../../sdk/index.js";
 import { buildExecutionPrompt } from "./planner.js";
 import { verifyGoal } from "./verifier.js";
-import type { Logger } from "../logging/logger.js";
+import type { Logger } from "../logging/index.js";
 import type { ExecutionSummary } from "./types.js";
 
 export class ExecutionPhase implements Phase {
@@ -95,7 +94,8 @@ export class ExecutionPhase implements Phase {
           costUsd: totalGoalCost,
         });
       } else {
-        tracker.fail(next.id, verification.reason);
+        tracker.fail(next.id, verification.reason, totalGoalCost);
+        summary.failed.push(goalSpec.id);
 
         if (tracker.canRetry(next.id)) {
           this.logger.log({

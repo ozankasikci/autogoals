@@ -1,6 +1,5 @@
 import type { Phase, PhaseResult, AgentContext } from "../../core/types.js";
-import { runQuery } from "../../sdk/index.js";
-import { STANDBY_TOOLS } from "../../sdk/tool-config.js";
+import { runQuery, STANDBY_TOOLS } from "../../sdk/index.js";
 import * as readline from "readline";
 
 export function buildStandbyPrompt(

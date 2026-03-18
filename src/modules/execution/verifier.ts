@@ -1,6 +1,5 @@
 import type { SpecGoal } from "../../core/types.js";
-import { runQuery } from "../../sdk/index.js";
-import { EXECUTION_TOOLS } from "../../sdk/tool-config.js";
+import { runQuery, EXECUTION_TOOLS } from "../../sdk/index.js";
 import { buildVerificationPrompt } from "./planner.js";
 
 export interface VerificationResult {
