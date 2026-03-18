@@ -78,3 +78,28 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Markdown message container */
+.markdown-message > *:first-child {
+  margin-top: 0;
+}
+.markdown-message > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Highlight.js - GitHub Dark Dimmed theme (adapted) */
+.hljs {
+  color: #adbac7;
+  background: transparent;
+}
+.hljs-keyword, .hljs-selector-tag { color: #f47067; }
+.hljs-string, .hljs-attr { color: #96d0ff; }
+.hljs-number, .hljs-literal { color: #6cb6ff; }
+.hljs-built_in { color: #dcbdfb; }
+.hljs-comment { color: #768390; font-style: italic; }
+.hljs-function .hljs-title, .hljs-title.function_ { color: #dcbdfb; }
+.hljs-variable, .hljs-template-variable { color: #f69d50; }
+.hljs-type, .hljs-title.class_ { color: #6cb6ff; }
+.hljs-meta { color: #768390; }
+.hljs-addition { color: #57ab5a; background-color: rgba(87,171,90,0.1); }
+.hljs-deletion { color: #e5534b; background-color: rgba(229,83,75,0.1); }

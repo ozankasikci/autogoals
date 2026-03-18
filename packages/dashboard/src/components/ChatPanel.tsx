@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 interface Message {
   id: string;
@@ -260,14 +261,13 @@ export function ChatPanel({
                         : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
                     )}
                   >
-                    <p
-                      className={cn(
-                        "text-[13px] whitespace-pre-wrap break-words leading-relaxed",
-                        msg.role === "agent" && "font-mono text-[12.5px] leading-[1.7]"
-                      )}
-                    >
-                      {msg.content}
-                    </p>
+                    {msg.role === "agent" ? (
+                      <MarkdownMessage content={msg.content} />
+                    ) : (
+                      <p className="text-[13px] whitespace-pre-wrap break-words leading-relaxed">
+                        {msg.content}
+                      </p>
+                    )}
                     <p className="text-[10px] mt-2 opacity-25">
                       {formatTimestamp(msg.createdAt)}
                     </p>
