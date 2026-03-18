@@ -50,6 +50,10 @@ export {
   STANDBY_TOOLS,
 } from "./sdk/tool-config.js";
 
+// Session
+export { MessageQueue, AgentSession } from "./session/index.js";
+export type { AgentSessionOptions, AgentEvent } from "./session/index.js";
+
 // Config
 export { loadConfig } from "./config/loader.js";
 export { DEFAULT_CONFIG } from "./config/defaults.js";
