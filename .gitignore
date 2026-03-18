@@ -3,3 +3,4 @@ dist/
 specs/
 logs/
 *.tgz
+.DS_Store
