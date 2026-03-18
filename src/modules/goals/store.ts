@@ -1,6 +1,2 @@
-import type { GoalState } from "../../core/types.js";
-import { GoalTracker } from "./tracker.js";
-
-export function serializeGoals(tracker: GoalTracker): GoalState[] {
-  return tracker.getAll();
-}
+// Goal serialization is now handled by StateStore.
+// This module is kept for backward compatibility but no longer needed.

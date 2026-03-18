@@ -1,3 +1,5 @@
+import type { StateStore } from "../modules/state/index.js";
+
 export type PhaseName = "interview" | "spec" | "execution" | "standby" | "done";
 
 export interface PhaseResult {
@@ -66,7 +68,7 @@ export interface ProjectState {
 
 export interface AgentContext {
   config: AgentConfig;
-  state: ProjectState;
+  store: StateStore;
   projectPath: string;
   spec: Spec | null;
 }

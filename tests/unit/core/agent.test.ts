@@ -1,9 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
+import Database from "better-sqlite3";
 import { Agent } from "../../../src/core/agent.js";
 import type { Phase, PhaseResult, AgentContext } from "../../../src/core/types.js";
-import { createInitialState } from "../../../src/modules/state/index.js";
+import { SQLiteStore, SCHEMA_SQL } from "../../../src/modules/state/index.js";
+import type { StateStore } from "../../../src/modules/state/index.js";
 import { loadConfig } from "../../../src/config/index.js";
 import { createLogger } from "../../../src/modules/logging/index.js";
+
+function createMemoryStore(): StateStore {
+  const db = new Database(":memory:");
+  db.pragma("journal_mode = WAL");
+  db.exec(SCHEMA_SQL);
+  return new SQLiteStore(db);
+}
 
 function mockPhase(name: string, next: string): Phase {
   return {
@@ -27,12 +36,12 @@ describe("Agent", () => {
     });
 
     const config = loadConfig({ projectPath: "/tmp/test" });
-    const state = createInitialState();
+    const store = createMemoryStore();
     const logger = createLogger({ sink: () => {} });
 
     await agent.run({
       config,
-      state,
+      store,
       projectPath: "/tmp/test",
       spec: null,
     }, logger);
@@ -52,12 +61,12 @@ describe("Agent", () => {
     const agent = new Agent({ interview, spec, execution, standby });
 
     const config = loadConfig({ projectPath: "/tmp/test" });
-    const state = createInitialState();
+    const store = createMemoryStore();
     const logger = createLogger({ sink: () => {} });
 
     await agent.run({
       config,
-      state,
+      store,
       projectPath: "/tmp/test",
       spec: null,
     }, logger);

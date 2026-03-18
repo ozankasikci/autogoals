@@ -1,56 +1,59 @@
 import type { GoalState, GoalStatus, SpecGoal } from "../../core/types.js";
+import type { StateStore } from "../state/index.js";
 
 export class GoalTracker {
-  private goals: Map<string, GoalState> = new Map();
-  private specGoals: Map<string, SpecGoal> = new Map();
+  private store: StateStore;
+  private specGoals: SpecGoal[];
   private maxRetries: number;
 
-  constructor(specGoals: SpecGoal[], maxRetries: number) {
+  constructor(store: StateStore, specGoals: SpecGoal[], maxRetries: number) {
+    this.store = store;
+    this.specGoals = specGoals;
     this.maxRetries = maxRetries;
+
+    // Seed any spec goals that aren't already in the store
     for (const sg of specGoals) {
-      this.specGoals.set(sg.id, sg);
-      this.goals.set(sg.id, {
-        id: sg.id,
-        status: "pending",
-        retries: 0,
-        costUsd: 0,
-      });
+      const existing = store.getGoal(sg.id);
+      if (!existing) {
+        store.upsertGoal({
+          id: sg.id,
+          status: "pending",
+          retries: 0,
+          costUsd: 0,
+        });
+      }
     }
   }
 
   get(id: string): GoalState | undefined {
-    return this.goals.get(id);
+    return this.store.getGoal(id) ?? undefined;
   }
 
   getAll(): GoalState[] {
-    return Array.from(this.goals.values());
+    return this.store.getGoals();
   }
 
   getNextPending(): GoalState | undefined {
-    for (const [id, state] of this.goals) {
-      if (state.status !== "pending" && state.status !== "retrying") continue;
-      const spec = this.specGoals.get(id)!;
-      const depsReady = spec.dependsOn.every((depId) => {
-        const dep = this.goals.get(depId);
-        return dep && (dep.status === "done" || dep.status === "skipped");
-      });
-      if (depsReady) return state;
-    }
-    return undefined;
+    return this.store.getNextPendingGoal(this.specGoals) ?? undefined;
   }
 
   start(id: string): void {
-    this.setStatus(id, "active");
+    const goal = this.mustGet(id);
+    goal.status = "active";
+    this.store.upsertGoal(goal);
   }
 
   startVerifying(id: string): void {
-    this.setStatus(id, "verifying");
+    const goal = this.mustGet(id);
+    goal.status = "verifying";
+    this.store.upsertGoal(goal);
   }
 
   complete(id: string, costUsd: number): void {
     const goal = this.mustGet(id);
     goal.status = "done";
     goal.costUsd += costUsd;
+    this.store.upsertGoal(goal);
   }
 
   fail(id: string, error: string, costUsd: number = 0): void {
@@ -58,6 +61,7 @@ export class GoalTracker {
     goal.status = "failed";
     goal.error = error;
     goal.costUsd += costUsd;
+    this.store.upsertGoal(goal);
   }
 
   canRetry(id: string): boolean {
@@ -69,10 +73,13 @@ export class GoalTracker {
     const goal = this.mustGet(id);
     goal.retries += 1;
     goal.status = "retrying";
+    this.store.upsertGoal(goal);
   }
 
   skip(id: string): void {
-    this.setStatus(id, "skipped");
+    const goal = this.mustGet(id);
+    goal.status = "skipped";
+    this.store.upsertGoal(goal);
   }
 
   isAllDone(): boolean {
@@ -85,12 +92,8 @@ export class GoalTracker {
     return this.getAll().reduce((sum, g) => sum + g.costUsd, 0);
   }
 
-  private setStatus(id: string, status: GoalStatus): void {
-    this.mustGet(id).status = status;
-  }
-
   private mustGet(id: string): GoalState {
-    const goal = this.goals.get(id);
+    const goal = this.store.getGoal(id);
     if (!goal) throw new Error(`Unknown goal: ${id}`);
     return goal;
   }

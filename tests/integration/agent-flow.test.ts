@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import Database from "better-sqlite3";
 import { Agent } from "../../src/core/agent.js";
 import { GoalTracker } from "../../src/modules/goals/index.js";
-import { createInitialState } from "../../src/modules/state/index.js";
+import { SQLiteStore, SCHEMA_SQL } from "../../src/modules/state/index.js";
+import type { StateStore } from "../../src/modules/state/index.js";
 import { loadConfig } from "../../src/config/index.js";
 import { createLogger } from "../../src/modules/logging/index.js";
 import { parseSpec } from "../../src/modules/spec/index.js";
@@ -11,6 +13,13 @@ import { fileURLToPath } from "url";
 import type { Phase, PhaseResult } from "../../src/core/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function createMemoryStore(): StateStore {
+  const db = new Database(":memory:");
+  db.pragma("journal_mode = WAL");
+  db.exec(SCHEMA_SQL);
+  return new SQLiteStore(db);
+}
 
 describe("agent flow integration", () => {
   it("transitions through all phases with mock phases", async () => {
@@ -32,10 +41,10 @@ describe("agent flow integration", () => {
     });
 
     const config = loadConfig({ projectPath: "/tmp/test" });
-    const state = createInitialState();
+    const store = createMemoryStore();
     const logger = createLogger({ sink: () => {} });
 
-    await agent.run({ config, state, projectPath: "/tmp/test", spec: null }, logger);
+    await agent.run({ config, store, projectPath: "/tmp/test", spec: null }, logger);
 
     expect(transitions).toEqual(["interview", "spec", "execution", "standby"]);
   });
@@ -58,7 +67,10 @@ describe("agent flow integration", () => {
     const md = readFileSync(fixturePath, "utf-8");
     const spec = parseSpec(md);
 
-    const tracker = new GoalTracker(spec.goals, 2);
+    const store = createMemoryStore();
+    store.saveSpec(spec);
+
+    const tracker = new GoalTracker(store, spec.goals, 2);
     expect(tracker.getNextPending()?.id).toBe("1");
 
     tracker.start("1");

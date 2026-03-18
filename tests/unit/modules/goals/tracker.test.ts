@@ -1,6 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import Database from "better-sqlite3";
 import { GoalTracker } from "../../../../src/modules/goals/index.js";
+import { SQLiteStore } from "../../../../src/modules/state/index.js";
+import { SCHEMA_SQL } from "../../../../src/modules/state/index.js";
 import type { SpecGoal } from "../../../../src/core/types.js";
+import type { StateStore } from "../../../../src/modules/state/index.js";
 
 const makeGoal = (id: string, deps: string[] = []): SpecGoal => ({
   id,
@@ -10,24 +14,41 @@ const makeGoal = (id: string, deps: string[] = []): SpecGoal => ({
   dependsOn: deps,
 });
 
+function createMemoryStore(specGoals: SpecGoal[]): StateStore {
+  const db = new Database(":memory:");
+  db.pragma("journal_mode = WAL");
+  db.exec(SCHEMA_SQL);
+  const store = new SQLiteStore(db);
+  // Save a spec so goals rows exist in the DB
+  store.saveSpec({
+    overview: "test",
+    technicalDecisions: [],
+    goals: specGoals,
+  });
+  return store;
+}
+
 describe("GoalTracker", () => {
   it("initializes goals from spec goals", () => {
-    const tracker = new GoalTracker([makeGoal("1"), makeGoal("2")], 2);
+    const specGoals = [makeGoal("1"), makeGoal("2")];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
     expect(tracker.getAll()).toHaveLength(2);
     expect(tracker.getAll()[0].status).toBe("pending");
   });
 
   it("returns next goal that has no unmet dependencies", () => {
-    const tracker = new GoalTracker(
-      [makeGoal("1"), makeGoal("2", ["1"])],
-      2
-    );
+    const specGoals = [makeGoal("1"), makeGoal("2", ["1"])];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
     const next = tracker.getNextPending();
     expect(next?.id).toBe("1");
   });
 
   it("transitions goal through lifecycle", () => {
-    const tracker = new GoalTracker([makeGoal("1")], 2);
+    const specGoals = [makeGoal("1")];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
 
     tracker.start("1");
     expect(tracker.get("1")!.status).toBe("active");
@@ -41,7 +62,9 @@ describe("GoalTracker", () => {
   });
 
   it("retries failed goal up to max retries then skips", () => {
-    const tracker = new GoalTracker([makeGoal("1")], 2);
+    const specGoals = [makeGoal("1")];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
 
     tracker.start("1");
     tracker.fail("1", "first error");
@@ -66,7 +89,9 @@ describe("GoalTracker", () => {
   });
 
   it("reports all done when every goal is done or skipped", () => {
-    const tracker = new GoalTracker([makeGoal("1"), makeGoal("2")], 2);
+    const specGoals = [makeGoal("1"), makeGoal("2")];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
 
     tracker.start("1");
     tracker.startVerifying("1");
@@ -78,7 +103,9 @@ describe("GoalTracker", () => {
   });
 
   it("computes total cost", () => {
-    const tracker = new GoalTracker([makeGoal("1"), makeGoal("2")], 2);
+    const specGoals = [makeGoal("1"), makeGoal("2")];
+    const store = createMemoryStore(specGoals);
+    const tracker = new GoalTracker(store, specGoals, 2);
 
     tracker.start("1");
     tracker.startVerifying("1");

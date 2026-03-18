@@ -29,7 +29,7 @@ export class Agent {
         message: `Entering ${currentPhase} phase`,
       });
 
-      context.state.currentPhase = currentPhase;
+      context.store.setPhase(currentPhase);
       const result: PhaseResult = await phase.execute(context);
       currentPhase = result.next;
     }
