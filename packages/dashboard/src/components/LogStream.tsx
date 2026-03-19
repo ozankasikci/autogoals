@@ -78,11 +78,11 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
     const recentLogs = logs.slice(-20);
 
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col h-full">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-sm leading-relaxed min-h-[200px] max-h-[calc(100vh-200px)]"
+          className="flex-1 overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-sm leading-relaxed"
         >
           {recentLogs.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-muted-foreground">

@@ -690,7 +690,7 @@ export function ProjectDetail() {
           <main className="flex-1 min-w-0 flex flex-col bg-background transition-all duration-200 ease-out">
             <div
               className="w-full h-full flex flex-col mx-auto transition-all duration-200 ease-out"
-              style={{ maxWidth: panelOpen ? Math.max(480, 720 - (panelWidth - 360) * 0.5) : 720 }}
+              style={{ maxWidth: panelOpen ? Math.max(600, 900 - (panelWidth - 360) * 0.5) : 900 }}
             >
               <ChatPanel
                 projectId={project.id}
