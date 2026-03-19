@@ -166,12 +166,12 @@ export function ChatPanel({
   useEffect(() => {
     if (data?.messages) {
       setMessages(data.messages);
-      // Jump to bottom instantly on initial load
+      // Jump to bottom instantly on initial load — use setTimeout to ensure DOM is rendered
       if (initialLoadRef.current) {
-        requestAnimationFrame(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "instant" });
-        });
         initialLoadRef.current = false;
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 50);
       }
     }
   }, [data]);
