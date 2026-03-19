@@ -62,6 +62,22 @@ export class AgentManager {
     });
 
     this.sessions.set(projectId, session);
+
+    // Set phase based on what we're about to do
+    const db = this.getDb();
+    const store = new SQLiteStore(db, projectId);
+    const goals = store.getGoals();
+    const hasDraftGoals = goals.some(g => g.status === "draft");
+    const hasPendingGoals = goals.some(g => g.status === "pending" || g.status === "ready");
+
+    if (hasDraftGoals) {
+      store.setPhase("interview");
+    } else if (hasPendingGoals) {
+      store.setPhase("execution");
+    } else {
+      store.setPhase("standby");
+    }
+
     this.consumeEvents(projectId, session);
 
     if (initialMessage) {
@@ -87,6 +103,7 @@ export class AgentManager {
     if (!pending) return;
 
     store.updateGoal(pending.id, { status: "active" });
+    store.setPhase("execution");
     this.activeGoals.set(projectId, pending.id);
 
     console.log(`[AgentManager] Goal '${pending.id}' → active`);
@@ -104,6 +121,12 @@ export class AgentManager {
     const store = new SQLiteStore(db, projectId);
     store.updateGoal(activeGoalId, { status: "done" });
     this.activeGoals.delete(projectId);
+
+    // Check if more goals remain, otherwise standby
+    const remaining = store.getGoals().filter(g => g.status === "pending" || g.status === "ready" || g.status === "draft");
+    if (remaining.length === 0) {
+      store.setPhase("standby");
+    }
 
     console.log(`[AgentManager] Goal '${activeGoalId}' → done`);
 
@@ -166,6 +189,9 @@ export class AgentManager {
                         });
                       }
                     }
+
+                    // Move to spec phase since we just generated criteria
+                    store.setPhase("spec");
 
                     console.log(
                       `[AgentManager] Goal '${draftGoals[0].name}' refined with ${parsed.criteria.length} criteria`,
