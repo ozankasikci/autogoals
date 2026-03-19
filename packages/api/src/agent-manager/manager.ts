@@ -108,8 +108,8 @@ export class AgentManager {
 
         // --- Phase 0: Empty project — ask user what to build ---
         const allGoals = store.getGoals();
-        const rules = store.getRules();
-        if (allGoals.length === 0 && rules.length === 0) {
+        const projectRules = store.getRules();
+        if (allGoals.length === 0 && projectRules.length === 0) {
           // Check if we already asked (has agent messages)
           const existingMessages = store.getMessages(5);
           const hasAgentIntro = existingMessages.some(m => m.role === "agent");
