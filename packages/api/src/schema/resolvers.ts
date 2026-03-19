@@ -234,15 +234,8 @@ export function createResolvers(
           const spec = store.getSpec();
           const phase = store.getPhase();
           const goalViews = getGoalViews(db, record.id);
-          const rules = store.getRules();
 
           let systemPrompt = `You are an autonomous AI agent working on the project "${record.name}" at ${record.path}. Current phase: ${phase}.`;
-
-          if (rules.length > 0) {
-            systemPrompt += `\n\nRULES (you MUST follow ALL of these):\n`;
-            systemPrompt += rules.map(r => `- ${r.content}`).join("\n");
-            systemPrompt += `\n\nYou must comply with ALL rules above when implementing any goal. If a goal conflicts with a rule, the rule wins — flag the conflict instead of breaking the rule.`;
-          }
 
           if (spec) {
             systemPrompt += `\n\nProject spec:\n${spec.overview}`;
@@ -253,16 +246,8 @@ export function createResolvers(
 
           const resolvedPath = resolvePath(record.path);
           mkdirSync(resolvedPath, { recursive: true });
-          const goalDetails = goalViews
-            .filter(g => g.status === "pending" || g.status === "active")
-            .map(g => `- ${g.name}: ${g.description || "no description"}`)
-            .join("\n");
 
-          const initialMessage = goalViews.length > 0
-            ? `Start working on the project. Here are the pending goals:\n${goalDetails}\n\nBegin with the first pending goal.`
-            : "The project has no goals yet. Introduce yourself and ask what the user wants to build.";
-
-          agentManager.start(args.projectId, resolvedPath, systemPrompt, initialMessage);
+          agentManager.start(args.projectId, resolvedPath, systemPrompt);
           return projectToView(record, db, store, getRunningIds());
         }
 

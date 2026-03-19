@@ -5,6 +5,7 @@ const phaseColors: Record<string, BadgeProps["variant"]> = {
   interview: "info",
   spec: "info",
   execution: "warning",
+  monitoring: "info",
   standby: "secondary",
   done: "success",
   failed: "destructive",
@@ -20,6 +21,7 @@ const goalStatusColors: Record<string, BadgeProps["variant"]> = {
   done: "success",
   failed: "destructive",
   skipped: "outline",
+  regressed: "warning",
 };
 
 interface StatusBadgeProps {

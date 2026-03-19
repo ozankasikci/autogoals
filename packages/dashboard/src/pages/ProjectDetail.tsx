@@ -114,7 +114,7 @@ type PanelTab = "goals" | "rules" | "activity";
 /* ------------------------------------------------------------------ */
 
 function PhaseIndicator({ phase }: { phase: string }) {
-  const phases = ["interview", "spec", "execution", "standby"];
+  const phases = ["interview", "spec", "execution", "monitoring", "standby"];
   const currentIdx = phases.indexOf(phase);
 
   return (

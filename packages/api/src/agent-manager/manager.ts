@@ -17,10 +17,8 @@ function buildToolSummary(tool: string, input: Record<string, unknown>): string 
   }
 }
 
-// Tools that indicate the agent is actively working (not just reading)
-const ACTIVE_TOOLS = new Set(["Write", "Edit", "Bash"]);
-
 export class AgentManager {
+  private loops = new Map<string, boolean>(); // projectId → running flag
   private sessions = new Map<string, AgentSession>();
   private activeGoals = new Map<string, string>(); // projectId → goalId
   private getDb: () => Database.Database;
@@ -45,266 +43,281 @@ export class AgentManager {
     });
   }
 
+  // Start the continuous loop for a project
+  start(projectId: string, projectPath: string, systemPromptBase: string): void {
+    if (this.loops.has(projectId)) throw new Error(`Already running for project ${projectId}`);
+    this.loops.set(projectId, true);
+    this.runContinuous(projectId, projectPath, systemPromptBase);
+  }
+
+  // Stop the continuous loop
+  stop(projectId: string): void {
+    this.loops.delete(projectId);
+    const session = this.sessions.get(projectId);
+    if (session) {
+      session.close();
+      this.sessions.delete(projectId);
+    }
+    this.activeGoals.delete(projectId);
+  }
+
+  stopAll(): void {
+    for (const [id] of this.loops) {
+      this.stop(id);
+    }
+  }
+
   isRunning(projectId: string): boolean {
-    return this.sessions.has(projectId);
+    return this.loops.has(projectId);
   }
 
   getRunningIds(): Set<string> {
-    return new Set(this.sessions.keys());
+    return new Set(this.loops.keys());
   }
 
-  start(projectId: string, projectPath: string, systemPrompt?: string, initialMessage?: string): void {
-    if (this.sessions.has(projectId)) {
-      throw new Error(`Agent already running for project ${projectId}`);
+  // Push a message to the active session, or store for next pickup
+  sendMessage(projectId: string, content: string): void {
+    const session = this.sessions.get(projectId);
+    if (session && !session.closed) {
+      session.send(content);
+    }
+    // Message is already stored in DB by the resolver
+    // The loop will pick it up if no active session
+  }
+
+  // The main continuous loop
+  private async runContinuous(projectId: string, projectPath: string, systemPromptBase: string) {
+    const IDLE_COOLDOWN = 5 * 60 * 1000;  // 5 min when nothing to do
+    const POST_WORK_COOLDOWN = 5 * 1000;   // 5s after completing work
+
+    console.log(`[Supervisor] Starting continuous loop for ${projectId}`);
+
+    while (this.loops.has(projectId)) {
+      try {
+        const db = this.getDb();
+        const store = new SQLiteStore(db, projectId);
+
+        // --- Phase A: Check for unread user messages ---
+        const unread = store.getUnreadMessages();
+        if (unread.length > 0) {
+          store.setPhase("standby");
+          const msgText = unread.map(m => `User: ${m.content}`).join("\n");
+          await this.runTask(projectId, projectPath, systemPromptBase, {
+            prompt: `The user sent you messages:\n\n${msgText}\n\nRespond helpfully.`,
+            model: "sonnet",
+            maxTurns: 30,
+          });
+          store.markMessagesRead();
+          await this.sleep(POST_WORK_COOLDOWN, projectId);
+          continue;
+        }
+
+        // --- Phase B: Work on incomplete goals ---
+        const goals = store.getGoals();
+        const incomplete = goals.find(g =>
+          g.status === "pending" || g.status === "ready" || g.status === "draft" || g.status === "regressed"
+        );
+        if (incomplete) {
+          store.setPhase("execution");
+          const goalRow = db.prepare(
+            "SELECT id, name, description, approach, acceptance_criteria FROM goals WHERE project_id = ? AND id = ?"
+          ).get(projectId, incomplete.id) as any;
+
+          if (goalRow) {
+            const criteria = JSON.parse(goalRow.acceptance_criteria || "[]");
+            store.updateGoal(incomplete.id, { status: "active" });
+            this.activeGoals.set(projectId, incomplete.id);
+
+            this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 active`);
+            pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+
+            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\nACCEPTANCE CRITERIA:\n${criteria.map((c: string) => `- ${c}`).join("\n") || "- none specified"}\n\nImplement it completely, then verify all criteria are met.`;
+
+            await this.runTask(projectId, projectPath, systemPromptBase, {
+              prompt: goalPrompt,
+              model: "sonnet",
+              maxTurns: 100,
+            });
+
+            // Mark goal as done
+            store.updateGoal(incomplete.id, { status: "done" });
+            this.activeGoals.delete(projectId);
+            this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 done`);
+            pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+          }
+          await this.sleep(POST_WORK_COOLDOWN, projectId);
+          continue;
+        }
+
+        // --- Phase C: Verify completed goals (rotate, one per cycle) ---
+        const doneGoals = goals.filter(g => g.status === "done");
+        if (doneGoals.length > 0) {
+          store.setPhase("monitoring");
+          // Pick one goal to verify (round-robin based on timestamp)
+          const goalToVerify = doneGoals[Math.floor(Date.now() / IDLE_COOLDOWN) % doneGoals.length];
+          const goalRow = db.prepare(
+            "SELECT id, name, acceptance_criteria FROM goals WHERE project_id = ? AND id = ?"
+          ).get(projectId, goalToVerify.id) as any;
+
+          if (goalRow) {
+            const criteria = JSON.parse(goalRow.acceptance_criteria || "[]");
+            if (criteria.length > 0) {
+              this.publishLogEvent(projectId, "info", `Verifying goal: ${goalRow.name}`);
+
+              const verifyPrompt = `Verify that this goal is still met. Do NOT make changes \u2014 only check.\n\nGOAL: ${goalRow.name}\nCRITERIA:\n${criteria.map((c: string) => `- ${c}`).join("\n")}\n\nRun tests, check files, verify each criterion. Respond with:\n- VERIFIED: if all criteria still pass\n- REGRESSED: [reason] if any criterion fails`;
+
+              const result = await this.runTask(projectId, projectPath, systemPromptBase, {
+                prompt: verifyPrompt,
+                model: "haiku",
+                maxTurns: 20,
+              });
+
+              if (result?.text?.includes("REGRESSED")) {
+                store.updateGoal(goalToVerify.id, { status: "regressed" });
+                this.publishLogEvent(projectId, "warning", `Goal '${goalRow.name}' regressed!`);
+                pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+                await this.sleep(POST_WORK_COOLDOWN, projectId);
+                continue; // Next iteration will pick it up as incomplete
+              } else {
+                this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' verified`);
+              }
+            }
+          }
+        }
+
+        // --- Phase D: Check rules ---
+        const rules = store.getRules();
+        if (rules.length > 0) {
+          const rulesText = rules.map(r => `- ${r.content}`).join("\n");
+          this.publishLogEvent(projectId, "info", "Checking rules compliance...");
+
+          const rulesPrompt = `Check if these project rules are being followed. Do NOT make changes \u2014 only check.\n\nRULES:\n${rulesText}\n\nScan the codebase. Respond with:\n- ALL_CLEAR: if all rules are followed\n- VIOLATION: [rule] [details] if any rule is broken`;
+
+          const result = await this.runTask(projectId, projectPath, systemPromptBase, {
+            prompt: rulesPrompt,
+            model: "haiku",
+            maxTurns: 15,
+          });
+
+          if (result?.text?.includes("VIOLATION")) {
+            // Store the violation as a chat message so user sees it
+            const violationText = `Rule violation detected:\n\n${result.text}`;
+            store.addMessage("agent", violationText);
+            pubsub.publish(EVENTS.NEW_MESSAGE, {
+              newMessage: { role: "agent", content: result.text, projectId },
+            });
+          } else {
+            this.publishLogEvent(projectId, "info", "All rules compliant");
+          }
+        }
+
+        // --- Phase E: All green → sleep ---
+        store.setPhase("standby");
+        this.publishLogEvent(projectId, "info", `All clear. Sleeping ${IDLE_COOLDOWN / 1000}s...`);
+        await this.sleep(IDLE_COOLDOWN, projectId);
+
+      } catch (err: any) {
+        console.error(`[Supervisor] Error in loop for ${projectId}:`, err.message);
+        this.publishLogEvent(projectId, "error", `Supervisor error: ${err.message}`);
+        // Don't crash the loop — sleep and retry
+        await this.sleep(30_000, projectId);
+      }
+    }
+
+    console.log(`[Supervisor] Loop ended for ${projectId}`);
+  }
+
+  // Run a single focused task session
+  private async runTask(
+    projectId: string,
+    projectPath: string,
+    systemPromptBase: string,
+    task: { prompt: string; model: string; maxTurns: number }
+  ): Promise<{ text?: string; costUsd?: number } | null> {
+    const db = this.getDb();
+    const store = new SQLiteStore(db, projectId);
+
+    // Build system prompt with rules
+    const rules = store.getRules();
+    let systemPrompt = systemPromptBase;
+    if (rules.length > 0) {
+      systemPrompt += `\n\nRULES (you MUST follow ALL of these):\n`;
+      systemPrompt += rules.map(r => `- ${r.content}`).join("\n");
+      systemPrompt += `\n\nYou must comply with ALL rules above. If a goal conflicts with a rule, the rule wins.`;
     }
 
     const session = new AgentSession({
       cwd: projectPath,
-      model: "sonnet",
-      systemPrompt:
-        systemPrompt ??
-        `You are an autonomous AI agent working on a project at ${projectPath}. Help the user build their project. Ask clarifying questions when needed. Be concise.`,
-      allowedTools: [
-        "Read",
-        "Write",
-        "Edit",
-        "Bash",
-        "Glob",
-        "Grep",
-        "WebSearch",
-        "WebFetch",
-      ],
-      maxTurns: 200,
+      model: task.model,
+      systemPrompt,
+      maxTurns: task.maxTurns,
     });
 
     this.sessions.set(projectId, session);
+    session.send(task.prompt);
 
-    // Set phase based on what we're about to do
-    const db = this.getDb();
-    const store = new SQLiteStore(db, projectId);
-    const goals = store.getGoals();
-    const hasDraftGoals = goals.some(g => g.status === "draft");
-    const hasPendingGoals = goals.some(g => g.status === "pending" || g.status === "ready");
-
-    if (hasDraftGoals) {
-      store.setPhase("interview");
-    } else if (hasPendingGoals) {
-      store.setPhase("execution");
-    } else {
-      store.setPhase("standby");
-    }
-
-    this.consumeEvents(projectId, session);
-
-    if (initialMessage) {
-      session.send(initialMessage);
-    }
-  }
-
-  sendMessage(projectId: string, content: string): void {
-    const session = this.sessions.get(projectId);
-    if (!session) {
-      throw new Error(`No agent running for project ${projectId}`);
-    }
-    session.send(content);
-  }
-
-  private activateNextGoal(projectId: string): void {
-    const db = this.getDb();
-    const store = new SQLiteStore(db, projectId);
-    const goals = store.getGoals();
-
-    // Pick up actionable goals — pending, ready, or draft (draft gets auto-promoted)
-    const pending = goals.find(g => g.status === "pending" || g.status === "ready" || g.status === "draft");
-    if (!pending) return;
-
-    store.updateGoal(pending.id, { status: "active" });
-    store.setPhase("execution");
-    this.activeGoals.set(projectId, pending.id);
-
-    console.log(`[AgentManager] Goal '${pending.id}' → active`);
-
-    pubsub.publish(EVENTS.PROJECT_UPDATED, {
-      projectUpdated: { id: projectId },
-    });
-  }
-
-  private completeActiveGoal(projectId: string): void {
-    const activeGoalId = this.activeGoals.get(projectId);
-    if (!activeGoalId) return;
-
-    const db = this.getDb();
-    const store = new SQLiteStore(db, projectId);
-    store.updateGoal(activeGoalId, { status: "done" });
-    this.activeGoals.delete(projectId);
-
-    // Check if more goals remain, otherwise standby
-    const remaining = store.getGoals().filter(g => g.status === "pending" || g.status === "ready" || g.status === "draft");
-    if (remaining.length === 0) {
-      store.setPhase("standby");
-    }
-
-    console.log(`[AgentManager] Goal '${activeGoalId}' → done`);
-
-    pubsub.publish(EVENTS.PROJECT_UPDATED, {
-      projectUpdated: { id: projectId },
-    });
-  }
-
-  private async consumeEvents(
-    projectId: string,
-    session: AgentSession,
-  ): Promise<void> {
-    let hasSeenActiveTool = false;
+    let lastText: string | undefined;
+    let totalCost = 0;
 
     try {
-      console.log(`[AgentManager] Starting event consumption for project ${projectId}`);
       for await (const event of session.events()) {
-        console.log(`[AgentManager] Event: ${event.type}`, event.type === "text" ? event.text?.slice(0, 80) : event.type === "error" ? event.error : event.type === "tool_use" ? event.toolName : "");
+        if (!this.loops.has(projectId)) break; // stopped
 
         switch (event.type) {
           case "text": {
-            const db = this.getDb();
-            const store = new SQLiteStore(db, projectId);
+            lastText = event.text;
             const msg = store.addMessage("agent", event.text!);
-
-            // Check if this is a refinement response with structured JSON
-            const jsonMatch = event.text!.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch) {
-              try {
-                const parsed = JSON.parse(jsonMatch[1]);
-                if (parsed.criteria && parsed.approach) {
-                  // Find the draft goal and update it
-                  const draftGoals = db
-                    .prepare(
-                      "SELECT id, name FROM goals WHERE project_id = ? AND status = 'draft' ORDER BY rowid DESC LIMIT 1",
-                    )
-                    .all(projectId) as { id: string; name: string }[];
-
-                  if (draftGoals.length > 0) {
-                    const goalId = draftGoals[0].id;
-                    store.updateGoal(goalId, {
-                      acceptanceCriteria: parsed.criteria,
-                      approach: parsed.approach,
-                      status: "refined",
-                    });
-
-                    // Update project spec if specUpdate provided
-                    if (parsed.specUpdate) {
-                      const existingSpec = store.getSpec();
-                      if (existingSpec) {
-                        store.updateSpec(
-                          existingSpec.overview + "\n\n" + parsed.specUpdate,
-                          existingSpec.technicalDecisions,
-                        );
-                      } else {
-                        store.saveSpec({
-                          overview: parsed.specUpdate,
-                          goals: [],
-                          technicalDecisions: [],
-                        });
-                      }
-                    }
-
-                    // Move to spec phase since we just generated criteria
-                    store.setPhase("spec");
-
-                    console.log(
-                      `[AgentManager] Goal '${draftGoals[0].name}' refined with ${parsed.criteria.length} criteria`,
-                    );
-
-                    pubsub.publish(EVENTS.PROJECT_UPDATED, {
-                      projectUpdated: { id: projectId },
-                    });
-                  }
-                }
-              } catch {
-                // Not valid JSON refinement, just a normal message
-              }
-            }
-
-            pubsub.publish(EVENTS.NEW_MESSAGE, {
-              newMessage: { ...msg, projectId },
-            });
-            this.publishLogEvent(projectId, "info", event.text!.slice(0, 200));
+            pubsub.publish(EVENTS.NEW_MESSAGE, { newMessage: { ...msg, projectId } });
+            this.publishLogEvent(projectId, "info", event.text!.slice(0, 150));
             break;
           }
-
           case "tool_use": {
-            // If agent uses a write/edit/bash tool, activate the next pending goal
-            if (ACTIVE_TOOLS.has(event.toolName!) && !this.activeGoals.has(projectId)) {
-              this.activateNextGoal(projectId);
-              hasSeenActiveTool = true;
-            }
-
-            // Store a tool-use message in the chat stream
+            // Store tool-use in chat
             const toolMsg = JSON.stringify({
               _type: "tool_use",
               tool: event.toolName,
               input: event.toolInput,
               summary: buildToolSummary(event.toolName!, event.toolInput || {}),
             });
-
-            {
-              const db = this.getDb();
-              const store = new SQLiteStore(db, projectId);
-              const msg = store.addMessage("agent", toolMsg);
-
-              pubsub.publish(EVENTS.NEW_MESSAGE, {
-                newMessage: { ...msg, projectId },
-              });
-            }
-
-            // Also keep the log event
-            this.publishLogEvent(projectId, "info", `Using ${event.toolName}${event.toolInput?.file_path ? `: ${event.toolInput.file_path}` : ""}${event.toolInput?.command ? `: ${String(event.toolInput.command).slice(0, 60)}` : ""}`);
+            const msg = store.addMessage("agent", toolMsg);
+            pubsub.publish(EVENTS.NEW_MESSAGE, { newMessage: { ...msg, projectId } });
+            this.publishLogEvent(projectId, "info",
+              `Using ${event.toolName}${event.toolInput?.file_path ? `: ${event.toolInput.file_path}` : ""}${event.toolInput?.command ? `: ${String(event.toolInput.command).slice(0, 60)}` : ""}`
+            );
             break;
           }
-
           case "result": {
-            // Agent turn completed — if there was an active goal and the agent was working, mark it done
-            if (hasSeenActiveTool && this.activeGoals.has(projectId)) {
-              this.completeActiveGoal(projectId);
-              hasSeenActiveTool = false;
-
-              // Check if there are more pending goals — query with names
-              const db = this.getDb();
-              const remainingRows = db
-                .prepare("SELECT id, name, description FROM goals WHERE project_id = ? AND status IN ('pending', 'ready') ORDER BY rowid LIMIT 1")
-                .all(projectId) as { id: string; name: string; description: string }[];
-              if (remainingRows.length > 0) {
-                const next = remainingRows[0];
-                session.send(`Great work! Now move on to the next goal: "${next.name}". Description: ${next.description}. Begin implementing it.`);
-              }
-            }
-
-            this.publishLogEvent(projectId, "info", `Agent completed turn (cost: $${event.result?.costUsd.toFixed(4) ?? "?"})`, event.result?.costUsd);
+            totalCost += event.result?.costUsd ?? 0;
+            store.addCost(event.result?.costUsd ?? 0);
+            this.publishLogEvent(projectId, "info", `Task done (cost: $${totalCost.toFixed(4)})`);
             break;
           }
-
-          case "error":
+          case "error": {
             this.publishLogEvent(projectId, "error", `Agent error: ${event.error}`);
             break;
+          }
         }
       }
     } catch (err: any) {
-      this.publishLogEvent(projectId, "error", `Agent crashed: ${err.message}`);
+      this.publishLogEvent(projectId, "error", `Session error: ${err.message}`);
     } finally {
       this.sessions.delete(projectId);
-      this.activeGoals.delete(projectId);
     }
+
+    return { text: lastText, costUsd: totalCost };
   }
 
-  stop(projectId: string): void {
-    const session = this.sessions.get(projectId);
-    if (!session) return;
-    session.close();
-    this.sessions.delete(projectId);
-    this.activeGoals.delete(projectId);
-  }
-
-  stopAll(): void {
-    for (const [id] of this.sessions) {
-      this.stop(id);
-    }
+  // Sleep that can be interrupted by stop()
+  private sleep(ms: number, projectId: string): Promise<void> {
+    return new Promise(resolve => {
+      const timer = setTimeout(resolve, ms);
+      const check = setInterval(() => {
+        if (!this.loops.has(projectId)) {
+          clearTimeout(timer);
+          clearInterval(check);
+          resolve();
+        }
+      }, 1000);
+    });
   }
 }

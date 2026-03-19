@@ -1,6 +1,6 @@
 import type { StateStore } from "../state/index.js";
 
-export type PhaseName = "interview" | "spec" | "execution" | "standby" | "done";
+export type PhaseName = "interview" | "spec" | "execution" | "standby" | "monitoring" | "done";
 
 export interface PhaseResult {
   next: PhaseName;
@@ -50,7 +50,8 @@ export type GoalStatus =
   | "done"
   | "failed"
   | "retrying"
-  | "skipped";
+  | "skipped"
+  | "regressed";
 
 export interface GoalState {
   id: string;

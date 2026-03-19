@@ -8,7 +8,7 @@ import { formatCost } from "@/lib/utils";
 import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
 import { Plus, X, Pencil, Trash2 } from "lucide-react";
 
-const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped"];
+const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed"];
 
 interface Goal {
   id: string;
@@ -50,6 +50,7 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   failed: "bg-red-500",
   verifying: "bg-amber-500",
   skipped: "bg-orange-500",
+  regressed: "bg-orange-500",
 };
 
 /* -- Helpers -- */
@@ -285,13 +286,18 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                     Ready
                   </span>
                 )}
+                {goal.status === "regressed" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 rounded px-1.5 py-0.5">
+                    Regressed
+                  </span>
+                )}
                 {goal.status === "active" && (
                   <span className="inline-flex items-center gap-1 text-xs text-blue-400 bg-blue-500/10 rounded px-1.5 py-0.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
                     Working...
                   </span>
                 )}
-                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && progress.total > 0 && (
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && goal.status !== "regressed" && progress.total > 0 && (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 max-w-[80px] h-1 rounded-full bg-border overflow-hidden">
                       <div
@@ -304,7 +310,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                     </span>
                   </div>
                 )}
-                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && goal.status !== "regressed" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
                   <span className="text-xs text-muted-foreground">
                     {goal.acceptanceCriteria.length} {goal.acceptanceCriteria.length === 1 ? "criterion" : "criteria"}
                   </span>
