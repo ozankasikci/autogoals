@@ -777,7 +777,7 @@ export function ProjectDetail() {
                       </button>
                     </div>
                   )}
-                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                  <div className={`flex-1 overflow-y-auto px-4 py-4 ${activePanel === "activity" ? "hidden" : ""}`}>
                     {activePanel === "goals" && !selectedGoalId && (
                       <GoalTable
                         goals={project.goals}
