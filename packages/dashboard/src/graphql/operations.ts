@@ -95,6 +95,24 @@ export const STOP_AGENT = gql`
   }
 `;
 
+export const START_ALL_AGENTS = gql`
+  mutation StartAllAgents {
+    startAllAgents {
+      id
+      isRunning
+    }
+  }
+`;
+
+export const STOP_ALL_AGENTS = gql`
+  mutation StopAllAgents {
+    stopAllAgents {
+      id
+      isRunning
+    }
+  }
+`;
+
 export const PROJECT_UPDATED = gql`
   subscription ProjectUpdated($projectId: ID!) {
     projectUpdated(projectId: $projectId) {

@@ -75,6 +75,8 @@ export const typeDefs = `#graphql
     deleteProject(id: ID!): Boolean!
     startAgent(projectId: ID!): Project!
     stopAgent(projectId: ID!): Project!
+    startAllAgents: [Project!]!
+    stopAllAgents: [Project!]!
     sendMessage(projectId: ID!, content: String!): Message!
     updateSpec(projectId: ID!, overview: String!, technicalDecisions: [String!]!): Spec!
     updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, approach: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String): Goal!

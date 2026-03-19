@@ -1,9 +1,9 @@
-import { useQuery } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import { Link } from "react-router-dom";
-import { GET_PROJECTS } from "@/graphql/operations";
+import { GET_PROJECTS, START_ALL_AGENTS, STOP_ALL_AGENTS } from "@/graphql/operations";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderOpen } from "lucide-react";
+import { Plus, FolderOpen, PlayCircle, StopCircle } from "lucide-react";
 
 interface Goal {
   id: string;
@@ -28,6 +28,15 @@ export function ProjectList() {
     { pollInterval: 5000 }
   );
 
+  const [startAll, { loading: startingAll }] = useMutation(START_ALL_AGENTS, {
+    refetchQueries: [{ query: GET_PROJECTS }],
+  });
+  const [stopAll, { loading: stoppingAll }] = useMutation(STOP_ALL_AGENTS, {
+    refetchQueries: [{ query: GET_PROJECTS }],
+  });
+
+  const anyRunning = data?.projects?.some(p => p.isRunning) ?? false;
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -38,12 +47,37 @@ export function ProjectList() {
             Manage your AI agent projects
           </p>
         </div>
-        <Link to="/projects/new">
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {anyRunning ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => stopAll()}
+              disabled={stoppingAll}
+              className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+            >
+              <StopCircle className="mr-2 h-4 w-4" />
+              {stoppingAll ? "Stopping..." : "Stop All"}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => startAll()}
+              disabled={startingAll}
+              className="text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
+            >
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {startingAll ? "Starting..." : "Start All"}
+            </Button>
+          )}
+          <Link to="/projects/new">
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Content */}

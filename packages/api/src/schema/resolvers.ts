@@ -270,6 +270,37 @@ export function createResolvers(
         return projectToView(record, db, store, getRunningIds());
       },
 
+      startAllAgents(): ProjectView[] {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const projects = projectStore.listProjects();
+        const results: ProjectView[] = [];
+        for (const record of projects) {
+          if (agentManager && !agentManager.isRunning(record.id)) {
+            const store = new SQLiteStore(db, record.id);
+            const resolvedPath = resolvePath(record.path);
+            mkdirSync(resolvedPath, { recursive: true });
+            const phase = store.getPhase();
+            const systemPrompt = `You are an AI agent working on "${record.name}" at ${record.path}. Current phase: ${phase}.`;
+            agentManager.start(record.id, resolvedPath, systemPrompt);
+          }
+          const store = new SQLiteStore(db, record.id);
+          results.push(projectToView(record, db, store, getRunningIds()));
+        }
+        return results;
+      },
+
+      stopAllAgents(): ProjectView[] {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const projects = projectStore.listProjects();
+        if (agentManager) agentManager.stopAll();
+        return projects.map(record => {
+          const store = new SQLiteStore(db, record.id);
+          return projectToView(record, db, store, getRunningIds());
+        });
+      },
+
       sendMessage(
         _: unknown,
         args: { projectId: string; content: string },
