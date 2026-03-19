@@ -226,9 +226,9 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
   // -- Compact sidebar mode --
   if (compact) {
     return (
-      <div className="space-y-0.5">
+      <div className="space-y-2">
         {goals.length === 0 && !addingGoal && (
-          <p className="text-xs text-muted-foreground/70 py-4 text-center">
+          <p className="text-sm text-muted-foreground py-6 text-center">
             No goals yet.
           </p>
         )}
@@ -236,77 +236,82 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
         {goals.map((goal) => {
           const progress = getCriteriaProgress(goal.acceptanceCriteria);
           const progressPct = progress.total > 0 ? (progress.checked / progress.total) * 100 : 0;
+          const isComplete = goal.status === "done";
+          const isActive = goal.status === "active";
 
           return (
             <button
               key={goal.id}
               onClick={() => onSelectGoal?.(goal.id)}
-              className="w-full text-left group flex items-start gap-2.5 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-all duration-150 cursor-pointer"
+              className={`
+                w-full text-left group rounded-lg border transition-all duration-150 cursor-pointer
+                ${isActive
+                  ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
+                  : isComplete
+                    ? "border-border/60 bg-card/50 hover:bg-card"
+                    : "border-border hover:border-border bg-card hover:bg-accent/30"
+                }
+              `}
             >
-              {/* Status dot */}
-              <span
-                className={`shrink-0 mt-[5px] h-2 w-2 rounded-full ${STATUS_DOT_COLORS[goal.status] ?? "bg-zinc-500"}`}
-              />
-
-              {/* Content */}
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground/90 truncate flex-1 min-w-0">
-                    {goal.name}
+              {/* Top row: status + name + cost */}
+              <div className="flex items-center gap-2.5 px-3 pt-3 pb-1.5">
+                <span
+                  className={`shrink-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${STATUS_DOT_COLORS[goal.status] ?? "bg-zinc-500"}`}
+                />
+                <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isComplete ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>
+                  {goal.name}
+                </span>
+                {goal.costUsd > 0 && (
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {formatCost(goal.costUsd)}
                   </span>
-
-                  {/* Cost */}
-                  {goal.costUsd > 0 && (
-                    <span className="shrink-0 text-xs text-muted-foreground/50 tabular-nums">
-                      {formatCost(goal.costUsd)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Description (1 line) */}
-                {goal.description && (
-                  <p className="text-sm text-muted-foreground/60 truncate leading-tight">
-                    {goal.description}
-                  </p>
                 )}
+              </div>
 
-                {/* Status-specific indicators for draft/refined */}
+              {/* Bottom row: status label or progress */}
+              <div className="px-3 pb-3 pl-8">
                 {goal.status === "draft" && (
-                  <span className="text-[11px] text-violet-400/60 pt-0.5">
+                  <span className="inline-flex items-center gap-1 text-xs text-violet-400 bg-violet-500/10 rounded px-1.5 py-0.5">
                     Draft
                   </span>
                 )}
                 {goal.status === "refined" && (
-                  <span className="text-[11px] text-cyan-400/60 pt-0.5">
+                  <span className="inline-flex items-center gap-1 text-xs text-cyan-400 bg-cyan-500/10 rounded px-1.5 py-0.5">
                     Needs approval
                   </span>
                 )}
                 {goal.status === "ready" && (
-                  <span className="text-[11px] text-indigo-400/60 pt-0.5">
-                    Waiting to start
+                  <span className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 rounded px-1.5 py-0.5">
+                    Ready
                   </span>
                 )}
-
-                {/* Criteria progress (hide for draft/refined/ready since they show their own indicator) */}
-                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && progress.total > 0 && (
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <div className="w-10 h-[2px] rounded-full bg-muted overflow-hidden">
+                {goal.status === "active" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-blue-400 bg-blue-500/10 rounded px-1.5 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    Working...
+                  </span>
+                )}
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && progress.total > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 max-w-[80px] h-1 rounded-full bg-border overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-emerald-500/70 transition-all duration-300"
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                    <span className="text-xs text-muted-foreground tabular-nums">
                       {progress.checked}/{progress.total}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground/30">
-                      {progress.total === 1 ? "criterion" : "criteria"}
                     </span>
                   </div>
                 )}
-                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
-                  <span className="text-[11px] text-muted-foreground/40 pt-0.5">
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
+                  <span className="text-xs text-muted-foreground">
                     {goal.acceptanceCriteria.length} {goal.acceptanceCriteria.length === 1 ? "criterion" : "criteria"}
+                  </span>
+                )}
+                {goal.status === "done" && progress.total === 0 && goal.acceptanceCriteria.length === 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 rounded px-1.5 py-0.5">
+                    Complete
                   </span>
                 )}
               </div>
