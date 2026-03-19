@@ -64,7 +64,7 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-[11px] text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04] transition-colors"
         >
           <svg className="h-3 w-3 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -77,7 +77,7 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
         {expanded && (
           <div className="mt-1.5 ml-1 space-y-0.5">
             {tools.map((tool, i) => (
-              <div key={i} className="text-[11px] text-muted-foreground/40 font-mono truncate max-w-[400px]">
+              <div key={i} className="text-sm text-muted-foreground/40 font-mono truncate max-w-[400px]">
                 {tool.summary}
               </div>
             ))}
@@ -264,11 +264,11 @@ export function ChatPanel({
                     {msg.role === "agent" ? (
                       <MarkdownMessage content={msg.content} />
                     ) : (
-                      <p className="text-[13px] whitespace-pre-wrap break-words leading-relaxed">
+                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                         {msg.content}
                       </p>
                     )}
-                    <p className="text-[10px] mt-2 opacity-25">
+                    <p className="text-[11px] mt-2 opacity-25">
                       {formatTimestamp(msg.createdAt)}
                     </p>
                   </div>
@@ -318,7 +318,7 @@ export function ChatPanel({
             )}
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground/20 text-center mt-2">
+        <p className="text-[11px] text-muted-foreground/20 text-center mt-2">
           {isAgentRunning
             ? "Agent responds in real-time"
             : "Start the agent to get responses"

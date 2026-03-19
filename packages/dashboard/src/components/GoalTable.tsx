@@ -245,13 +245,13 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
               {/* Content */}
               <div className="flex-1 min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-foreground/90 truncate flex-1 min-w-0">
+                  <span className="text-sm font-medium text-foreground/90 truncate flex-1 min-w-0">
                     {goal.name}
                   </span>
 
                   {/* Cost */}
                   {goal.costUsd > 0 && (
-                    <span className="shrink-0 text-[10px] text-muted-foreground/30 tabular-nums">
+                    <span className="shrink-0 text-xs text-muted-foreground/30 tabular-nums">
                       {formatCost(goal.costUsd)}
                     </span>
                   )}
@@ -259,7 +259,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
 
                 {/* Description (1 line) */}
                 {goal.description && (
-                  <p className="text-[11px] text-muted-foreground/40 truncate leading-tight">
+                  <p className="text-sm text-muted-foreground/40 truncate leading-tight">
                     {goal.description}
                   </p>
                 )}
@@ -273,16 +273,16 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <span className="text-[9px] text-muted-foreground/30 tabular-nums">
+                    <span className="text-[11px] text-muted-foreground/30 tabular-nums">
                       {progress.checked}/{progress.total}
                     </span>
-                    <span className="text-[9px] text-muted-foreground/20">
+                    <span className="text-[11px] text-muted-foreground/20">
                       {progress.total === 1 ? "criterion" : "criteria"}
                     </span>
                   </div>
                 )}
                 {goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
-                  <span className="text-[9px] text-muted-foreground/25 pt-0.5">
+                  <span className="text-[11px] text-muted-foreground/25 pt-0.5">
                     {goal.acceptanceCriteria.length} {goal.acceptanceCriteria.length === 1 ? "criterion" : "criteria"}
                   </span>
                 )}
@@ -323,7 +323,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
         ) : (
           <button
             onClick={() => setAddingGoal(true)}
-            className="w-full flex items-center gap-1.5 text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors py-2 px-2.5 mt-1"
+            className="w-full flex items-center gap-1.5 text-sm text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors py-2 px-2.5 mt-1"
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

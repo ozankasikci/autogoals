@@ -14,14 +14,14 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
-          h1: ({ children }) => <h1 className="text-base font-bold mt-3 mb-1.5">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-[14px] font-bold mt-3 mb-1.5">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-[13px] font-semibold mt-2.5 mb-1">{children}</h3>,
-          h4: ({ children }) => <h4 className="text-[13px] font-medium mt-2 mb-1">{children}</h4>,
-          p: ({ children }) => <p className="text-[13px] leading-relaxed mb-2 last:mb-0">{children}</p>,
-          ul: ({ children }) => <ul className="text-[13px] leading-relaxed list-disc pl-5 mb-2 space-y-0.5">{children}</ul>,
-          ol: ({ children }) => <ol className="text-[13px] leading-relaxed list-decimal pl-5 mb-2 space-y-0.5">{children}</ol>,
-          li: ({ children }) => <li className="text-[13px]">{children}</li>,
+          h1: ({ children }) => <h1 className="text-lg font-bold mt-3 mb-1.5">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-1.5">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-sm font-semibold mt-2.5 mb-1">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-sm font-medium mt-2 mb-1">{children}</h4>,
+          p: ({ children }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="text-sm leading-relaxed list-disc pl-5 mb-2 space-y-0.5">{children}</ul>,
+          ol: ({ children }) => <ol className="text-sm leading-relaxed list-decimal pl-5 mb-2 space-y-0.5">{children}</ol>,
+          li: ({ children }) => <li className="text-sm">{children}</li>,
           a: ({ href, children }) => (
             <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
               {children}
@@ -37,7 +37,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
           ),
           table: ({ children }) => (
             <div className="overflow-x-auto my-2">
-              <table className="text-[12px] border-collapse w-full">{children}</table>
+              <table className="text-[13px] border-collapse w-full">{children}</table>
             </div>
           ),
           th: ({ children }) => (
@@ -52,7 +52,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
               return <CodeBlock className={className}>{children}</CodeBlock>;
             }
             return (
-              <code className="text-[12px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.04] font-mono text-indigo-300/90" {...props}>
+              <code className="text-[13px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.04] font-mono text-indigo-300/90" {...props}>
                 {children}
               </code>
             );
@@ -79,18 +79,18 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   return (
     <div className="relative group my-2 rounded-lg overflow-hidden border border-white/[0.06]">
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.04]">
-        <span className="text-[10px] text-muted-foreground/40 font-mono">
+        <span className="text-xs text-muted-foreground/40 font-mono">
           {className?.replace("language-", "").replace("hljs ", "") || "code"}
         </span>
         <button
           onClick={handleCopy}
-          className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors"
         >
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
       <pre className="p-3 overflow-x-auto">
-        <code className={`text-[12px] leading-[1.6] font-mono ${className || ""}`}>
+        <code className={`text-[13px] leading-[1.6] font-mono ${className || ""}`}>
           {children}
         </code>
       </pre>

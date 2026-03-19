@@ -64,13 +64,13 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-[11px] leading-relaxed min-h-[200px] max-h-[calc(100vh-200px)]"
+          className="overflow-y-auto rounded-md bg-black/20 p-2 font-mono text-sm leading-relaxed min-h-[200px] max-h-[calc(100vh-200px)]"
         >
           {recentLogs.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-muted-foreground">
               <div className="text-center space-y-1">
                 <div className="text-sm opacity-50">{">"}_</div>
-                <p className="text-[11px]">Waiting for events...</p>
+                <p className="text-sm">Waiting for events...</p>
               </div>
             </div>
           ) : (
@@ -98,7 +98,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
           )}
         </div>
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[10px] text-muted-foreground/60">
+          <span className="text-[11px] text-muted-foreground/60">
             {logs.length} event{logs.length !== 1 ? "s" : ""}
           </span>
           {!autoScroll && recentLogs.length > 0 && (
@@ -107,7 +107,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
                 setAutoScroll(true);
                 bottomRef.current?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               Scroll to bottom
             </button>

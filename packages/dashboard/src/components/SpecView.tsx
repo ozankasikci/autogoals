@@ -98,7 +98,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
           {overviewText.length > 150 && (
             <button
               onClick={() => setShowMore(!showMore)}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-1"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors mt-1"
             >
               {showMore ? "Show less" : "Show more"}
             </button>
@@ -108,14 +108,14 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
         {/* Tech decisions as pills */}
         {spec.technicalDecisions.length > 0 && (
           <div>
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Tech Decisions
             </span>
             <div className="flex flex-wrap gap-1 mt-1.5">
               {spec.technicalDecisions.map((decision, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-foreground/70"
+                  className="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-sm text-foreground/70"
                   title={decision}
                 >
                   {decision.length > 40 ? decision.slice(0, 40) + "..." : decision}
@@ -128,7 +128,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
         {/* Edit button */}
         <button
           onClick={startEditing}
-          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -140,7 +140,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
         {editing && (
           <div className="rounded-md border border-border bg-muted/20 p-3 space-y-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase">Overview</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase">Overview</label>
               <textarea
                 className="flex w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
                 value={overview}
@@ -148,7 +148,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase">Technical Decisions</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase">Technical Decisions</label>
               <div className="space-y-1.5">
                 {techDecisions.map((decision, i) => (
                   <div key={i} className="flex items-center gap-1.5">
@@ -172,17 +172,17 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
                 <button
                   type="button"
                   onClick={addDecision}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   + Add decision
                 </button>
               </div>
             </div>
             <div className="flex items-center justify-end gap-1.5 pt-1">
-              <Button variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={cancelEditing} disabled={saving}>
+              <Button variant="outline" size="sm" className="h-6 text-sm px-2" onClick={cancelEditing} disabled={saving}>
                 Cancel
               </Button>
-              <Button size="sm" className="h-6 text-[11px] px-2" onClick={saveEdits} disabled={saving}>
+              <Button size="sm" className="h-6 text-sm px-2" onClick={saveEdits} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>

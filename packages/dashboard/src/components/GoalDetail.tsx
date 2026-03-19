@@ -333,7 +333,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
           {/* Saved indicator */}
           <span
-            className={`shrink-0 text-[10px] text-emerald-400/70 font-medium mt-1.5 transition-opacity duration-300 ${
+            className={`shrink-0 text-xs text-emerald-400/70 font-medium mt-1.5 transition-opacity duration-300 ${
               saved.visible ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -344,7 +344,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
           <div className="relative shrink-0" ref={statusDropdownRef}>
             <button
               onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-              className="flex items-center gap-1.5 h-6 px-2 rounded-md text-[11px] font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors"
+              className="flex items-center gap-1.5 h-6 px-2 rounded-md text-sm font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors"
             >
               <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[status] ?? "bg-zinc-500"}`} />
               <span className="text-muted-foreground">{status}</span>
@@ -396,7 +396,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             <SectionHeader label="Acceptance Criteria" />
             {totalCriteria > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+                <span className="text-xs text-muted-foreground/50 tabular-nums">
                   {checkedCount}/{totalCriteria}
                 </span>
                 <div className="w-12 h-[2px] rounded-full bg-white/[0.06] overflow-hidden">
@@ -451,7 +451,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                 {depGoals.map((dep) => (
                   <span
                     key={dep.id}
-                    className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[dep.status] ?? "bg-zinc-500"}`} />
                     <button
@@ -474,7 +474,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             <div className="relative" ref={depPickerRef}>
               <button
                 onClick={() => setShowDepPicker(!showDepPicker)}
-                className="flex items-center gap-1 text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="flex items-center gap-1 text-sm text-muted-foreground/40 hover:text-muted-foreground transition-colors"
               >
                 <IconPlus />
                 <span>Add dependency</span>
@@ -495,7 +495,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
               )}
               {showDepPicker && availableDeps.length === 0 && (
                 <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border border-white/[0.08] bg-[hsl(224,71%,6%)] shadow-xl py-1">
-                  <div className="px-3 py-2 text-[11px] text-muted-foreground/40">No other goals available</div>
+                  <div className="px-3 py-2 text-sm text-muted-foreground/40">No other goals available</div>
                 </div>
               )}
             </div>
@@ -525,7 +525,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
               <DetailRow label="Retries" value={String(goal.retries)} />
               {goal.error && (
                 <div className="pt-1">
-                  <span className="text-[10px] text-muted-foreground/40">Error</span>
+                  <span className="text-xs text-muted-foreground/40">Error</span>
                   <p className="text-xs text-red-400/80 mt-0.5 leading-relaxed">{goal.error}</p>
                 </div>
               )}
@@ -577,7 +577,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground/40 font-medium">
+    <span className="text-xs uppercase tracking-[0.08em] text-muted-foreground/40 font-medium">
       {label}
     </span>
   );
@@ -586,8 +586,8 @@ function SectionHeader({ label }: { label: string }) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[11px] text-muted-foreground/40">{label}</span>
-      <span className="text-[11px] text-muted-foreground/70 tabular-nums">{value}</span>
+      <span className="text-sm text-muted-foreground/40">{label}</span>
+      <span className="text-sm text-muted-foreground/70 tabular-nums">{value}</span>
     </div>
   );
 }

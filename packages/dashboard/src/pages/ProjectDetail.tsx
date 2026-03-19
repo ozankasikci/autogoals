@@ -181,7 +181,7 @@ function PhaseIndicator({ phase }: { phase: string }) {
               i === currentIdx ? "bg-indigo-500" :
               "bg-white/[0.08]"
             }`} />
-            <span className={`text-[10px] ${
+            <span className={`text-[11px] ${
               i === currentIdx ? "text-foreground font-medium" :
               i < currentIdx ? "text-muted-foreground/60" :
               "text-muted-foreground/30"
@@ -237,7 +237,7 @@ function ProjectSidebar({
               {/* Status dot + initial */}
               <div className="shrink-0 relative">
                 <div className={`
-                  h-6 w-6 rounded-md flex items-center justify-center text-[11px] font-semibold
+                  h-6 w-6 rounded-md flex items-center justify-center text-sm font-semibold
                   ${isActive ? "bg-indigo-500/20 text-indigo-400" : "bg-white/[0.06] text-muted-foreground/60"}
                 `}>
                   {initial}
@@ -250,10 +250,10 @@ function ProjectSidebar({
               {/* Name + phase (only when expanded) */}
               {expanded && (
                 <div className="min-w-0 flex-1">
-                  <div className={`text-xs truncate ${isActive ? "text-foreground font-medium" : "text-muted-foreground/70"}`}>
+                  <div className={`text-sm truncate ${isActive ? "text-foreground font-medium" : "text-muted-foreground/70"}`}>
                     {p.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground/40 truncate">
+                  <div className="text-xs text-muted-foreground/40 truncate">
                     {p.phase}
                   </div>
                 </div>
@@ -274,7 +274,7 @@ function ProjectSidebar({
           title="New Project"
         >
           <IconPlus />
-          {expanded && <span className="text-[11px]">New Project</span>}
+          {expanded && <span className="text-sm">New Project</span>}
         </Link>
       </div>
     </aside>
@@ -313,12 +313,12 @@ function RailButton({
       <div className="relative">
         {icon}
         {count !== undefined && count > 0 && (
-          <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-white/[0.08] text-[10px] font-medium tabular-nums leading-none px-1">
+          <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-white/[0.08] text-xs font-medium tabular-nums leading-none px-1">
             {count}
           </span>
         )}
       </div>
-      <span className="text-[9px] font-medium leading-none">{label}</span>
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </button>
   );
 }
