@@ -161,14 +161,23 @@ export function ChatPanel({
     },
   });
 
+  const initialLoadRef = useRef(true);
+
   useEffect(() => {
     if (data?.messages) {
       setMessages(data.messages);
+      // Jump to bottom instantly on initial load
+      if (initialLoadRef.current) {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        });
+        initialLoadRef.current = false;
+      }
     }
   }, [data]);
 
   useEffect(() => {
-    if (bottomRef.current) {
+    if (!initialLoadRef.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);

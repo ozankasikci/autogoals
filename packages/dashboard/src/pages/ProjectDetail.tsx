@@ -311,7 +311,7 @@ export function ProjectDetail() {
 
   const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [panelWidth, setPanelWidth] = useState(480);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const autoOpenedRef = useRef(false);
