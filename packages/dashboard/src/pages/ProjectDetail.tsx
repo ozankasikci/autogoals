@@ -415,6 +415,7 @@ export function ProjectDetail() {
   const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(480);
   const autoOpenedRef = useRef(false);
   const autoOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -729,10 +730,8 @@ export function ProjectDetail() {
         {/* ── Chat Area (fills remaining space) ── */}
         <main className="flex-1 min-w-0 flex flex-col bg-background transition-all duration-200 ease-out">
           <div
-            className={`
-              w-full h-full flex flex-col mx-auto transition-all duration-200 ease-out
-              ${panelOpen ? "max-w-[600px]" : "max-w-[720px]"}
-            `}
+            className="w-full h-full flex flex-col mx-auto transition-all duration-200 ease-out"
+            style={{ maxWidth: panelOpen ? Math.max(480, 720 - (panelWidth - 360) * 0.5) : 720 }}
           >
             <ChatPanel
               projectId={project.id}
@@ -746,12 +745,40 @@ export function ProjectDetail() {
           className={`
             shrink-0 overflow-hidden transition-all duration-200 ease-out border-l
             ${panelOpen
-              ? "w-[480px] border-white/[0.06]"
+              ? "border-white/[0.06]"
               : "w-0 border-transparent"
             }
           `}
+          style={panelOpen ? { width: panelWidth } : undefined}
         >
-          <div className="w-[480px] h-full flex flex-col bg-[hsl(224,71%,4.5%)]">
+          <div className="h-full flex flex-col bg-[hsl(224,71%,4.5%)] relative" style={{ width: panelWidth }}>
+            {/* Drag handle */}
+            <div
+              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-indigo-500/30 active:bg-indigo-500/50 transition-colors z-10"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = panelWidth;
+
+                const onMouseMove = (ev: MouseEvent) => {
+                  const delta = startX - ev.clientX;
+                  const newWidth = Math.max(360, Math.min(800, startWidth + delta));
+                  setPanelWidth(newWidth);
+                };
+
+                const onMouseUp = () => {
+                  document.removeEventListener("mousemove", onMouseMove);
+                  document.removeEventListener("mouseup", onMouseUp);
+                  document.body.style.cursor = "";
+                  document.body.style.userSelect = "";
+                };
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+                document.body.style.cursor = "col-resize";
+                document.body.style.userSelect = "none";
+              }}
+            />
             {activePanel && (
               <>
                 {/* Hide panel header when viewing goal detail (GoalDetail has its own back nav) */}
