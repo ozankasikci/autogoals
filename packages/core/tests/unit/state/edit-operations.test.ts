@@ -106,6 +106,12 @@ describe("SQLiteStore edit operations", () => {
       expect(goal!.status).toBe("done");
     });
 
+    it("updates approach", () => {
+      store.updateGoal("g1", { approach: "Implement using streaming API" });
+      const goal = store.getGoal("g1");
+      expect(goal!.approach).toBe("Implement using streaming API");
+    });
+
     it("updates multiple fields at once", () => {
       store.updateGoal("g1", {
         name: "Renamed",
@@ -128,7 +134,7 @@ describe("SQLiteStore edit operations", () => {
   // ── addGoal ─────────────────────────────────────────────
 
   describe("addGoal", () => {
-    it("adds a new goal with pending status", () => {
+    it("adds a new goal with draft status", () => {
       store.addGoal({
         id: "g3",
         name: "New Goal",
@@ -147,9 +153,24 @@ describe("SQLiteStore edit operations", () => {
 
       const goalState = store.getGoal("g3");
       expect(goalState).not.toBeNull();
-      expect(goalState!.status).toBe("pending");
+      expect(goalState!.status).toBe("draft");
       expect(goalState!.retries).toBe(0);
       expect(goalState!.costUsd).toBe(0);
+    });
+
+    it("adds a new goal with approach", () => {
+      store.addGoal({
+        id: "g3",
+        name: "New Goal",
+        description: "A new goal",
+        acceptanceCriteria: ["Acceptance 1"],
+        dependsOn: [],
+        approach: "Use TDD to implement feature",
+      });
+
+      const goalState = store.getGoal("g3");
+      expect(goalState).not.toBeNull();
+      expect(goalState!.approach).toBe("Use TDD to implement feature");
     });
   });
 

@@ -40,12 +40,15 @@ describe("GoalTracker", () => {
     const store = createMemoryStore(specGoals);
     const tracker = new GoalTracker(store, specGoals, 2);
     expect(tracker.getAll()).toHaveLength(2);
-    expect(tracker.getAll()[0].status).toBe("pending");
+    expect(tracker.getAll()[0].status).toBe("draft");
   });
 
   it("returns next goal that has no unmet dependencies", () => {
     const specGoals = [makeGoal("1"), makeGoal("2", ["1"])];
     const store = createMemoryStore(specGoals);
+    // Goals default to 'draft'; set to 'pending' so getNextPending finds them
+    store.upsertGoal({ id: "1", status: "pending", retries: 0, costUsd: 0 });
+    store.upsertGoal({ id: "2", status: "pending", retries: 0, costUsd: 0 });
     const tracker = new GoalTracker(store, specGoals, 2);
     const next = tracker.getNextPending();
     expect(next?.id).toBe("1");

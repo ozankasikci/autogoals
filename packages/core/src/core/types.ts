@@ -41,6 +41,9 @@ export interface SpecGoal {
 }
 
 export type GoalStatus =
+  | "draft"
+  | "refined"
+  | "ready"
   | "pending"
   | "active"
   | "verifying"
@@ -56,6 +59,7 @@ export interface GoalState {
   costUsd: number;
   error?: string;
   sessionId?: string;
+  approach?: string;
 }
 
 export interface ProjectState {

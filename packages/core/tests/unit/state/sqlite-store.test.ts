@@ -146,7 +146,7 @@ describe("SQLiteStore", () => {
 
     expect(goals).toHaveLength(1);
     expect(goals[0].id).toBe("g1");
-    expect(goals[0].status).toBe("pending");
+    expect(goals[0].status).toBe("draft");
     expect(goals[0].retries).toBe(0);
     expect(goals[0].costUsd).toBe(0);
   });
@@ -211,6 +211,9 @@ describe("SQLiteStore", () => {
       goals: specGoals,
     };
     store.saveSpec(spec);
+    // Goals default to 'draft'; set to 'pending' so getNextPendingGoal finds them
+    store.upsertGoal({ id: "g1", status: "pending", retries: 0, costUsd: 0 });
+    store.upsertGoal({ id: "g2", status: "pending", retries: 0, costUsd: 0 });
 
     const next = store.getNextPendingGoal(specGoals);
     expect(next).not.toBeNull();
@@ -241,6 +244,8 @@ describe("SQLiteStore", () => {
       goals: specGoals,
     };
     store.saveSpec(spec);
+    // Set g2 to pending so it would be eligible if deps were met
+    store.upsertGoal({ id: "g2", status: "pending", retries: 0, costUsd: 0 });
 
     // Mark g1 as active (not done yet)
     store.upsertGoal({ id: "g1", status: "active", retries: 0, costUsd: 0 });
@@ -274,6 +279,8 @@ describe("SQLiteStore", () => {
       goals: specGoals,
     };
     store.saveSpec(spec);
+    // Set g2 to pending so getNextPendingGoal can find it
+    store.upsertGoal({ id: "g2", status: "pending", retries: 0, costUsd: 0 });
 
     // Mark g1 as done
     store.upsertGoal({ id: "g1", status: "done", retries: 0, costUsd: 0.1 });
@@ -307,6 +314,8 @@ describe("SQLiteStore", () => {
       goals: specGoals,
     };
     store.saveSpec(spec);
+    // Set g2 to pending so getNextPendingGoal can find it
+    store.upsertGoal({ id: "g2", status: "pending", retries: 0, costUsd: 0 });
 
     store.upsertGoal({
       id: "g1",
@@ -348,6 +357,28 @@ describe("SQLiteStore", () => {
     const next = store.getNextPendingGoal(specGoals);
     expect(next).not.toBeNull();
     expect(next!.id).toBe("g1");
+  });
+
+  it("does not return draft goals as pending", () => {
+    const specGoals: SpecGoal[] = [
+      {
+        id: "g1",
+        name: "Goal 1",
+        description: "First",
+        acceptanceCriteria: [],
+        dependsOn: [],
+      },
+    ];
+
+    const spec: Spec = {
+      overview: "Test",
+      technicalDecisions: [],
+      goals: specGoals,
+    };
+    store.saveSpec(spec);
+    // g1 defaults to 'draft', should not be returned by getNextPendingGoal
+    const next = store.getNextPendingGoal(specGoals);
+    expect(next).toBeNull();
   });
 
   it("returns null when all goals are done", () => {

@@ -47,11 +47,12 @@ export interface StateStore {
   updateGoal(id: string, updates: Partial<{
     name: string;
     description: string;
+    approach: string;
     acceptanceCriteria: string[];
     dependsOn: string[];
     status: string;
   }>): void;
-  addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[] }): void;
+  addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[]; approach?: string }): void;
   removeGoal(id: string): void;
 
   // Lifecycle
