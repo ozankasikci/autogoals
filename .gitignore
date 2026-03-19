@@ -9,3 +9,4 @@ x-clone/
 .small-singularity/
 *.png
 .playwright-mcp/
+.worktrees/
