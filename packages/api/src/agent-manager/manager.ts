@@ -288,13 +288,17 @@ export class AgentManager {
     console.log(`[Supervisor] Loop ended for ${projectId}`);
   }
 
-  // Run a single focused task session
+  // Run a single focused task session with timeout
   private async runTask(
     projectId: string,
     projectPath: string,
     systemPromptBase: string,
     task: { prompt: string; model: string; maxTurns: number }
   ): Promise<{ text?: string; costUsd?: number } | null> {
+    const pid = projectId.slice(0, 8);
+    console.log(`[Task:${pid}] Starting task (model=${task.model}, maxTurns=${task.maxTurns})`);
+    console.log(`[Task:${pid}] Prompt: ${task.prompt.slice(0, 100)}...`);
+
     const db = this.getDb();
     const store = new SQLiteStore(db, projectId);
 
@@ -307,6 +311,7 @@ export class AgentManager {
       systemPrompt += `\n\nYou must comply with ALL rules above. If a goal conflicts with a rule, the rule wins.`;
     }
 
+    console.log(`[Task:${pid}] Creating AgentSession...`);
     const session = new AgentSession({
       cwd: projectPath,
       model: task.model,
@@ -315,14 +320,37 @@ export class AgentManager {
     });
 
     this.sessions.set(projectId, session);
+    console.log(`[Task:${pid}] Sending prompt to session...`);
     session.send(task.prompt);
 
     let lastText: string | undefined;
     let totalCost = 0;
 
+    // Timeout: 5 min for the entire task
+    const TASK_TIMEOUT = 5 * 60 * 1000;
+    const timeoutPromise = new Promise<"timeout">((resolve) => {
+      setTimeout(() => resolve("timeout"), TASK_TIMEOUT);
+    });
+
     try {
-      for await (const event of session.events()) {
+      console.log(`[Task:${pid}] Consuming events...`);
+      const eventIterator = session.events();
+
+      while (true) {
         if (!this.loops.has(projectId)) break; // stopped
+
+        const nextEvent = eventIterator.next();
+        const result = await Promise.race([nextEvent, timeoutPromise]);
+
+        if (result === "timeout") {
+          console.log(`[Task:${pid}] TIMEOUT after ${TASK_TIMEOUT / 1000}s`);
+          this.publishLogEvent(projectId, "warning", "Task timed out after 5 minutes");
+          session.close();
+          break;
+        }
+
+        const { value: event, done } = result as IteratorResult<any>;
+        if (done) break;
 
         switch (event.type) {
           case "text": {
@@ -360,9 +388,11 @@ export class AgentManager {
         }
       }
     } catch (err: any) {
+      console.log(`[Task:${pid}] Error: ${err.message}`);
       this.publishLogEvent(projectId, "error", `Session error: ${err.message}`);
     } finally {
       this.sessions.delete(projectId);
+      console.log(`[Task:${pid}] Session ended (cost: $${totalCost.toFixed(4)})`);
     }
 
     return { text: lastText, costUsd: totalCost };
