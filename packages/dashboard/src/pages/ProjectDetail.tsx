@@ -800,12 +800,13 @@ export function ProjectDetail() {
                     {activePanel === "rules" && (
                       <RulesPanel projectId={project.id} />
                     )}
-                    {activePanel === "activity" && (
-                      <LogStream projectId={project.id} compact />
-                    )}
                   </div>
                 </>
               )}
+              {/* LogStream always mounted to preserve state + subscription */}
+              <div className={`flex-1 overflow-y-auto px-4 py-4 ${activePanel === "activity" ? "" : "hidden"}`}>
+                <LogStream projectId={project.id} compact />
+              </div>
             </div>
           </div>
 
