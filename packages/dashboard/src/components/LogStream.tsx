@@ -74,8 +74,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
 
   // ── Compact sidebar mode ──
   if (compact) {
-    // Show last 20 events
-    const recentLogs = logs.slice(-20);
+    const recentLogs = logs;
 
     return (
       <div className="flex flex-col h-full">
