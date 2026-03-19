@@ -275,7 +275,7 @@ export function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Message the agent..."
             rows={1}
-            className="w-full min-h-[44px] max-h-[160px] pl-4 pr-12 py-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 transition-all resize-none"
+            className="w-full min-h-[44px] max-h-[160px] pl-4 pr-12 py-3 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 transition-all resize-none"
           />
           <button
             onClick={handleSend}
