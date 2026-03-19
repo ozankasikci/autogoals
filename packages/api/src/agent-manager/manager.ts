@@ -112,21 +112,71 @@ export class AgentManager {
           continue;
         }
 
-        // --- Phase B: Work on incomplete goals ---
+        // --- Phase B1: Refine draft goals first ---
         const goals = store.getGoals();
-        const incomplete = goals.find(g =>
-          g.status === "pending" || g.status === "ready" || g.status === "draft" || g.status === "regressed"
+        const draftGoal = goals.find(g => g.status === "draft");
+        if (draftGoal) {
+          store.setPhase("interview");
+          const goalRow = db.prepare(
+            "SELECT id, name, description FROM goals WHERE project_id = ? AND id = ?"
+          ).get(projectId, draftGoal.id) as any;
+
+          if (goalRow) {
+            this.publishLogEvent(projectId, "info", `Refining goal: ${goalRow.name}`);
+            pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+
+            const refinePrompt = `A goal needs to be refined before implementation.\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\n\nAnalyze this goal and generate:\n1. A clear technical approach (2-3 sentences)\n2. Specific, testable acceptance criteria (3-7 items)\n\nRespond with EXACTLY this JSON format:\n\`\`\`json\n{\n  "approach": "your technical approach here",\n  "criteria": ["criterion 1", "criterion 2", "criterion 3"]\n}\n\`\`\``;
+
+            const result = await this.runTask(projectId, projectPath, systemPromptBase, {
+              prompt: refinePrompt,
+              model: "sonnet",
+              maxTurns: 15,
+            });
+
+            // Parse the refinement response
+            const jsonMatch = result?.text?.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[1]);
+                if (parsed.criteria && parsed.approach) {
+                  store.updateGoal(draftGoal.id, {
+                    acceptanceCriteria: parsed.criteria,
+                    approach: parsed.approach,
+                    status: "pending",
+                  });
+                  store.setPhase("spec");
+                  this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' refined with ${parsed.criteria.length} criteria → pending`);
+                  pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+                }
+              } catch {
+                // JSON parse failed — promote to pending anyway so it doesn't get stuck
+                store.updateGoal(draftGoal.id, { status: "pending" });
+                this.publishLogEvent(projectId, "warning", `Could not parse refinement for '${goalRow.name}', promoting to pending`);
+              }
+            } else {
+              // No JSON block — promote to pending anyway
+              store.updateGoal(draftGoal.id, { status: "pending" });
+              this.publishLogEvent(projectId, "warning", `No structured refinement for '${goalRow.name}', promoting to pending`);
+            }
+          }
+          await this.sleep(POST_WORK_COOLDOWN, projectId);
+          continue;
+        }
+
+        // --- Phase B2: Work on actionable goals ---
+        const actionable = goals.find(g =>
+          g.status === "pending" || g.status === "ready" || g.status === "regressed"
         );
-        if (incomplete) {
+        if (actionable) {
           store.setPhase("execution");
           const goalRow = db.prepare(
             "SELECT id, name, description, approach, acceptance_criteria FROM goals WHERE project_id = ? AND id = ?"
-          ).get(projectId, incomplete.id) as any;
+          ).get(projectId, actionable.id) as any;
 
           if (goalRow) {
             const criteria = JSON.parse(goalRow.acceptance_criteria || "[]");
-            store.updateGoal(incomplete.id, { status: "active" });
-            this.activeGoals.set(projectId, incomplete.id);
+            store.updateGoal(actionable.id, { status: "active" });
+            this.activeGoals.set(projectId, actionable.id);
 
             this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 active`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
@@ -140,7 +190,7 @@ export class AgentManager {
             });
 
             // Mark goal as done
-            store.updateGoal(incomplete.id, { status: "done" });
+            store.updateGoal(actionable.id, { status: "done" });
             this.activeGoals.delete(projectId);
             this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 done`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
