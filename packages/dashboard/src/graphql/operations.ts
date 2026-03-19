@@ -125,8 +125,9 @@ export const LOG_EVENTS = gql`
 `;
 
 export const GET_ACTIVITY = gql`
-  query GetActivity($projectId: ID!, $limit: Int) {
-    activityEvents(projectId: $projectId, limit: $limit) {
+  query GetActivity($projectId: ID!, $limit: Int, $beforeId: ID) {
+    activityEvents(projectId: $projectId, limit: $limit, beforeId: $beforeId) {
+      id
       type
       message
       costUsd
@@ -137,8 +138,8 @@ export const GET_ACTIVITY = gql`
 `;
 
 export const GET_MESSAGES = gql`
-  query GetMessages($projectId: ID!, $limit: Int) {
-    messages(projectId: $projectId, limit: $limit) {
+  query GetMessages($projectId: ID!, $limit: Int, $beforeId: ID) {
+    messages(projectId: $projectId, limit: $limit, beforeId: $beforeId) {
       id
       role
       content

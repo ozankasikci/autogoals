@@ -272,7 +272,31 @@ export class SQLiteStore implements StateStore {
 
   // ── Messages ───────────────────────────────────────────
 
-  getMessages(limit = 1000): Message[] {
+  getMessages(limit = 1000, beforeId?: number): Message[] {
+    if (beforeId) {
+      const rows = this.db
+        .prepare(
+          "SELECT * FROM (SELECT id, project_id, role, content, read, created_at FROM messages WHERE project_id = ? AND id < ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",
+        )
+        .all(this.projectId, beforeId, limit) as {
+        id: number;
+        project_id: string;
+        role: string;
+        content: string;
+        read: number;
+        created_at: string;
+      }[];
+
+      return rows.map((r) => ({
+        id: r.id,
+        projectId: r.project_id,
+        role: r.role as "user" | "agent",
+        content: r.content,
+        read: r.read === 1,
+        createdAt: r.created_at,
+      }));
+    }
+
     const rows = this.db
       .prepare(
         "SELECT * FROM (SELECT id, project_id, role, content, read, created_at FROM messages WHERE project_id = ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",
@@ -486,7 +510,29 @@ export class SQLiteStore implements StateStore {
 
   // ── Activity ─────────────────────────────────────────────
 
-  getActivityEvents(limit = 100): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[] {
+  getActivityEvents(limit = 100, beforeId?: number): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[] {
+    if (beforeId) {
+      const rows = this.db
+        .prepare(
+          "SELECT * FROM (SELECT id, type, message, cost_usd, created_at FROM activity_events WHERE project_id = ? AND id < ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",
+        )
+        .all(this.projectId, beforeId, limit) as {
+        id: number;
+        type: string;
+        message: string;
+        cost_usd: number | null;
+        created_at: string;
+      }[];
+
+      return rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        message: r.message,
+        costUsd: r.cost_usd,
+        createdAt: r.created_at,
+      }));
+    }
+
     const rows = this.db
       .prepare(
         "SELECT * FROM (SELECT id, type, message, cost_usd, created_at FROM activity_events WHERE project_id = ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",

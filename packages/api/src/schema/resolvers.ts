@@ -175,11 +175,12 @@ export function createResolvers(
 
       messages(
         _: unknown,
-        args: { projectId: string; limit?: number },
+        args: { projectId: string; limit?: number; beforeId?: string },
       ): Message[] {
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
-        return store.getMessages(args.limit ?? 100);
+        const beforeId = args.beforeId ? parseInt(args.beforeId, 10) : undefined;
+        return store.getMessages(args.limit ?? 100, beforeId);
       },
 
       rules(
@@ -191,11 +192,13 @@ export function createResolvers(
         return store.getRules();
       },
 
-      activityEvents(_: unknown, args: { projectId: string; limit?: number }) {
+      activityEvents(_: unknown, args: { projectId: string; limit?: number; beforeId?: string }) {
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
-        const events = store.getActivityEvents(args.limit ?? 100);
+        const beforeId = args.beforeId ? parseInt(args.beforeId, 10) : undefined;
+        const events = store.getActivityEvents(args.limit ?? 100, beforeId);
         return events.map(e => ({
+          id: e.id,
           type: e.type,
           message: e.message,
           costUsd: e.costUsd,

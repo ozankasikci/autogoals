@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useQuery, useMutation, useSubscription } from "@apollo/client";
+import { useQuery, useMutation, useSubscription, useApolloClient } from "@apollo/client";
 import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
 import { MarkdownMessage } from "./MarkdownMessage";
@@ -131,18 +131,23 @@ interface ChatPanelProps {
   isAgentRunning: boolean;
 }
 
+const PAGE_SIZE = 100;
+
 export function ChatPanel({
   projectId,
   isAgentRunning,
 }: ChatPanelProps) {
+  const client = useApolloClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data, loading } = useQuery<{ messages: Message[] }>(GET_MESSAGES, {
-    variables: { projectId, limit: 200 },
+    variables: { projectId, limit: PAGE_SIZE },
     fetchPolicy: "network-only",
   });
 
@@ -166,6 +171,7 @@ export function ChatPanel({
   useEffect(() => {
     if (data?.messages) {
       setMessages(data.messages);
+      if (data.messages.length < PAGE_SIZE) setHasMore(false);
       // Jump to bottom instantly on initial load — use setTimeout to ensure DOM is rendered
       if (initialLoadRef.current) {
         initialLoadRef.current = false;
@@ -175,6 +181,48 @@ export function ChatPanel({
       }
     }
   }, [data]);
+
+  // Load older messages when scrolling to top
+  const loadOlder = useCallback(async () => {
+    if (loadingMore || !hasMore || messages.length === 0) return;
+    setLoadingMore(true);
+
+    const oldestId = messages[0].id;
+    const { data: olderData } = await client.query<{ messages: Message[] }>({
+      query: GET_MESSAGES,
+      variables: { projectId, limit: PAGE_SIZE, beforeId: oldestId },
+      fetchPolicy: "network-only",
+    });
+
+    if (olderData?.messages?.length > 0) {
+      // Preserve scroll position
+      const scrollEl = scrollRef.current;
+      const prevScrollHeight = scrollEl?.scrollHeight ?? 0;
+
+      setMessages(prev => [...olderData.messages, ...prev]);
+
+      // Restore scroll position after prepending
+      requestAnimationFrame(() => {
+        if (scrollEl) {
+          const newScrollHeight = scrollEl.scrollHeight;
+          scrollEl.scrollTop = newScrollHeight - prevScrollHeight;
+        }
+      });
+
+      if (olderData.messages.length < PAGE_SIZE) setHasMore(false);
+    } else {
+      setHasMore(false);
+    }
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, messages, projectId, client]);
+
+  // Detect scroll to top
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    if (scrollRef.current.scrollTop < 100 && hasMore && !loadingMore) {
+      loadOlder();
+    }
+  }, [hasMore, loadingMore, loadOlder]);
 
   useEffect(() => {
     if (!initialLoadRef.current && bottomRef.current) {
@@ -237,6 +285,7 @@ export function ChatPanel({
       {/* Messages */}
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-6 py-6"
       >
         {loading ? (
@@ -262,6 +311,16 @@ export function ChatPanel({
           </div>
         ) : (
           <div className="space-y-5">
+            {loadingMore && (
+              <div className="flex justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!hasMore && messages.length > 0 && (
+              <div className="text-center text-xs text-muted-foreground/30 py-2">
+                Beginning of conversation
+              </div>
+            )}
             {grouped.map((item) => {
               if ("type" in item && item.type === "tool_group") {
                 return <ToolUseCard key={`tg-${item.messages[0].id}`} tools={item.tools} />;

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { useQuery, useSubscription } from "@apollo/client";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useQuery, useSubscription, useApolloClient } from "@apollo/client";
 import { GET_ACTIVITY, LOG_EVENTS } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
 
 interface LogEvent {
+  id?: string;
   type: string;
   message: string;
   costUsd: number | null;
@@ -26,14 +27,19 @@ const logTypeColors: Record<string, string> = {
   goal: "text-indigo-400",
 };
 
+const LOG_PAGE_SIZE = 100;
+
 export function LogStream({ projectId, compact = false }: LogStreamProps) {
+  const client = useApolloClient();
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: historicalData } = useQuery(GET_ACTIVITY, {
-    variables: { projectId, limit: 100 },
+    variables: { projectId, limit: LOG_PAGE_SIZE },
     fetchPolicy: "network-only",
   });
 
@@ -41,6 +47,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
   useEffect(() => {
     if (historicalData?.activityEvents) {
       setLogs(historicalData.activityEvents);
+      if (historicalData.activityEvents.length < LOG_PAGE_SIZE) setHasMore(false);
     }
   }, [historicalData]);
 
@@ -65,12 +72,50 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
     }
   }, [logs, autoScroll]);
 
-  const handleScroll = () => {
+  // Load older activity events when scrolling to top
+  const loadOlderLogs = useCallback(async () => {
+    if (loadingMore || !hasMore || logs.length === 0) return;
+    const firstWithId = logs.find(l => l.id);
+    if (!firstWithId) return;
+    setLoadingMore(true);
+
+    const { data: olderData } = await client.query<{ activityEvents: LogEvent[] }>({
+      query: GET_ACTIVITY,
+      variables: { projectId, limit: LOG_PAGE_SIZE, beforeId: firstWithId.id },
+      fetchPolicy: "network-only",
+    });
+
+    if (olderData?.activityEvents?.length > 0) {
+      const scrollEl = scrollRef.current;
+      const prevScrollHeight = scrollEl?.scrollHeight ?? 0;
+
+      setLogs(prev => [...olderData.activityEvents, ...prev]);
+
+      requestAnimationFrame(() => {
+        if (scrollEl) {
+          const newScrollHeight = scrollEl.scrollHeight;
+          scrollEl.scrollTop = newScrollHeight - prevScrollHeight;
+        }
+      });
+
+      if (olderData.activityEvents.length < LOG_PAGE_SIZE) setHasMore(false);
+    } else {
+      setHasMore(false);
+    }
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, logs, projectId, client]);
+
+  const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 40;
     setAutoScroll(isAtBottom);
-  };
+
+    // Detect scroll to top for infinite scroll
+    if (scrollTop < 100 && hasMore && !loadingMore) {
+      loadOlderLogs();
+    }
+  }, [hasMore, loadingMore, loadOlderLogs]);
 
   // ── Compact sidebar mode ──
   if (compact) {
@@ -92,9 +137,19 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
             </div>
           ) : (
             <div className="space-y-px">
+              {loadingMore && (
+                <div className="flex justify-center py-1">
+                  <span className="text-[11px] text-muted-foreground/50">Loading older...</span>
+                </div>
+              )}
+              {!hasMore && logs.length > 0 && (
+                <div className="text-center text-[11px] text-muted-foreground/30 py-1">
+                  Beginning of activity
+                </div>
+              )}
               {recentLogs.map((log, i) => (
                 <div
-                  key={i}
+                  key={log.id ?? i}
                   className="flex gap-1.5 py-px hover:bg-muted/30 rounded px-1 -mx-1"
                 >
                   <span className="shrink-0 text-muted-foreground/50 tabular-nums">
@@ -173,9 +228,19 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
           </div>
         ) : (
           <div className="space-y-0.5">
+            {loadingMore && (
+              <div className="flex justify-center py-1">
+                <span className="text-[11px] text-muted-foreground/50">Loading older...</span>
+              </div>
+            )}
+            {!hasMore && logs.length > 0 && (
+              <div className="text-center text-[11px] text-muted-foreground/30 py-1">
+                Beginning of activity
+              </div>
+            )}
             {logs.map((log, i) => (
               <div
-                key={i}
+                key={log.id ?? i}
                 className="flex gap-3 py-0.5 hover:bg-muted/30 rounded px-1 -mx-1"
               >
                 <span className="text-muted-foreground shrink-0 select-none tabular-nums">

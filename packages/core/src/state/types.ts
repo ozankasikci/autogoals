@@ -35,7 +35,7 @@ export interface StateStore {
   getLatestSession(phase: string, goalId?: string): string | null;
 
   // Messages
-  getMessages(limit?: number): Message[];
+  getMessages(limit?: number, beforeId?: number): Message[];
   getUnreadMessages(): Message[];
   addMessage(role: "user" | "agent", content: string): Message;
   markMessagesRead(): void;
@@ -62,7 +62,7 @@ export interface StateStore {
   removeGoal(id: string): void;
 
   // Activity
-  getActivityEvents(limit?: number): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[];
+  getActivityEvents(limit?: number, beforeId?: number): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[];
   addActivityEvent(type: string, message: string, costUsd?: number): void;
 
   // Lifecycle

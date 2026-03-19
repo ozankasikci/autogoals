@@ -46,6 +46,7 @@ export const typeDefs = `#graphql
   }
 
   type LogEvent {
+    id: ID
     type: String!
     message: String!
     costUsd: Float
@@ -64,8 +65,8 @@ export const typeDefs = `#graphql
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
-    messages(projectId: ID!, limit: Int): [Message!]!
-    activityEvents(projectId: ID!, limit: Int): [LogEvent!]!
+    messages(projectId: ID!, limit: Int, beforeId: ID): [Message!]!
+    activityEvents(projectId: ID!, limit: Int, beforeId: ID): [LogEvent!]!
     rules(projectId: ID!): [Rule!]!
   }
 
