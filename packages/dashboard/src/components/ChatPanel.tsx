@@ -3,6 +3,7 @@ import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { Terminal, ChevronDown, Zap, User, Send, Loader2, MessageSquare } from "lucide-react";
 
 interface Message {
   id: string;
@@ -66,13 +67,9 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04] transition-colors"
         >
-          <svg className="h-3 w-3 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+          <Terminal className="h-3 w-3 text-muted-foreground/40" />
           <span>{tools.length} tool{tools.length > 1 ? "s" : ""} used</span>
-          <svg className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDown className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
         </button>
         {expanded && (
           <div className="mt-1.5 ml-1 space-y-0.5">
@@ -195,10 +192,7 @@ export function ChatPanel({
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex items-center gap-2 text-sm text-muted-foreground/50">
-              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading...
             </div>
           </div>
@@ -206,19 +200,7 @@ export function ChatPanel({
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
               <div className="mx-auto h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                <svg
-                  className="h-6 w-6 text-muted-foreground/20"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+                <MessageSquare className="h-6 w-6 text-muted-foreground/20" />
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground/50">No messages yet</p>
@@ -246,9 +228,7 @@ export function ChatPanel({
                   {/* Agent avatar */}
                   {msg.role === "agent" && (
                     <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
-                      <svg className="h-3.5 w-3.5 text-violet-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+                      <Zap className="h-3.5 w-3.5 text-violet-400/70" />
                     </div>
                   )}
 
@@ -276,9 +256,7 @@ export function ChatPanel({
                   {/* User avatar */}
                   {msg.role === "user" && (
                     <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
-                      <svg className="h-3.5 w-3.5 text-indigo-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                      <User className="h-3.5 w-3.5 text-indigo-400/70" />
                     </div>
                   )}
                 </div>
@@ -307,14 +285,9 @@ export function ChatPanel({
             className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
           >
             {sending ? (
-              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
+              <Send className="h-4 w-4" />
             )}
           </button>
         </div>

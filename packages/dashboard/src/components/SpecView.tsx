@@ -3,6 +3,8 @@ import { useMutation } from "@apollo/client";
 import { UPDATE_SPEC, GET_PROJECT } from "@/graphql/operations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Pencil, X } from "lucide-react";
 
 interface SpecGoal {
   id: string;
@@ -72,7 +74,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
     setTechDecisions((prev) => [...prev, ""]);
   }
 
-  // ── Compact sidebar mode ──
+  // -- Compact sidebar mode --
   if (compact) {
     if (!spec) {
       return (
@@ -130,9 +132,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
           onClick={startEditing}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
+          <Pencil className="h-3 w-3" />
           Edit spec
         </button>
 
@@ -141,8 +141,8 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
           <div className="rounded-md border border-border bg-muted/20 p-3 space-y-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase">Overview</label>
-              <textarea
-                className="flex w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+              <Textarea
+                className="min-h-[80px] resize-y text-xs"
                 value={overview}
                 onChange={(e) => setOverview(e.target.value)}
               />
@@ -158,15 +158,15 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
                       onChange={(e) => updateDecision(i, e.target.value)}
                       placeholder="Technical decision..."
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 h-6 w-6"
                       onClick={() => removeDecision(i)}
-                      className="shrink-0 h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-400 hover:bg-muted transition-colors"
                     >
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
                 ))}
                 <button
@@ -192,7 +192,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
     );
   }
 
-  // ── Full mode (unchanged) ──
+  // -- Full mode --
   if (!spec) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
@@ -217,9 +217,7 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
         ) : (
           <Button variant="outline" size="sm" onClick={startEditing}>
             <span className="flex items-center gap-1.5">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
+              <Pencil className="h-3.5 w-3.5" />
               Edit
             </span>
           </Button>
@@ -232,8 +230,8 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
           Overview
         </h3>
         {editing ? (
-          <textarea
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[120px] resize-y"
+          <Textarea
+            className="min-h-[120px] resize-y text-sm"
             value={overview}
             onChange={(e) => setOverview(e.target.value)}
           />
@@ -313,15 +311,15 @@ export function SpecView({ spec, projectId, compact = false }: SpecViewProps) {
                     onChange={(e) => updateDecision(i, e.target.value)}
                     placeholder="Technical decision..."
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
                     onClick={() => removeDecision(i)}
-                    className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-red-400 hover:bg-muted transition-colors"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
               <button
