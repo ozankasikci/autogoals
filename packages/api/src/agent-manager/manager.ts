@@ -140,7 +140,7 @@ export class AgentManager {
 
             const result = await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: refinePrompt,
-              model: "sonnet",
+              model: "opus",
               maxTurns: 15,
             });
 
@@ -196,7 +196,7 @@ export class AgentManager {
 
             await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: goalPrompt,
-              model: "sonnet",
+              model: "opus",
               maxTurns: 100,
             });
 
@@ -229,7 +229,7 @@ export class AgentManager {
 
               const result = await this.runTask(projectId, projectPath, systemPromptBase, {
                 prompt: verifyPrompt,
-                model: "haiku",
+                model: "sonnet",
                 maxTurns: 20,
               });
 
@@ -256,7 +256,7 @@ export class AgentManager {
 
           const result = await this.runTask(projectId, projectPath, systemPromptBase, {
             prompt: rulesPrompt,
-            model: "haiku",
+            model: "sonnet",
             maxTurns: 15,
           });
 
