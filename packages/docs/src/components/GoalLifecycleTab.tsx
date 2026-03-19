@@ -405,6 +405,74 @@ export function GoalLifecycleTab() {
           Click any state above to see its details
         </div>
       )}
+
+      {/* Rules context section */}
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
+          How Rules Interact with Goals
+        </h2>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-400 mb-1">Rules are injected into the system prompt at EVERY phase</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Whenever the agent starts or receives a new goal, the system prompt is composed as:
+              </p>
+              <div className="mt-2 bg-background/40 rounded-md border border-border/30 p-3 font-mono text-[11px] text-foreground/70 leading-relaxed whitespace-pre-wrap">
+{`RULES (you MUST follow ALL of these):
+- rule 1
+- rule 2
+
+GOAL: [goal name]
+DESCRIPTION: [goal description]
+APPROACH: [approach]
+ACCEPTANCE CRITERIA:
+- criterion 1
+- criterion 2`}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-400 mb-1">Rules always win over goals</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If a goal's requirements conflict with a rule, the agent must comply with the rule and flag the conflict in chat instead of breaking it.
+                This is enforced via the system prompt instruction:
+              </p>
+              <p className="mt-1 text-[11px] font-mono text-foreground/60 italic">
+                "If a goal conflicts with a rule, the rule wins — flag the conflict instead of breaking the rule."
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-400 mb-1">Live rule updates reach the running agent</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                When a user adds, edits, or removes a rule while the agent is running, the resolver sends a
+                <code className="mx-1 text-[11px] font-mono bg-muted/30 px-1 py-0.5 rounded">[System]</code>
+                message with the full updated rules list to the live agent session.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

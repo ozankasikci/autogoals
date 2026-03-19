@@ -4,13 +4,15 @@ import { ArchitectureTab } from "@/components/ArchitectureTab";
 import { GoalLifecycleTab } from "@/components/GoalLifecycleTab";
 import { MessageFlowTab } from "@/components/MessageFlowTab";
 import { LiveMonitorTab } from "@/components/LiveMonitorTab";
+import { DatabaseTab } from "@/components/DatabaseTab";
 
-type Tab = "architecture" | "goal-lifecycle" | "message-flow" | "live-monitor";
+type Tab = "architecture" | "goal-lifecycle" | "message-flow" | "database" | "live-monitor";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "architecture", label: "Architecture" },
   { id: "goal-lifecycle", label: "Goal Lifecycle" },
   { id: "message-flow", label: "Message Flow" },
+  { id: "database", label: "Database" },
   { id: "live-monitor", label: "Live Monitor" },
 ];
 
@@ -66,6 +68,7 @@ function App() {
           {activeTab === "architecture" && <ArchitectureTab />}
           {activeTab === "goal-lifecycle" && <GoalLifecycleTab />}
           {activeTab === "message-flow" && <MessageFlowTab />}
+          {activeTab === "database" && <DatabaseTab />}
           {activeTab === "live-monitor" && <LiveMonitorTab />}
         </div>
       </main>
