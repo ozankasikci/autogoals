@@ -61,6 +61,9 @@ export class AgentSession {
         maxTurns: options.maxTurns ?? 200,
         permissionMode: (options.permissionMode ?? "bypassPermissions") as any,
         settingSources: ["project"],
+        stderr: (data: string) => {
+          console.log(`[Claude:stderr] ${data.trim().slice(0, 200)}`);
+        },
       },
     })[Symbol.asyncIterator]();
   }
