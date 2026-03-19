@@ -106,6 +106,26 @@ export class AgentManager {
 
         console.log(`[Supervisor:${projectId.slice(0, 8)}] Evaluating...`);
 
+        // --- Phase 0: Empty project — ask user what to build ---
+        const allGoals = store.getGoals();
+        const rules = store.getRules();
+        if (allGoals.length === 0 && rules.length === 0) {
+          // Check if we already asked (has agent messages)
+          const existingMessages = store.getMessages(5);
+          const hasAgentIntro = existingMessages.some(m => m.role === "agent");
+          if (!hasAgentIntro) {
+            store.setPhase("interview");
+            this.publishLogEvent(projectId, "info", "New project — introducing agent");
+            await this.runTask(projectId, projectPath, systemPromptBase, {
+              prompt: `This is a brand new project with no goals or rules defined yet. Introduce yourself briefly, scan the project directory to understand what exists (if anything), and ask the user what they want to build. Be concise and direct.`,
+              model: "sonnet",
+              maxTurns: 20,
+            });
+            await this.sleep(POST_WORK_COOLDOWN, projectId);
+            continue;
+          }
+        }
+
         // --- Phase A: Check for unread USER messages (not agent messages) ---
         const unread = store.getUnreadMessages().filter(m => m.role === "user");
         if (unread.length > 0) {
