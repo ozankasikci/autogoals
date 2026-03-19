@@ -87,7 +87,7 @@ export class AgentManager {
 
   // The main continuous loop
   private async runContinuous(projectId: string, projectPath: string, systemPromptBase: string) {
-    const IDLE_COOLDOWN = 5 * 60 * 1000;  // 5 min when nothing to do
+    const IDLE_COOLDOWN = 60 * 1000;  // 1 min when nothing to do
     const POST_WORK_COOLDOWN = 5 * 1000;   // 5s after completing work
 
     console.log(`[Supervisor] Starting continuous loop for ${projectId}`);
