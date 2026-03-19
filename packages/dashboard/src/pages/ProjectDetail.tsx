@@ -12,6 +12,7 @@ import {
   NEW_MESSAGE,
 } from "@/graphql/operations";
 import { GoalTable } from "@/components/GoalTable";
+import { GoalDetail } from "@/components/GoalDetail";
 import { SpecView } from "@/components/SpecView";
 import { LogStream } from "@/components/LogStream";
 import { ChatPanel } from "@/components/ChatPanel";
@@ -412,6 +413,7 @@ export function ProjectDetail() {
   const navigate = useNavigate();
 
   const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const autoOpenedRef = useRef(false);
   const autoOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -427,6 +429,14 @@ export function ProjectDetail() {
     variables: { projectId: id },
     skip: !id,
   });
+
+  // Clear selectedGoalId when the goal no longer exists (e.g. after deletion)
+  useEffect(() => {
+    if (selectedGoalId && data?.project) {
+      const exists = data.project.goals.some((g) => g.id === selectedGoalId);
+      if (!exists) setSelectedGoalId(null);
+    }
+  }, [selectedGoalId, data?.project?.goals]);
 
   // Auto-open panel (system triggered, won't override user's choice)
   const autoOpenPanel = useCallback((panel: PanelTab) => {
@@ -519,6 +529,7 @@ export function ProjectDetail() {
       autoOpenedRef.current = false; // user took manual control
       return next;
     });
+    setSelectedGoalId(null);
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -546,8 +557,14 @@ export function ProjectDetail() {
         e.preventDefault();
         toggleSidebar();
       } else if (e.key === "Escape") {
-        setActivePanel(null);
-        autoOpenedRef.current = false;
+        // If viewing a goal detail, go back to list first
+        setSelectedGoalId((prevGoalId) => {
+          if (prevGoalId !== null) return null;
+          // Only close the panel if we weren't in goal detail
+          setActivePanel(null);
+          autoOpenedRef.current = false;
+          return null;
+        });
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -737,31 +754,62 @@ export function ProjectDetail() {
           <div className="w-[480px] h-full flex flex-col bg-[hsl(224,71%,4.5%)]">
             {activePanel && (
               <>
-                <PanelHeader
-                  title={panelTitles[activePanel]}
-                  onClose={() => {
-                    setActivePanel(null);
-                    autoOpenedRef.current = false;
-                  }}
-                  action={
-                    activePanel === "goals" ? (
-                      <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-                        {doneGoals}/{project.goals.length} done
-                      </span>
-                    ) : activePanel === "spec" ? (
-                      <span className="text-[11px] text-muted-foreground/50">
-                        {project.spec ? "Generated" : "Pending"}
-                      </span>
-                    ) : null
-                  }
-                />
+                {/* Hide panel header when viewing goal detail (GoalDetail has its own back nav) */}
+                {!(activePanel === "goals" && selectedGoalId) && (
+                  <PanelHeader
+                    title={panelTitles[activePanel]}
+                    onClose={() => {
+                      setActivePanel(null);
+                      setSelectedGoalId(null);
+                      autoOpenedRef.current = false;
+                    }}
+                    action={
+                      activePanel === "goals" ? (
+                        <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                          {doneGoals}/{project.goals.length} done
+                        </span>
+                      ) : activePanel === "spec" ? (
+                        <span className="text-[11px] text-muted-foreground/50">
+                          {project.spec ? "Generated" : "Pending"}
+                        </span>
+                      ) : null
+                    }
+                  />
+                )}
+                {/* Goal detail header with close button */}
+                {activePanel === "goals" && selectedGoalId && (
+                  <div className="shrink-0 flex items-center justify-end h-12 px-4 border-b border-white/[0.06]">
+                    <button
+                      onClick={() => {
+                        setActivePanel(null);
+                        setSelectedGoalId(null);
+                        autoOpenedRef.current = false;
+                      }}
+                      className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                    >
+                      <IconClose />
+                    </button>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto px-4 py-4">
-                  {activePanel === "goals" && (
+                  {activePanel === "goals" && !selectedGoalId && (
                     <GoalTable
                       goals={project.goals}
                       projectId={project.id}
                       compact
+                      onSelectGoal={(goalId) => setSelectedGoalId(goalId)}
                     />
+                  )}
+                  {activePanel === "goals" && selectedGoalId && (
+                    project.goals.find((g) => g.id === selectedGoalId) ? (
+                      <GoalDetail
+                        goal={project.goals.find((g) => g.id === selectedGoalId)!}
+                        projectId={project.id}
+                        allGoals={project.goals}
+                        onBack={() => setSelectedGoalId(null)}
+                        onNavigateToGoal={(goalId) => setSelectedGoalId(goalId)}
+                      />
+                    ) : null
                   )}
                   {activePanel === "spec" && (
                     <SpecView
