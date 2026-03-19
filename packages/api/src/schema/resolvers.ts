@@ -190,6 +190,19 @@ export function createResolvers(
         const store = new SQLiteStore(db, args.projectId);
         return store.getRules();
       },
+
+      activityEvents(_: unknown, args: { projectId: string; limit?: number }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const events = store.getActivityEvents(args.limit ?? 100);
+        return events.map(e => ({
+          type: e.type,
+          message: e.message,
+          costUsd: e.costUsd,
+          timestamp: e.createdAt,
+          projectId: args.projectId,
+        }));
+      },
     },
 
     Mutation: {

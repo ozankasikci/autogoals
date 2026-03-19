@@ -29,6 +29,22 @@ export class AgentManager {
     this.getDb = getDb;
   }
 
+  private publishLogEvent(projectId: string, type: string, message: string, costUsd?: number) {
+    const db = this.getDb();
+    const store = new SQLiteStore(db, projectId);
+    store.addActivityEvent(type, message, costUsd);
+
+    pubsub.publish(EVENTS.LOG_EVENT, {
+      logEvent: {
+        type,
+        message,
+        costUsd: costUsd ?? null,
+        timestamp: new Date().toISOString(),
+        projectId,
+      },
+    });
+  }
+
   isRunning(projectId: string): boolean {
     return this.sessions.has(projectId);
   }
@@ -210,14 +226,7 @@ export class AgentManager {
             pubsub.publish(EVENTS.NEW_MESSAGE, {
               newMessage: { ...msg, projectId },
             });
-            pubsub.publish(EVENTS.LOG_EVENT, {
-              logEvent: {
-                type: "info",
-                message: event.text!.slice(0, 200),
-                timestamp: new Date().toISOString(),
-                projectId,
-              },
-            });
+            this.publishLogEvent(projectId, "info", event.text!.slice(0, 200));
             break;
           }
 
@@ -247,14 +256,7 @@ export class AgentManager {
             }
 
             // Also keep the log event
-            pubsub.publish(EVENTS.LOG_EVENT, {
-              logEvent: {
-                type: "info",
-                message: `Using ${event.toolName}${event.toolInput?.file_path ? `: ${event.toolInput.file_path}` : ""}${event.toolInput?.command ? `: ${String(event.toolInput.command).slice(0, 60)}` : ""}`,
-                timestamp: new Date().toISOString(),
-                projectId,
-              },
-            });
+            this.publishLogEvent(projectId, "info", `Using ${event.toolName}${event.toolInput?.file_path ? `: ${event.toolInput.file_path}` : ""}${event.toolInput?.command ? `: ${String(event.toolInput.command).slice(0, 60)}` : ""}`);
             break;
           }
 
@@ -275,38 +277,17 @@ export class AgentManager {
               }
             }
 
-            pubsub.publish(EVENTS.LOG_EVENT, {
-              logEvent: {
-                type: "info",
-                message: `Agent completed turn (cost: $${event.result?.costUsd.toFixed(4) ?? "?"})`,
-                timestamp: new Date().toISOString(),
-                projectId,
-              },
-            });
+            this.publishLogEvent(projectId, "info", `Agent completed turn (cost: $${event.result?.costUsd.toFixed(4) ?? "?"})`, event.result?.costUsd);
             break;
           }
 
           case "error":
-            pubsub.publish(EVENTS.LOG_EVENT, {
-              logEvent: {
-                type: "error",
-                message: `Agent error: ${event.error}`,
-                timestamp: new Date().toISOString(),
-                projectId,
-              },
-            });
+            this.publishLogEvent(projectId, "error", `Agent error: ${event.error}`);
             break;
         }
       }
     } catch (err: any) {
-      pubsub.publish(EVENTS.LOG_EVENT, {
-        logEvent: {
-          type: "error",
-          message: `Agent crashed: ${err.message}`,
-          timestamp: new Date().toISOString(),
-          projectId,
-        },
-      });
+      this.publishLogEvent(projectId, "error", `Agent crashed: ${err.message}`);
     } finally {
       this.sessions.delete(projectId);
       this.activeGoals.delete(projectId);

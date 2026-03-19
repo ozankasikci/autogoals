@@ -484,6 +484,38 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId, id);
   }
 
+  // ── Activity ─────────────────────────────────────────────
+
+  getActivityEvents(limit = 100): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM (SELECT id, type, message, cost_usd, created_at FROM activity_events WHERE project_id = ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",
+      )
+      .all(this.projectId, limit) as {
+      id: number;
+      type: string;
+      message: string;
+      cost_usd: number | null;
+      created_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      message: r.message,
+      costUsd: r.cost_usd,
+      createdAt: r.created_at,
+    }));
+  }
+
+  addActivityEvent(type: string, message: string, costUsd?: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO activity_events (project_id, type, message, cost_usd) VALUES (?, ?, ?, ?)",
+      )
+      .run(this.projectId, type, message, costUsd ?? null);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

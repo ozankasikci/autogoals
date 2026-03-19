@@ -124,6 +124,18 @@ export const LOG_EVENTS = gql`
   }
 `;
 
+export const GET_ACTIVITY = gql`
+  query GetActivity($projectId: ID!, $limit: Int) {
+    activityEvents(projectId: $projectId, limit: $limit) {
+      type
+      message
+      costUsd
+      timestamp
+      projectId
+    }
+  }
+`;
+
 export const GET_MESSAGES = gql`
   query GetMessages($projectId: ID!, $limit: Int) {
     messages(projectId: $projectId, limit: $limit) {

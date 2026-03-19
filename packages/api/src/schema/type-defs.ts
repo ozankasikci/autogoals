@@ -65,6 +65,7 @@ export const typeDefs = `#graphql
     projects: [Project!]!
     project(id: ID!): Project
     messages(projectId: ID!, limit: Int): [Message!]!
+    activityEvents(projectId: ID!, limit: Int): [LogEvent!]!
     rules(projectId: ID!): [Rule!]!
   }
 

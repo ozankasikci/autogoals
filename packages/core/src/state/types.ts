@@ -61,6 +61,10 @@ export interface StateStore {
   addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[]; approach?: string }): void;
   removeGoal(id: string): void;
 
+  // Activity
+  getActivityEvents(limit?: number): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[];
+  addActivityEvent(type: string, message: string, costUsd?: number): void;
+
   // Lifecycle
   close(): void;
 }

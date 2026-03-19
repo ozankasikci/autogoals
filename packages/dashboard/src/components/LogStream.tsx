@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useSubscription } from "@apollo/client";
-import { LOG_EVENTS } from "@/graphql/operations";
+import { useQuery, useSubscription } from "@apollo/client";
+import { GET_ACTIVITY, LOG_EVENTS } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
 
 interface LogEvent {
@@ -32,11 +32,29 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const { data: historicalData } = useQuery(GET_ACTIVITY, {
+    variables: { projectId, limit: 100 },
+    fetchPolicy: "network-only",
+  });
+
+  // Seed logs from historical data
+  useEffect(() => {
+    if (historicalData?.activityEvents) {
+      setLogs(historicalData.activityEvents);
+    }
+  }, [historicalData]);
+
+  // Subscription adds new events
   useSubscription(LOG_EVENTS, {
     variables: { projectId },
     onData: ({ data }) => {
       if (data.data?.logEvent) {
-        setLogs((prev) => [...prev, data.data.logEvent]);
+        setLogs((prev) => {
+          const event = data.data.logEvent;
+          // Dedup
+          if (prev.some(l => l.message === event.message && l.timestamp === event.timestamp)) return prev;
+          return [...prev, event];
+        });
       }
     },
   });
