@@ -44,6 +44,7 @@ export const GET_PROJECT = gql`
         id
         name
         description
+        approach
         acceptanceCriteria
         dependsOn
         status
@@ -182,5 +183,21 @@ export const ADD_GOAL = gql`
 export const REMOVE_GOAL = gql`
   mutation RemoveGoal($projectId: ID!, $goalId: ID!) {
     removeGoal(projectId: $projectId, goalId: $goalId)
+  }
+`;
+
+export const REFINE_GOAL = gql`
+  mutation RefineGoal($projectId: ID!, $goalId: ID!) {
+    refineGoal(projectId: $projectId, goalId: $goalId) {
+      id name status approach
+    }
+  }
+`;
+
+export const APPROVE_GOAL = gql`
+  mutation ApproveGoal($projectId: ID!, $goalId: ID!, $startImmediately: Boolean) {
+    approveGoal(projectId: $projectId, goalId: $goalId, startImmediately: $startImmediately) {
+      id name status
+    }
   }
 `;

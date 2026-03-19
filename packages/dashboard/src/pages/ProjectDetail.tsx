@@ -23,6 +23,7 @@ interface Goal {
   id: string;
   name: string;
   description: string;
+  approach?: string | null;
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;

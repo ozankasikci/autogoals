@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useMutation } from "@apollo/client";
-import { UPDATE_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
+import { UPDATE_GOAL, REMOVE_GOAL, REFINE_GOAL, APPROVE_GOAL, GET_PROJECT } from "@/graphql/operations";
 import { formatCost } from "@/lib/utils";
 
 /* ── Saved indicator hook ── */
@@ -30,6 +30,7 @@ interface Goal {
   id: string;
   name: string;
   description: string;
+  approach?: string | null;
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
@@ -44,13 +45,17 @@ interface GoalDetailProps {
   allGoals: Goal[];
   onBack: () => void;
   onNavigateToGoal: (goalId: string) => void;
+  onSendMessage?: (message: string) => void;
 }
 
 /* ── Constants ── */
 
-const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped"] as const;
+const GOAL_STATUSES = ["draft", "refined", "ready", "pending", "active", "verifying", "done", "failed", "skipped"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-violet-500",
+  refined: "bg-cyan-500",
+  ready: "bg-indigo-500",
   done: "bg-emerald-500",
   active: "bg-blue-500",
   pending: "bg-zinc-500",
@@ -115,9 +120,11 @@ function IconPlus() {
 
 /* ── Main Component ── */
 
-export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal }: GoalDetailProps) {
+export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal, onSendMessage }: GoalDetailProps) {
   const [name, setName] = useState(goal.name);
   const [description, setDescription] = useState(goal.description);
+  const [approach, setApproach] = useState(goal.approach ?? "");
+  const [editingApproach, setEditingApproach] = useState(false);
   const [criteria, setCriteria] = useState(goal.acceptanceCriteria);
   const [status, setStatus] = useState(goal.status);
   const [dependencies, setDependencies] = useState(goal.dependsOn);
@@ -131,6 +138,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const approachRef = useRef<HTMLTextAreaElement>(null);
   const newCriterionRef = useRef<HTMLInputElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const depPickerRef = useRef<HTMLDivElement>(null);
@@ -139,10 +147,11 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
   useEffect(() => {
     setName(goal.name);
     setDescription(goal.description);
+    setApproach(goal.approach ?? "");
     setCriteria(goal.acceptanceCriteria);
     setStatus(goal.status);
     setDependencies(goal.dependsOn);
-  }, [goal.id, goal.name, goal.description, goal.acceptanceCriteria, goal.dependsOn, goal.status]);
+  }, [goal.id, goal.name, goal.description, goal.approach, goal.acceptanceCriteria, goal.dependsOn, goal.status]);
 
   const refetchOpts = {
     refetchQueries: [{ query: GET_PROJECT, variables: { id: projectId } }],
@@ -150,6 +159,8 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
   const [updateGoal] = useMutation(UPDATE_GOAL, refetchOpts);
   const [removeGoal, { loading: removingGoal }] = useMutation(REMOVE_GOAL, refetchOpts);
+  const [refineGoal, { loading: refining }] = useMutation(REFINE_GOAL, refetchOpts);
+  const [approveGoal, { loading: approving }] = useMutation(APPROVE_GOAL, refetchOpts);
 
   // Debounced save
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -270,6 +281,27 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
     saveGoalNow({ dependsOn: updated });
   }
 
+  function handleApproachChange(value: string) {
+    setApproach(value);
+    saveGoal({ approach: value });
+  }
+
+  function handleApproachBlur() {
+    setEditingApproach(false);
+  }
+
+  async function handleRefineGoal() {
+    await refineGoal({ variables: { projectId, goalId: goal.id } });
+  }
+
+  async function handleApproveGoal(startImmediately: boolean) {
+    await approveGoal({ variables: { projectId, goalId: goal.id, startImmediately } });
+  }
+
+  function handleReviseGoal() {
+    onSendMessage?.(`Please revise goal "${goal.name}" — I'd like to make changes to the approach and criteria.`);
+  }
+
   async function handleDeleteGoal() {
     await removeGoal({ variables: { projectId, goalId: goal.id } });
     onBack();
@@ -286,12 +318,22 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
     autoGrow(descriptionRef.current);
   }, [description]);
 
+  useEffect(() => {
+    if (editingApproach) {
+      autoGrow(approachRef.current);
+    }
+  }, [approach, editingApproach]);
+
   /* ── Computed ── */
 
   const parsedCriteria = criteria.map(parseCriterion);
   const checkedCount = parsedCriteria.filter((c) => c.checked).length;
   const totalCriteria = parsedCriteria.length;
   const progressPct = totalCriteria > 0 ? (checkedCount / totalCriteria) * 100 : 0;
+
+  const isDraft = status === "draft";
+  const isRefined = status === "refined";
+  const isReady = status === "ready";
 
   const availableDeps = allGoals.filter(
     (g) => g.id !== goal.id && !dependencies.includes(g.id)
@@ -370,6 +412,79 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
         </div>
       </div>
 
+      {/* ── Action bar (status-dependent) ── */}
+      {isDraft && (
+        <div className="shrink-0 py-3 border-b border-white/[0.04]">
+          <button
+            onClick={handleRefineGoal}
+            disabled={refining}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors disabled:opacity-50"
+          >
+            {refining ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Refining...
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Refine with Agent
+              </>
+            )}
+          </button>
+          {refining && (
+            <p className="text-xs text-muted-foreground/50 text-center mt-2">
+              The agent will ask you questions in the chat...
+            </p>
+          )}
+        </div>
+      )}
+
+      {isRefined && (
+        <div className="shrink-0 py-3 border-b border-white/[0.04]">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleApproveGoal(true)}
+              disabled={approving}
+              className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              {approving ? "Approving..." : "Approve & Start"}
+            </button>
+            <button
+              onClick={() => handleApproveGoal(false)}
+              disabled={approving}
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              onClick={handleReviseGoal}
+              disabled={approving}
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+            >
+              Revise
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isReady && (
+        <div className="shrink-0 py-3 border-b border-white/[0.04]">
+          <div className="flex items-center justify-center gap-2 h-8 rounded-lg bg-indigo-500/[0.06] border border-indigo-500/10">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-400" />
+            </span>
+            <span className="text-xs text-indigo-400/80 font-medium">Waiting to start</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Scrollable content ── */}
       <div className="flex-1 overflow-y-auto py-4 space-y-5">
         {/* ── Description ── */}
@@ -389,6 +504,40 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             />
           </div>
         </section>
+
+        {/* ── Approach ── */}
+        {(goal.approach || isRefined || isReady) && (
+          <section>
+            <SectionHeader label="Approach" />
+            <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+              {editingApproach ? (
+                <textarea
+                  ref={approachRef}
+                  value={approach}
+                  onChange={(e) => {
+                    handleApproachChange(e.target.value);
+                    autoGrow(e.target);
+                  }}
+                  onBlur={handleApproachBlur}
+                  className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/30 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
+                  rows={1}
+                  autoFocus
+                />
+              ) : (
+                <p
+                  onClick={() => {
+                    if (isRefined || isDraft) setEditingApproach(true);
+                  }}
+                  className={`text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap ${
+                    isRefined || isDraft ? "cursor-text" : ""
+                  }`}
+                >
+                  {approach || "No approach defined yet"}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ── Acceptance Criteria ── */}
         <section>

@@ -12,6 +12,7 @@ interface Goal {
   id: string;
   name: string;
   description: string;
+  approach?: string | null;
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
@@ -38,6 +39,9 @@ interface GoalFormState {
 /* ── Status Colors ── */
 
 const STATUS_DOT_COLORS: Record<string, string> = {
+  draft: "bg-violet-500",
+  refined: "bg-cyan-500",
+  ready: "bg-indigo-500",
   done: "bg-emerald-500",
   active: "bg-blue-500",
   pending: "bg-zinc-500",
@@ -264,8 +268,25 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                   </p>
                 )}
 
-                {/* Criteria progress */}
-                {progress.total > 0 && (
+                {/* Status-specific indicators for draft/refined */}
+                {goal.status === "draft" && (
+                  <span className="text-[11px] text-violet-400/60 pt-0.5">
+                    Draft
+                  </span>
+                )}
+                {goal.status === "refined" && (
+                  <span className="text-[11px] text-cyan-400/60 pt-0.5">
+                    Needs approval
+                  </span>
+                )}
+                {goal.status === "ready" && (
+                  <span className="text-[11px] text-indigo-400/60 pt-0.5">
+                    Waiting to start
+                  </span>
+                )}
+
+                {/* Criteria progress (hide for draft/refined/ready since they show their own indicator) */}
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && progress.total > 0 && (
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <div className="w-10 h-[2px] rounded-full bg-white/[0.06] overflow-hidden">
                       <div
@@ -281,7 +302,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                     </span>
                   </div>
                 )}
-                {goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
+                {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
                   <span className="text-[11px] text-muted-foreground/25 pt-0.5">
                     {goal.acceptanceCriteria.length} {goal.acceptanceCriteria.length === 1 ? "criterion" : "criteria"}
                   </span>

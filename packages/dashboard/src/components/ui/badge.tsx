@@ -9,7 +9,10 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
     | "outline"
     | "success"
     | "warning"
-    | "info";
+    | "info"
+    | "violet"
+    | "cyan"
+    | "indigo";
 }
 
 const badgeVariants = {
@@ -26,6 +29,12 @@ const badgeVariants = {
     "border-transparent bg-amber-500/15 text-amber-400",
   info:
     "border-transparent bg-blue-500/15 text-blue-400",
+  violet:
+    "border-transparent bg-violet-500/15 text-violet-400",
+  cyan:
+    "border-transparent bg-cyan-500/15 text-cyan-400",
+  indigo:
+    "border-transparent bg-indigo-500/15 text-indigo-400",
 };
 
 function Badge({

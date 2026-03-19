@@ -11,6 +11,9 @@ const phaseColors: Record<string, BadgeProps["variant"]> = {
 };
 
 const goalStatusColors: Record<string, BadgeProps["variant"]> = {
+  draft: "violet",
+  refined: "cyan",
+  ready: "indigo",
   pending: "secondary",
   active: "info",
   verifying: "warning",
