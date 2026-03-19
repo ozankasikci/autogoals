@@ -1,13 +1,13 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface MarkdownMessageProps {
   content: string;
 }
 
-export function MarkdownMessage({ content }: MarkdownMessageProps) {
+export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: MarkdownMessageProps) {
   return (
     <div className="markdown-message">
       <ReactMarkdown
@@ -64,7 +64,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
       </ReactMarkdown>
     </div>
   );
-}
+});
 
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
   const [copied, setCopied] = useState(false);

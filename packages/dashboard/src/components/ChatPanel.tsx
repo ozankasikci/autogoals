@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
@@ -84,6 +84,47 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
     </div>
   );
 }
+
+const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: Message }) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2.5",
+        msg.role === "user" ? "justify-end" : "justify-start"
+      )}
+    >
+      {msg.role === "agent" && (
+        <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
+          <Zap className="h-3.5 w-3.5 text-violet-400/70" />
+        </div>
+      )}
+      <div
+        className={cn(
+          "max-w-[85%] rounded-xl px-4 py-3",
+          msg.role === "user"
+            ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
+            : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
+        )}
+      >
+        {msg.role === "agent" ? (
+          <MarkdownMessage content={msg.content} />
+        ) : (
+          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+            {msg.content}
+          </p>
+        )}
+        <p className="text-[11px] mt-2 opacity-25">
+          {formatTimestamp(msg.createdAt)}
+        </p>
+      </div>
+      {msg.role === "user" && (
+        <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
+          <User className="h-3.5 w-3.5 text-indigo-400/70" />
+        </div>
+      )}
+    </div>
+  );
+});
 
 interface ChatPanelProps {
   projectId: string;
@@ -217,50 +258,7 @@ export function ChatPanel({
                 return <ToolUseCard key={`tg-${item.messages[0].id}`} tools={item.tools} />;
               }
               const msg = item as Message;
-              return (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex gap-2.5",
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {/* Agent avatar */}
-                  {msg.role === "agent" && (
-                    <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
-                      <Zap className="h-3.5 w-3.5 text-violet-400/70" />
-                    </div>
-                  )}
-
-                  {/* Message bubble */}
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-xl px-4 py-3",
-                      msg.role === "user"
-                        ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
-                        : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
-                    )}
-                  >
-                    {msg.role === "agent" ? (
-                      <MarkdownMessage content={msg.content} />
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                        {msg.content}
-                      </p>
-                    )}
-                    <p className="text-[11px] mt-2 opacity-25">
-                      {formatTimestamp(msg.createdAt)}
-                    </p>
-                  </div>
-
-                  {/* User avatar */}
-                  {msg.role === "user" && (
-                    <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
-                      <User className="h-3.5 w-3.5 text-indigo-400/70" />
-                    </div>
-                  )}
-                </div>
-              );
+              return <MessageBubble key={msg.id} msg={msg} />;
             })}
             <div ref={bottomRef} />
           </div>
