@@ -92,16 +92,27 @@ export class AgentManager {
 
     console.log(`[Supervisor] Starting continuous loop for ${projectId}`);
 
+    // Mark all existing messages as read on startup so we don't replay history
+    {
+      const db = this.getDb();
+      const store = new SQLiteStore(db, projectId);
+      store.markMessagesRead();
+    }
+
     while (this.loops.has(projectId)) {
       try {
         const db = this.getDb();
         const store = new SQLiteStore(db, projectId);
 
-        // --- Phase A: Check for unread user messages ---
-        const unread = store.getUnreadMessages();
+        console.log(`[Supervisor:${projectId.slice(0, 8)}] Evaluating...`);
+
+        // --- Phase A: Check for unread USER messages (not agent messages) ---
+        const unread = store.getUnreadMessages().filter(m => m.role === "user");
         if (unread.length > 0) {
           store.setPhase("standby");
-          const msgText = unread.map(m => `User: ${m.content}`).join("\n");
+          // Only process the last 5 messages to avoid overwhelming the agent
+          const recent = unread.slice(-5);
+          const msgText = recent.map(m => `User: ${m.content}`).join("\n");
           await this.runTask(projectId, projectPath, systemPromptBase, {
             prompt: `The user sent you messages:\n\n${msgText}\n\nRespond helpfully.`,
             model: "sonnet",
