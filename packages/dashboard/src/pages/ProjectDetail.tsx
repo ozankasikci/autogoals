@@ -113,33 +113,51 @@ type PanelTab = "goals" | "rules" | "activity";
 /*  Phase Indicator                                                    */
 /* ------------------------------------------------------------------ */
 
-function PhaseIndicator({ phase }: { phase: string }) {
-  const phases = ["interview", "spec", "execution", "monitoring", "standby"];
-  const currentIdx = phases.indexOf(phase);
+const PHASE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  interview: { label: "Interviewing", color: "text-violet-400", bgColor: "bg-violet-500/10" },
+  spec: { label: "Refining", color: "text-cyan-400", bgColor: "bg-cyan-500/10" },
+  execution: { label: "Executing", color: "text-blue-400", bgColor: "bg-blue-500/10" },
+  monitoring: { label: "Monitoring", color: "text-amber-400", bgColor: "bg-amber-500/10" },
+  standby: { label: "Standby", color: "text-muted-foreground", bgColor: "bg-muted" },
+  done: { label: "Done", color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
+};
+
+function PhaseIndicator({ phase, activeGoalName }: { phase: string; activeGoalName?: string }) {
+  const config = PHASE_CONFIG[phase] ?? PHASE_CONFIG.standby;
+
+  // Build the detail text based on phase
+  let detail = "";
+  if (phase === "execution" && activeGoalName) {
+    detail = activeGoalName;
+  } else if (phase === "monitoring") {
+    detail = "Verifying goals";
+  } else if (phase === "interview") {
+    detail = "Refining goal";
+  } else if (phase === "spec") {
+    detail = "Generating criteria";
+  } else if (phase === "standby") {
+    detail = "Idle";
+  }
 
   return (
-    <div className="hidden md:flex items-center gap-1">
-      {phases.map((p, i) => (
-        <React.Fragment key={p}>
-          {i > 0 && (
-            <div className={`w-4 h-px ${i <= currentIdx ? "bg-primary/50" : "bg-muted"}`} />
-          )}
-          <div className="flex items-center gap-1">
-            <div className={`h-1.5 w-1.5 rounded-full ${
-              i < currentIdx ? "bg-emerald-500" :
-              i === currentIdx ? "bg-primary" :
-              "bg-border"
-            }`} />
-            <span className={`text-[11px] ${
-              i === currentIdx ? "text-foreground font-medium" :
-              i < currentIdx ? "text-muted-foreground" :
-              "text-muted-foreground/50"
-            }`}>
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </span>
-          </div>
-        </React.Fragment>
-      ))}
+    <div className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md ${config.bgColor}`}>
+      {phase === "execution" && (
+        <span className="relative flex h-1.5 w-1.5">
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${config.color.replace("text-", "bg-")} opacity-75`} />
+          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${config.color.replace("text-", "bg-")}`} />
+        </span>
+      )}
+      {phase !== "execution" && (
+        <span className={`h-1.5 w-1.5 rounded-full ${config.color.replace("text-", "bg-")}`} />
+      )}
+      <span className={`text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+      {detail && (
+        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+          {detail}
+        </span>
+      )}
     </div>
   );
 }
@@ -559,7 +577,10 @@ export function ProjectDetail() {
           {/* Center-right: phase + status indicators */}
           <div className="flex items-center gap-3 shrink-0">
             {/* Phase indicator */}
-            <PhaseIndicator phase={project.phase} />
+            <PhaseIndicator
+              phase={project.phase}
+              activeGoalName={project.goals.find((g: Goal) => g.status === "active")?.name}
+            />
 
             {/* Divider */}
             <Separator orientation="vertical" className="hidden md:block h-4" />
