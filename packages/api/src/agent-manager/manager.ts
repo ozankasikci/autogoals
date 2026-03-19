@@ -327,7 +327,7 @@ export class AgentManager {
     let totalCost = 0;
 
     // Timeout: 5 min for the entire task
-    const TASK_TIMEOUT = 5 * 60 * 1000;
+    const TASK_TIMEOUT = 30 * 60 * 1000; // 30 min
     const timeoutPromise = new Promise<"timeout">((resolve) => {
       setTimeout(() => resolve("timeout"), TASK_TIMEOUT);
     });
