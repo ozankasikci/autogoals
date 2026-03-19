@@ -6,7 +6,8 @@
     "test": "pnpm -r run test",
     "dev:cli": "pnpm --filter @small-singularity/cli dev",
     "dev:api": "COREPACK_ENABLE_STRICT=0 pnpm --filter @small-singularity/api dev",
-    "dev:dashboard": "COREPACK_ENABLE_STRICT=0 pnpm --filter @small-singularity/dashboard dev"
+    "dev:dashboard": "COREPACK_ENABLE_STRICT=0 pnpm --filter @small-singularity/dashboard dev",
+    "dev:docs": "COREPACK_ENABLE_STRICT=0 pnpm --filter @small-singularity/docs dev"
   },
   "engines": {
     "node": ">=18"
