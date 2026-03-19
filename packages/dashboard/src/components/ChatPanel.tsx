@@ -280,7 +280,7 @@ export function ChatPanel({
           <button
             onClick={handleSend}
             disabled={sending || !inputValue.trim()}
-            className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
