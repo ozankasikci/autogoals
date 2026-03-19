@@ -104,7 +104,7 @@ export function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data, loading } = useQuery<{ messages: Message[] }>(GET_MESSAGES, {
-    variables: { projectId, limit: 100 },
+    variables: { projectId, limit: 1000 },
     fetchPolicy: "network-only",
   });
 

@@ -272,7 +272,7 @@ export class SQLiteStore implements StateStore {
 
   // ── Messages ───────────────────────────────────────────
 
-  getMessages(limit = 100): Message[] {
+  getMessages(limit = 1000): Message[] {
     const rows = this.db
       .prepare(
         "SELECT * FROM (SELECT id, project_id, role, content, read, created_at FROM messages WHERE project_id = ? ORDER BY id DESC LIMIT ?) sub ORDER BY id ASC",
