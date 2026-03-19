@@ -116,18 +116,18 @@ function PhaseIndicator({ phase }: { phase: string }) {
       {phases.map((p, i) => (
         <React.Fragment key={p}>
           {i > 0 && (
-            <div className={`w-4 h-px ${i <= currentIdx ? "bg-indigo-500/50" : "bg-white/[0.06]"}`} />
+            <div className={`w-4 h-px ${i <= currentIdx ? "bg-primary/50" : "bg-muted"}`} />
           )}
           <div className="flex items-center gap-1">
             <div className={`h-1.5 w-1.5 rounded-full ${
               i < currentIdx ? "bg-emerald-500" :
-              i === currentIdx ? "bg-indigo-500" :
-              "bg-white/[0.08]"
+              i === currentIdx ? "bg-primary" :
+              "bg-border"
             }`} />
             <span className={`text-[11px] ${
               i === currentIdx ? "text-foreground font-medium" :
-              i < currentIdx ? "text-muted-foreground/60" :
-              "text-muted-foreground/30"
+              i < currentIdx ? "text-muted-foreground" :
+              "text-muted-foreground/50"
             }`}>
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </span>
@@ -154,7 +154,7 @@ function ProjectSidebar({
   return (
     <aside
       className={`
-        shrink-0 border-r border-white/[0.06] bg-[hsl(224,71%,3%)] flex flex-col
+        shrink-0 border-r border-border bg-sidebar flex flex-col
         transition-all duration-200 overflow-hidden
         ${expanded ? "w-[220px]" : "w-12"}
       `}
@@ -171,8 +171,8 @@ function ProjectSidebar({
               className={`
                 flex items-center gap-2.5 px-3 py-2 transition-colors relative
                 ${isActive
-                  ? "bg-white/[0.06] border-l-2 border-indigo-500"
-                  : "border-l-2 border-transparent hover:bg-white/[0.03]"
+                  ? "bg-muted border-l-2 border-primary"
+                  : "border-l-2 border-transparent hover:bg-muted/50"
                 }
               `}
               title={p.name}
@@ -181,11 +181,11 @@ function ProjectSidebar({
               <div className="shrink-0 relative">
                 <div className={`
                   h-6 w-6 rounded-md flex items-center justify-center text-sm font-semibold
-                  ${isActive ? "bg-indigo-500/20 text-indigo-400" : "bg-white/[0.06] text-muted-foreground/60"}
+                  ${isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}
                 `}>
                   {initial}
                 </div>
-                <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[hsl(224,71%,3%)] ${
+                <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-sidebar ${
                   p.isRunning ? "bg-emerald-500" : "bg-zinc-600"
                 }`} />
               </div>
@@ -193,10 +193,10 @@ function ProjectSidebar({
               {/* Name + phase (only when expanded) */}
               {expanded && (
                 <div className="min-w-0 flex-1">
-                  <div className={`text-sm truncate ${isActive ? "text-foreground font-medium" : "text-muted-foreground/70"}`}>
+                  <div className={`text-sm truncate ${isActive ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                     {p.name}
                   </div>
-                  <div className="text-xs text-muted-foreground/40 truncate">
+                  <div className="text-xs text-muted-foreground/60 truncate">
                     {p.phase}
                   </div>
                 </div>
@@ -207,11 +207,11 @@ function ProjectSidebar({
       </div>
 
       {/* New Project link */}
-      <div className="shrink-0 border-t border-white/[0.06] py-2 px-3">
+      <div className="shrink-0 border-t border-border py-2 px-3">
         <Link
           to="/projects/new"
           className={`
-            flex items-center gap-2 py-1.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors
+            flex items-center gap-2 py-1.5 text-muted-foreground/60 hover:text-muted-foreground transition-colors
             ${expanded ? "" : "justify-center"}
           `}
           title="New Project"
@@ -247,8 +247,8 @@ function RailButton({
       className={`
         relative flex flex-col items-center justify-center gap-1 w-full py-3 transition-colors
         ${active
-          ? "bg-white/[0.06] text-foreground border-l-2 border-indigo-500"
-          : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03] border-l-2 border-transparent"
+          ? "bg-muted text-foreground border-l-2 border-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-l-2 border-transparent"
         }
       `}
       title={label}
@@ -256,7 +256,7 @@ function RailButton({
       <div className="relative">
         {icon}
         {count !== undefined && count > 0 && (
-          <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-white/[0.08] text-xs font-medium tabular-nums leading-none px-1">
+          <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-border text-xs font-medium tabular-nums leading-none px-1">
             {count}
           </span>
         )}
@@ -280,13 +280,13 @@ function PanelHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="shrink-0 flex items-center justify-between h-12 px-4 border-b border-white/[0.06]">
+    <div className="shrink-0 flex items-center justify-between h-12 px-4 border-b border-border">
       <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
       <div className="flex items-center gap-2">
         {action}
         <button
           onClick={onClose}
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -544,7 +544,7 @@ export function ProjectDetail() {
               <h1 className="text-[15px] font-semibold tracking-tight truncate">
                 {project.name}
               </h1>
-              <span className="text-[11px] text-muted-foreground/40 font-mono truncate hidden lg:inline">
+              <span className="text-[11px] text-muted-foreground/60 font-mono truncate hidden lg:inline">
                 {project.path}
               </span>
             </div>
@@ -568,7 +568,7 @@ export function ProjectDetail() {
                 Running
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
                 <span className="inline-flex rounded-full h-1.5 w-1.5 bg-zinc-500" />
                 Stopped
               </span>
@@ -585,7 +585,7 @@ export function ProjectDetail() {
             {/* Goals progress */}
             <span className="text-xs text-muted-foreground tabular-nums">
               {doneGoals}/{project.goals.length}
-              <span className="text-muted-foreground/40 ml-0.5 hidden sm:inline">goals</span>
+              <span className="text-muted-foreground/60 ml-0.5 hidden sm:inline">goals</span>
             </span>
 
             {/* Divider */}
@@ -619,7 +619,7 @@ export function ProjectDetail() {
             {/* Overflow menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-white/[0.06] transition-colors">
+                <button className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors">
                   <MoreVertical className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -698,16 +698,16 @@ export function ProjectDetail() {
             className={`
               shrink-0 overflow-hidden transition-all duration-200 ease-out border-l
               ${panelOpen
-                ? "border-white/[0.06]"
+                ? "border-border"
                 : "w-0 border-transparent"
               }
             `}
             style={panelOpen ? { width: panelWidth } : undefined}
           >
-            <div className="h-full flex flex-col bg-[hsl(224,71%,4.5%)] relative" style={{ width: panelWidth }}>
+            <div className="h-full flex flex-col bg-card relative" style={{ width: panelWidth }}>
               {/* Drag handle */}
               <div
-                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-indigo-500/30 active:bg-indigo-500/50 transition-colors z-10"
+                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   const startX = e.clientX;
@@ -745,11 +745,11 @@ export function ProjectDetail() {
                       }}
                       action={
                         activePanel === "goals" ? (
-                          <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                          <span className="text-[11px] text-muted-foreground/70 tabular-nums">
                             {doneGoals}/{project.goals.length} done
                           </span>
                         ) : activePanel === "spec" ? (
-                          <span className="text-[11px] text-muted-foreground/50">
+                          <span className="text-[11px] text-muted-foreground/70">
                             {project.spec ? "Generated" : "Pending"}
                           </span>
                         ) : null
@@ -758,14 +758,14 @@ export function ProjectDetail() {
                   )}
                   {/* Goal detail header with close button */}
                   {activePanel === "goals" && selectedGoalId && (
-                    <div className="shrink-0 flex items-center justify-end h-12 px-4 border-b border-white/[0.06]">
+                    <div className="shrink-0 flex items-center justify-end h-12 px-4 border-b border-border">
                       <button
                         onClick={() => {
                           setActivePanel(null);
                           setSelectedGoalId(null);
                           autoOpenedRef.current = false;
                         }}
-                        className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                        className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -808,7 +808,7 @@ export function ProjectDetail() {
           </div>
 
           {/* -- Tab Rail -- */}
-          <aside className="shrink-0 w-12 border-l border-white/[0.06] bg-[hsl(224,71%,3%)] flex flex-col pt-2">
+          <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col pt-2">
             <RailButton
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Goals"

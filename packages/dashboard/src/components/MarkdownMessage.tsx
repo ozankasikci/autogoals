@@ -23,15 +23,15 @@ export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: 
           ol: ({ children }) => <ol className="text-sm leading-relaxed list-decimal pl-5 mb-2 space-y-0.5">{children}</ol>,
           li: ({ children }) => <li className="text-sm">{children}</li>,
           a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline underline-offset-2">
               {children}
             </a>
           ),
-          hr: () => <hr className="border-white/[0.08] my-3" />,
+          hr: () => <hr className="border-border my-3" />,
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-indigo-500/30 pl-3 my-2 text-muted-foreground/80 italic">
+            <blockquote className="border-l-2 border-primary/30 pl-3 my-2 text-muted-foreground/80 italic">
               {children}
             </blockquote>
           ),
@@ -41,10 +41,10 @@ export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: 
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-white/[0.08] px-2 py-1 text-left font-medium bg-white/[0.03]">{children}</th>
+            <th className="border border-border px-2 py-1 text-left font-medium bg-card">{children}</th>
           ),
           td: ({ children }) => (
-            <td className="border border-white/[0.08] px-2 py-1">{children}</td>
+            <td className="border border-border px-2 py-1">{children}</td>
           ),
           code: ({ className, children, ...props }) => {
             const isBlock = className?.includes("language-") || className?.includes("hljs");
@@ -52,7 +52,7 @@ export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: 
               return <CodeBlock className={className}>{children}</CodeBlock>;
             }
             return (
-              <code className="text-[13px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.04] font-mono text-indigo-300/90" {...props}>
+              <code className="text-[13px] px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-primary/90" {...props}>
                 {children}
               </code>
             );
@@ -77,14 +77,14 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   };
 
   return (
-    <div className="relative group my-2 rounded-lg overflow-hidden border border-white/[0.06]">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.04]">
-        <span className="text-xs text-muted-foreground/40 font-mono">
+    <div className="relative group my-2 rounded-lg overflow-hidden border border-border">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border/50">
+        <span className="text-xs text-muted-foreground/60 font-mono">
           {className?.replace("language-", "").replace("hljs ", "") || "code"}
         </span>
         <button
           onClick={handleCopy}
-          className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
         >
           {copied ? "Copied!" : "Copy"}
         </button>

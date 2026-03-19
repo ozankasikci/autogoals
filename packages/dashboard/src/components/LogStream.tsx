@@ -78,7 +78,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
               {recentLogs.map((log, i) => (
                 <div
                   key={i}
-                  className="flex gap-1.5 py-px hover:bg-white/[0.02] rounded px-1 -mx-1"
+                  className="flex gap-1.5 py-px hover:bg-muted/30 rounded px-1 -mx-1"
                 >
                   <span
                     className={cn(
@@ -98,7 +98,7 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
           )}
         </div>
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[11px] text-muted-foreground/60">
+          <span className="text-[11px] text-muted-foreground">
             {logs.length} event{logs.length !== 1 ? "s" : ""}
           </span>
           {!autoScroll && recentLogs.length > 0 && (
@@ -156,9 +156,9 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
             {logs.map((log, i) => (
               <div
                 key={i}
-                className="flex gap-3 py-0.5 hover:bg-white/[0.02] rounded px-1 -mx-1"
+                className="flex gap-3 py-0.5 hover:bg-muted/30 rounded px-1 -mx-1"
               >
-                <span className="text-muted-foreground/60 shrink-0 select-none tabular-nums">
+                <span className="text-muted-foreground shrink-0 select-none tabular-nums">
                   {formatTimestamp(log.timestamp)}
                 </span>
                 <span

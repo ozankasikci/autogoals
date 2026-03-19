@@ -228,7 +228,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
     return (
       <div className="space-y-0.5">
         {goals.length === 0 && !addingGoal && (
-          <p className="text-xs text-muted-foreground/50 py-4 text-center">
+          <p className="text-xs text-muted-foreground/70 py-4 text-center">
             No goals yet.
           </p>
         )}
@@ -241,7 +241,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
             <button
               key={goal.id}
               onClick={() => onSelectGoal?.(goal.id)}
-              className="w-full text-left group flex items-start gap-2.5 rounded-lg px-2.5 py-2 hover:bg-white/[0.04] transition-all duration-150 cursor-pointer"
+              className="w-full text-left group flex items-start gap-2.5 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-all duration-150 cursor-pointer"
             >
               {/* Status dot */}
               <span
@@ -257,7 +257,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
 
                   {/* Cost */}
                   {goal.costUsd > 0 && (
-                    <span className="shrink-0 text-xs text-muted-foreground/30 tabular-nums">
+                    <span className="shrink-0 text-xs text-muted-foreground/50 tabular-nums">
                       {formatCost(goal.costUsd)}
                     </span>
                   )}
@@ -265,7 +265,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
 
                 {/* Description (1 line) */}
                 {goal.description && (
-                  <p className="text-sm text-muted-foreground/40 truncate leading-tight">
+                  <p className="text-sm text-muted-foreground/60 truncate leading-tight">
                     {goal.description}
                   </p>
                 )}
@@ -290,22 +290,22 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 {/* Criteria progress (hide for draft/refined/ready since they show their own indicator) */}
                 {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && progress.total > 0 && (
                   <div className="flex items-center gap-1.5 pt-0.5">
-                    <div className="w-10 h-[2px] rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="w-10 h-[2px] rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-full bg-emerald-500/70 transition-all duration-300"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <span className="text-[11px] text-muted-foreground/30 tabular-nums">
+                    <span className="text-[11px] text-muted-foreground/50 tabular-nums">
                       {progress.checked}/{progress.total}
                     </span>
-                    <span className="text-[11px] text-muted-foreground/20">
+                    <span className="text-[11px] text-muted-foreground/30">
                       {progress.total === 1 ? "criterion" : "criteria"}
                     </span>
                   </div>
                 )}
                 {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.acceptanceCriteria.length > 0 && progress.total === 0 && (
-                  <span className="text-[11px] text-muted-foreground/25 pt-0.5">
+                  <span className="text-[11px] text-muted-foreground/40 pt-0.5">
                     {goal.acceptanceCriteria.length} {goal.acceptanceCriteria.length === 1 ? "criterion" : "criteria"}
                   </span>
                 )}
@@ -340,13 +340,13 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
               }}
               placeholder="Goal name... (Enter to add)"
               disabled={addingGoalMut}
-              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/25 outline-none border-b border-white/[0.08] focus:border-indigo-500/40 pb-1.5 transition-colors"
+              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/40 outline-none border-b border-border focus:border-primary/40 pb-1.5 transition-colors"
             />
           </div>
         ) : (
           <button
             onClick={() => setAddingGoal(true)}
-            className="w-full flex items-center gap-1.5 text-sm text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors py-2 px-2.5 mt-1"
+            className="w-full flex items-center gap-1.5 text-sm text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2 px-2.5 mt-1"
           >
             <Plus className="h-3 w-3" />
             <span>Add Goal</span>

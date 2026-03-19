@@ -65,16 +65,16 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/30 border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
-          <Terminal className="h-3 w-3 text-muted-foreground/40" />
+          <Terminal className="h-3 w-3 text-muted-foreground/60" />
           <span>{tools.length} tool{tools.length > 1 ? "s" : ""} used</span>
           <ChevronDown className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
         </button>
         {expanded && (
           <div className="mt-1.5 ml-1 space-y-0.5">
             {tools.map((tool, i) => (
-              <div key={i} className="text-sm text-muted-foreground/40 font-mono truncate max-w-[400px]">
+              <div key={i} className="text-sm text-muted-foreground/60 font-mono truncate max-w-[400px]">
                 {tool.summary}
               </div>
             ))}
@@ -94,16 +94,16 @@ const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: Message 
       )}
     >
       {msg.role === "agent" && (
-        <div className="shrink-0 h-7 w-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/15 flex items-center justify-center mt-0.5">
-          <Zap className="h-3.5 w-3.5 text-violet-400/70" />
+        <div className="shrink-0 h-7 w-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center mt-0.5">
+          <Zap className="h-3.5 w-3.5 text-primary" />
         </div>
       )}
       <div
         className={cn(
           "max-w-[85%] rounded-xl px-4 py-3",
           msg.role === "user"
-            ? "bg-indigo-500/10 border border-indigo-500/15 text-foreground"
-            : "bg-white/[0.03] border border-white/[0.06] text-foreground/90"
+            ? "bg-primary/10 border border-primary/20 text-foreground"
+            : "bg-card border border-border text-foreground/90"
         )}
       >
         {msg.role === "agent" ? (
@@ -113,13 +113,13 @@ const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: Message 
             {msg.content}
           </p>
         )}
-        <p className="text-[11px] mt-2 opacity-25">
+        <p className="text-[11px] mt-2 text-muted-foreground/50">
           {formatTimestamp(msg.createdAt)}
         </p>
       </div>
       {msg.role === "user" && (
-        <div className="shrink-0 h-7 w-7 rounded-full bg-indigo-500/15 border border-indigo-500/15 flex items-center justify-center mt-0.5">
-          <User className="h-3.5 w-3.5 text-indigo-400/70" />
+        <div className="shrink-0 h-7 w-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center mt-0.5">
+          <User className="h-3.5 w-3.5 text-primary/70" />
         </div>
       )}
     </div>
@@ -232,7 +232,7 @@ export function ChatPanel({
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground/50">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground/70">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading...
             </div>
@@ -240,12 +240,12 @@ export function ChatPanel({
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
-              <div className="mx-auto h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-muted-foreground/20" />
+              <div className="mx-auto h-14 w-14 rounded-2xl bg-card border border-border flex items-center justify-center">
+                <MessageSquare className="h-6 w-6 text-muted-foreground/30" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground/50">No messages yet</p>
-                <p className="text-xs text-muted-foreground/25 mt-1.5 max-w-[240px] mx-auto leading-relaxed">
+                <p className="text-sm font-medium text-muted-foreground/70">No messages yet</p>
+                <p className="text-xs text-muted-foreground/40 mt-1.5 max-w-[240px] mx-auto leading-relaxed">
                   Start the agent and send a message to begin building your project
                 </p>
               </div>
@@ -275,12 +275,12 @@ export function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Message the agent..."
             rows={1}
-            className="w-full min-h-[44px] max-h-[160px] pl-4 pr-12 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none"
+            className="w-full min-h-[44px] max-h-[160px] pl-4 pr-12 py-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 transition-all resize-none"
           />
           <button
             onClick={handleSend}
             disabled={sending || !inputValue.trim()}
-            className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+            className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -289,7 +289,7 @@ export function ChatPanel({
             )}
           </button>
         </div>
-        <p className="text-[11px] text-muted-foreground/20 text-center mt-2">
+        <p className="text-[11px] text-muted-foreground/30 text-center mt-2">
           {isAgentRunning
             ? "Agent responds in real-time"
             : "Start the agent to get responses"

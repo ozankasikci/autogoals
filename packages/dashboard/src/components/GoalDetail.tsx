@@ -310,7 +310,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
       <div className="shrink-0 pb-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors -ml-0.5 py-1 pr-2 rounded-md hover:bg-white/[0.04]"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors -ml-0.5 py-1 pr-2 rounded-md hover:bg-muted/50"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           <span>Goals</span>
@@ -318,7 +318,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
       </div>
 
       {/* -- Title + Status + Saved indicator -- */}
-      <div className="shrink-0 pb-4 border-b border-white/[0.04]">
+      <div className="shrink-0 pb-4 border-b border-border/50">
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <input
@@ -327,7 +327,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               onKeyDown={handleNameKeyDown}
-              className="w-full bg-transparent text-base font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/40 outline-none border-none focus:ring-0 px-0"
+              className="w-full bg-transparent text-base font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/60 outline-none border-none focus:ring-0 px-0"
               placeholder="Goal name..."
             />
           </div>
@@ -345,19 +345,19 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
           <div className="relative shrink-0" ref={statusDropdownRef}>
             <button
               onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-              className="flex items-center gap-1.5 h-6 px-2 rounded-md text-sm font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors"
+              className="flex items-center gap-1.5 h-6 px-2 rounded-md text-sm font-medium bg-muted/50 hover:bg-muted border border-border transition-colors"
             >
               <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[status] ?? "bg-zinc-500"}`} />
               <span className="text-muted-foreground">{status}</span>
               <ChevronDown className="h-3 w-3" />
             </button>
             {statusDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-white/[0.08] bg-[hsl(224,71%,6%)] shadow-xl py-1">
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border bg-popover shadow-xl py-1">
                 {GOAL_STATUSES.map((s) => (
                   <button
                     key={s}
                     onClick={() => handleStatusChange(s)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/[0.04] transition-colors ${
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors ${
                       s === status ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
@@ -373,7 +373,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
       {/* -- Action bar (status-dependent) -- */}
       {isDraft && (
-        <div className="shrink-0 py-3 border-b border-white/[0.04]">
+        <div className="shrink-0 py-3 border-b border-border/50">
           <button
             onClick={handleRefineGoal}
             disabled={refining}
@@ -400,7 +400,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
       )}
 
       {isRefined && (
-        <div className="shrink-0 py-3 border-b border-white/[0.04]">
+        <div className="shrink-0 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleApproveGoal(true)}
@@ -412,14 +412,14 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             <button
               onClick={() => handleApproveGoal(false)}
               disabled={approving}
-              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-50"
             >
               Approve
             </button>
             <button
               onClick={handleReviseGoal}
               disabled={approving}
-              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-50"
             >
               Revise
             </button>
@@ -428,13 +428,13 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
       )}
 
       {isReady && (
-        <div className="shrink-0 py-3 border-b border-white/[0.04]">
-          <div className="flex items-center justify-center gap-2 h-8 rounded-lg bg-indigo-500/[0.06] border border-indigo-500/10">
+        <div className="shrink-0 py-3 border-b border-border/50">
+          <div className="flex items-center justify-center gap-2 h-8 rounded-lg bg-primary/[0.06] border border-primary/10">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-400" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
             </span>
-            <span className="text-xs text-indigo-400/80 font-medium">Waiting to start</span>
+            <span className="text-xs text-primary/80 font-medium">Waiting to start</span>
           </div>
         </div>
       )}
@@ -444,7 +444,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
         {/* -- Description -- */}
         <section>
           <SectionHeader label="Description" />
-          <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+          <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
             <textarea
               ref={descriptionRef}
               value={description}
@@ -453,7 +453,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                 autoGrow(e.target);
               }}
               placeholder="Add a description..."
-              className="w-full bg-transparent text-xs text-foreground/90 placeholder:text-muted-foreground/30 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
+              className="w-full bg-transparent text-xs text-foreground/90 placeholder:text-muted-foreground/50 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
               rows={1}
             />
           </div>
@@ -463,7 +463,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
         {(goal.approach || isRefined || isReady) && (
           <section>
             <SectionHeader label="Approach" />
-            <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+            <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
               {editingApproach ? (
                 <textarea
                   ref={approachRef}
@@ -473,7 +473,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                     autoGrow(e.target);
                   }}
                   onBlur={handleApproachBlur}
-                  className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/30 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
+                  className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/50 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
                   rows={1}
                   autoFocus
                 />
@@ -499,10 +499,10 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             <SectionHeader label="Acceptance Criteria" />
             {totalCriteria > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground/50 tabular-nums">
+                <span className="text-xs text-muted-foreground/70 tabular-nums">
                   {checkedCount}/{totalCriteria}
                 </span>
-                <div className="w-12 h-[2px] rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="w-12 h-[2px] rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all duration-300 ease-out"
                     style={{ width: `${progressPct}%` }}
@@ -511,7 +511,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
               </div>
             )}
           </div>
-          <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+          <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 overflow-hidden">
             {parsedCriteria.map((criterion, i) => (
               <CriterionRow
                 key={i}
@@ -523,8 +523,8 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
               />
             ))}
             {/* Continuous entry input */}
-            <div className={`flex items-center gap-2 py-1.5 px-2 ${totalCriteria > 0 ? "border-t border-white/[0.04]" : ""}`}>
-              <div className="shrink-0 h-3.5 w-3.5 rounded border border-white/[0.1] flex items-center justify-center opacity-30">
+            <div className={`flex items-center gap-2 py-1.5 px-2 ${totalCriteria > 0 ? "border-t border-border/50" : ""}`}>
+              <div className="shrink-0 h-3.5 w-3.5 rounded border border-border flex items-center justify-center opacity-30">
                 <Plus className="h-2 w-2" />
               </div>
               <input
@@ -539,7 +539,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                   }
                 }}
                 placeholder="Add a criterion..."
-                className="flex-1 bg-transparent text-xs text-foreground/80 placeholder:text-muted-foreground/25 outline-none border-b border-transparent focus:border-white/[0.08] focus:ring-0 pb-0.5 transition-colors"
+                className="flex-1 bg-transparent text-xs text-foreground/80 placeholder:text-muted-foreground/40 outline-none border-b border-transparent focus:border-border focus:ring-0 pb-0.5 transition-colors"
               />
             </div>
           </div>
@@ -548,13 +548,13 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
         {/* -- Dependencies -- */}
         <section>
           <SectionHeader label="Dependencies" />
-          <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+          <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
             {depGoals.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {depGoals.map((dep) => (
                   <span
                     key={dep.id}
-                    className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="group inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-muted/50 border border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[dep.status] ?? "bg-zinc-500"}`} />
                     <button
@@ -565,7 +565,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                     </button>
                     <button
                       onClick={() => handleRemoveDependency(dep.id)}
-                      className="shrink-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
+                      className="shrink-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
                     >
                       <X className="h-2.5 w-2.5" />
                     </button>
@@ -577,18 +577,18 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             <div className="relative" ref={depPickerRef}>
               <button
                 onClick={() => setShowDepPicker(!showDepPicker)}
-                className="flex items-center gap-1 text-sm text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="flex items-center gap-1 text-sm text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 <span>Add dependency</span>
               </button>
               {showDepPicker && availableDeps.length > 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] max-h-[180px] overflow-y-auto rounded-lg border border-white/[0.08] bg-[hsl(224,71%,6%)] shadow-xl py-1">
+                <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] max-h-[180px] overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1">
                   {availableDeps.map((g) => (
                     <button
                       key={g.id}
                       onClick={() => handleAddDependency(g.id)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                     >
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_COLORS[g.status] ?? "bg-zinc-500"}`} />
                       <span className="truncate">{g.name}</span>
@@ -597,8 +597,8 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                 </div>
               )}
               {showDepPicker && availableDeps.length === 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border border-white/[0.08] bg-[hsl(224,71%,6%)] shadow-xl py-1">
-                  <div className="px-3 py-2 text-sm text-muted-foreground/40">No other goals available</div>
+                <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border border-border bg-popover shadow-xl py-1">
+                  <div className="px-3 py-2 text-sm text-muted-foreground/60">No other goals available</div>
                 </div>
               )}
             </div>
@@ -613,16 +613,16 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
           >
             <SectionHeader label="Details" />
             <ChevronDown
-              className={`h-2.5 w-2.5 text-muted-foreground/30 transition-transform duration-150 mt-px ${detailsExpanded ? "rotate-180" : ""}`}
+              className={`h-2.5 w-2.5 text-muted-foreground/50 transition-transform duration-150 mt-px ${detailsExpanded ? "rotate-180" : ""}`}
             />
           </button>
           {detailsExpanded && (
-            <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3 space-y-1.5 animate-fade-slide-up">
+            <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3 space-y-1.5 animate-fade-slide-up">
               <DetailRow label="Cost" value={formatCost(goal.costUsd)} />
               <DetailRow label="Retries" value={String(goal.retries)} />
               {goal.error && (
                 <div className="pt-1">
-                  <span className="text-xs text-muted-foreground/40">Error</span>
+                  <span className="text-xs text-muted-foreground/60">Error</span>
                   <p className="text-xs text-red-400/80 mt-0.5 leading-relaxed">{goal.error}</p>
                 </div>
               )}
@@ -649,7 +649,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                 <button
                   onClick={() => setConfirmDelete(false)}
                   disabled={removingGoal}
-                  className="h-7 px-3 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                  className="h-7 px-3 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -658,7 +658,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs text-red-400/60 hover:text-red-400 border border-white/[0.04] hover:border-red-500/20 hover:bg-red-500/[0.04] transition-all"
+              className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs text-red-400/60 hover:text-red-400 border border-border/50 hover:border-red-500/20 hover:bg-red-500/[0.04] transition-all"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete Goal
@@ -674,7 +674,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <span className="text-xs uppercase tracking-[0.08em] text-muted-foreground/40 font-medium">
+    <span className="text-xs uppercase tracking-[0.08em] text-muted-foreground/60 font-medium">
       {label}
     </span>
   );
@@ -683,8 +683,8 @@ function SectionHeader({ label }: { label: string }) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground/40">{label}</span>
-      <span className="text-sm text-muted-foreground/70 tabular-nums">{value}</span>
+      <span className="text-sm text-muted-foreground/60">{label}</span>
+      <span className="text-sm text-muted-foreground tabular-nums">{value}</span>
     </div>
   );
 }
@@ -728,14 +728,14 @@ function CriterionRow({
   }
 
   return (
-    <div className="group flex items-center gap-2 py-1.5 px-2 hover:bg-white/[0.03] rounded transition-colors border-b border-white/[0.02] last:border-b-0">
+    <div className="group flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 rounded transition-colors border-b border-border/30 last:border-b-0">
       {/* Checkbox */}
       <button
         onClick={onToggle}
         className={`shrink-0 h-3.5 w-3.5 rounded border flex items-center justify-center transition-all ${
           checked
             ? "bg-emerald-500/20 border-emerald-500/40"
-            : "border-white/[0.15] hover:border-white/[0.3]"
+            : "border-border hover:border-border/80"
         }`}
       >
         {checked && (
@@ -767,7 +767,7 @@ function CriterionRow({
         <span
           onClick={() => setEditing(true)}
           className={`flex-1 text-xs cursor-text min-w-0 truncate transition-colors ${
-            checked ? "text-muted-foreground/40 line-through" : "text-foreground/80"
+            checked ? "text-muted-foreground/60 line-through" : "text-foreground/80"
           }`}
         >
           {label}
@@ -777,7 +777,7 @@ function CriterionRow({
       {/* Remove button */}
       <button
         onClick={onRemove}
-        className="shrink-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-400 hover:bg-white/[0.06] transition-all"
+        className="shrink-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-red-400 hover:bg-muted transition-all"
       >
         <X className="h-2.5 w-2.5" />
       </button>
