@@ -52,6 +52,10 @@ export const GET_PROJECT = gql`
         costUsd
         error
       }
+      rules {
+        id
+        content
+      }
       interviewNotes
     }
   }
@@ -199,5 +203,29 @@ export const APPROVE_GOAL = gql`
     approveGoal(projectId: $projectId, goalId: $goalId, startImmediately: $startImmediately) {
       id name status
     }
+  }
+`;
+
+export const GET_RULES = gql`
+  query GetRules($projectId: ID!) {
+    rules(projectId: $projectId) { id content }
+  }
+`;
+
+export const ADD_RULE = gql`
+  mutation AddRule($projectId: ID!, $content: String!) {
+    addRule(projectId: $projectId, content: $content) { id content }
+  }
+`;
+
+export const UPDATE_RULE = gql`
+  mutation UpdateRule($projectId: ID!, $ruleId: ID!, $content: String!) {
+    updateRule(projectId: $projectId, ruleId: $ruleId, content: $content) { id content }
+  }
+`;
+
+export const REMOVE_RULE = gql`
+  mutation RemoveRule($projectId: ID!, $ruleId: ID!) {
+    removeRule(projectId: $projectId, ruleId: $ruleId)
   }
 `;

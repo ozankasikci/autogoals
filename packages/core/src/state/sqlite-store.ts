@@ -358,6 +358,42 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId);
   }
 
+  // ── Rules ──────────────────────────────────────────────
+
+  getRules(): { id: number; content: string }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, content FROM rules WHERE project_id = ? ORDER BY id ASC",
+      )
+      .all(this.projectId) as { id: number; content: string }[];
+    return rows;
+  }
+
+  addRule(content: string): { id: number; content: string } {
+    const result = this.db
+      .prepare(
+        "INSERT INTO rules (project_id, content) VALUES (?, ?)",
+      )
+      .run(this.projectId, content);
+    return { id: Number(result.lastInsertRowid), content };
+  }
+
+  updateRule(id: number, content: string): void {
+    this.db
+      .prepare(
+        "UPDATE rules SET content = ? WHERE project_id = ? AND id = ?",
+      )
+      .run(content, this.projectId, id);
+  }
+
+  removeRule(id: number): void {
+    this.db
+      .prepare(
+        "DELETE FROM rules WHERE project_id = ? AND id = ?",
+      )
+      .run(this.projectId, id);
+  }
+
   // ── Spec editing ────────────────────────────────────────
 
   updateSpec(overview: string, technicalDecisions: string[]): void {

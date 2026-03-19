@@ -13,7 +13,7 @@ import {
 } from "@/graphql/operations";
 import { GoalTable } from "@/components/GoalTable";
 import { GoalDetail } from "@/components/GoalDetail";
-import { SpecView } from "@/components/SpecView";
+import { RulesPanel } from "@/components/RulesPanel";
 import { LogStream } from "@/components/LogStream";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,11 @@ interface Spec {
   technicalDecisions: string[];
 }
 
+interface Rule {
+  id: string;
+  content: string;
+}
+
 interface Project {
   id: string;
   name: string;
@@ -91,6 +96,7 @@ interface Project {
   createdAt: string;
   spec: Spec | null;
   goals: Goal[];
+  rules: Rule[];
   interviewNotes: string[];
 }
 
@@ -101,7 +107,7 @@ interface ProjectListItem {
   isRunning: boolean;
 }
 
-type PanelTab = "goals" | "spec" | "activity";
+type PanelTab = "goals" | "rules" | "activity";
 
 /* ------------------------------------------------------------------ */
 /*  Phase Indicator                                                    */
@@ -452,7 +458,7 @@ export function ProjectDetail() {
         togglePanel("goals");
       } else if (mod && e.key === "2") {
         e.preventDefault();
-        togglePanel("spec");
+        togglePanel("rules");
       } else if (mod && e.key === "3") {
         e.preventDefault();
         togglePanel("activity");
@@ -507,7 +513,7 @@ export function ProjectDetail() {
 
   const panelTitles: Record<PanelTab, string> = {
     goals: "Goals",
-    spec: "Spec",
+    rules: "Rules",
     activity: "Activity",
   };
 
@@ -748,9 +754,9 @@ export function ProjectDetail() {
                           <span className="text-[11px] text-muted-foreground/70 tabular-nums">
                             {doneGoals}/{project.goals.length} done
                           </span>
-                        ) : activePanel === "spec" ? (
+                        ) : activePanel === "rules" ? (
                           <span className="text-[11px] text-muted-foreground/70">
-                            {project.spec ? "Generated" : "Pending"}
+                            {project.rules?.length ?? 0} rules
                           </span>
                         ) : null
                       }
@@ -791,12 +797,8 @@ export function ProjectDetail() {
                         />
                       ) : null
                     )}
-                    {activePanel === "spec" && (
-                      <SpecView
-                        spec={project.spec}
-                        projectId={project.id}
-                        compact
-                      />
+                    {activePanel === "rules" && (
+                      <RulesPanel projectId={project.id} />
                     )}
                     {activePanel === "activity" && (
                       <LogStream projectId={project.id} compact />
@@ -818,9 +820,9 @@ export function ProjectDetail() {
             />
             <RailButton
               icon={<FileText className="h-4 w-4" />}
-              label="Spec"
-              active={activePanel === "spec"}
-              onClick={() => togglePanel("spec")}
+              label="Rules"
+              active={activePanel === "rules"}
+              onClick={() => togglePanel("rules")}
             />
             <RailButton
               icon={<Terminal className="h-4 w-4" />}

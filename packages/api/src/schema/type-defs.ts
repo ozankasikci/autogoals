@@ -7,9 +7,15 @@ export const typeDefs = `#graphql
     totalCost: Float!
     spec: Spec
     goals: [Goal!]!
+    rules: [Rule!]!
     interviewNotes: [String!]!
     isRunning: Boolean!
     createdAt: String!
+  }
+
+  type Rule {
+    id: ID!
+    content: String!
   }
 
   type Spec {
@@ -59,6 +65,7 @@ export const typeDefs = `#graphql
     projects: [Project!]!
     project(id: ID!): Project
     messages(projectId: ID!, limit: Int): [Message!]!
+    rules(projectId: ID!): [Rule!]!
   }
 
   type Mutation {
@@ -73,6 +80,9 @@ export const typeDefs = `#graphql
     refineGoal(projectId: ID!, goalId: ID!): Goal!
     approveGoal(projectId: ID!, goalId: ID!, startImmediately: Boolean): Goal!
     removeGoal(projectId: ID!, goalId: ID!): Boolean!
+    addRule(projectId: ID!, content: String!): Rule!
+    updateRule(projectId: ID!, ruleId: ID!, content: String!): Rule!
+    removeRule(projectId: ID!, ruleId: ID!): Boolean!
   }
 
   type Subscription {

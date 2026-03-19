@@ -40,6 +40,12 @@ export interface StateStore {
   addMessage(role: "user" | "agent", content: string): Message;
   markMessagesRead(): void;
 
+  // Rules
+  getRules(): { id: number; content: string }[];
+  addRule(content: string): { id: number; content: string };
+  updateRule(id: number, content: string): void;
+  removeRule(id: number): void;
+
   // Spec editing
   updateSpec(overview: string, technicalDecisions: string[]): void;
 

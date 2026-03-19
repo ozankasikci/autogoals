@@ -36,6 +36,11 @@ interface GoalView {
   error?: string;
 }
 
+interface RuleView {
+  id: number;
+  content: string;
+}
+
 interface ProjectView {
   id: string;
   name: string;
@@ -44,6 +49,7 @@ interface ProjectView {
   totalCost: number;
   spec: Spec | null;
   goals: GoalView[];
+  rules: RuleView[];
   interviewNotes: string[];
   isRunning: boolean;
   createdAt: string;
@@ -133,6 +139,7 @@ function projectToView(
     totalCost: store.getTotalCost(),
     spec: store.getSpec(),
     goals: getGoalViews(db, record.id),
+    rules: store.getRules(),
     interviewNotes: store.getInterviewNotes(),
     isRunning: runningIds.has(record.id),
     createdAt: record.createdAt,
@@ -174,6 +181,15 @@ export function createResolvers(
         const store = new SQLiteStore(db, args.projectId);
         return store.getMessages(args.limit ?? 100);
       },
+
+      rules(
+        _: unknown,
+        args: { projectId: string },
+      ): RuleView[] {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getRules();
+      },
     },
 
     Mutation: {
@@ -205,8 +221,16 @@ export function createResolvers(
           const spec = store.getSpec();
           const phase = store.getPhase();
           const goalViews = getGoalViews(db, record.id);
+          const rules = store.getRules();
 
           let systemPrompt = `You are an autonomous AI agent working on the project "${record.name}" at ${record.path}. Current phase: ${phase}.`;
+
+          if (rules.length > 0) {
+            systemPrompt += `\n\nRULES (you MUST follow ALL of these):\n`;
+            systemPrompt += rules.map(r => `- ${r.content}`).join("\n");
+            systemPrompt += `\n\nYou must comply with ALL rules above when implementing any goal. If a goal conflicts with a rule, the rule wins — flag the conflict instead of breaking the rule.`;
+          }
+
           if (spec) {
             systemPrompt += `\n\nProject spec:\n${spec.overview}`;
           }
@@ -449,6 +473,67 @@ Start by asking your first question about this goal.`,
               args.projectId,
               `[System] The user removed goal '${args.goalId}'. Please take note of the changes.`,
             );
+          } catch {}
+        }
+
+        return true;
+      },
+
+      addRule(
+        _: unknown,
+        args: { projectId: string; content: string },
+      ): RuleView {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const rule = store.addRule(args.content);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            const allRules = store.getRules();
+            const rulesText = allRules.map(r => `- ${r.content}`).join("\n");
+            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
+          } catch {}
+        }
+
+        return rule;
+      },
+
+      updateRule(
+        _: unknown,
+        args: { projectId: string; ruleId: string; content: string },
+      ): RuleView {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const ruleId = parseInt(args.ruleId, 10);
+        store.updateRule(ruleId, args.content);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            const allRules = store.getRules();
+            const rulesText = allRules.map(r => `- ${r.content}`).join("\n");
+            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
+          } catch {}
+        }
+
+        return { id: ruleId, content: args.content };
+      },
+
+      removeRule(
+        _: unknown,
+        args: { projectId: string; ruleId: string },
+      ): boolean {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const ruleId = parseInt(args.ruleId, 10);
+        store.removeRule(ruleId);
+
+        if (agentManager?.isRunning(args.projectId)) {
+          try {
+            const allRules = store.getRules();
+            const rulesText = allRules.length > 0
+              ? allRules.map(r => `- ${r.content}`).join("\n")
+              : "(no rules)";
+            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
           } catch {}
         }
 
