@@ -147,7 +147,7 @@ describe("resolvers", () => {
       expect(result.description).toBe("A brand new goal");
       expect(result.acceptanceCriteria).toEqual(["Criterion 1"]);
       expect(result.dependsOn).toEqual(["g1"]);
-      expect(result.status).toBe("pending");
+      expect(result.status).toBe("draft");
       expect(result.retries).toBe(0);
       expect(result.costUsd).toBe(0);
     });

@@ -82,8 +82,8 @@ export class AgentManager {
     const store = new SQLiteStore(db, projectId);
     const goals = store.getGoals();
 
-    // Find first pending goal
-    const pending = goals.find(g => g.status === "pending");
+    // Only pick up pending or ready goals (skip draft, refined)
+    const pending = goals.find(g => g.status === "pending" || g.status === "ready");
     if (!pending) return;
 
     store.updateGoal(pending.id, { status: "active" });
@@ -128,6 +128,58 @@ export class AgentManager {
             const db = this.getDb();
             const store = new SQLiteStore(db, projectId);
             const msg = store.addMessage("agent", event.text!);
+
+            // Check if this is a refinement response with structured JSON
+            const jsonMatch = event.text!.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[1]);
+                if (parsed.criteria && parsed.approach) {
+                  // Find the draft goal and update it
+                  const draftGoals = db
+                    .prepare(
+                      "SELECT id, name FROM goals WHERE project_id = ? AND status = 'draft' ORDER BY rowid DESC LIMIT 1",
+                    )
+                    .all(projectId) as { id: string; name: string }[];
+
+                  if (draftGoals.length > 0) {
+                    const goalId = draftGoals[0].id;
+                    store.updateGoal(goalId, {
+                      acceptanceCriteria: parsed.criteria,
+                      approach: parsed.approach,
+                      status: "refined",
+                    });
+
+                    // Update project spec if specUpdate provided
+                    if (parsed.specUpdate) {
+                      const existingSpec = store.getSpec();
+                      if (existingSpec) {
+                        store.updateSpec(
+                          existingSpec.overview + "\n\n" + parsed.specUpdate,
+                          existingSpec.technicalDecisions,
+                        );
+                      } else {
+                        store.saveSpec({
+                          overview: parsed.specUpdate,
+                          goals: [],
+                          technicalDecisions: [],
+                        });
+                      }
+                    }
+
+                    console.log(
+                      `[AgentManager] Goal '${draftGoals[0].name}' refined with ${parsed.criteria.length} criteria`,
+                    );
+
+                    pubsub.publish(EVENTS.PROJECT_UPDATED, {
+                      projectUpdated: { id: projectId },
+                    });
+                  }
+                }
+              } catch {
+                // Not valid JSON refinement, just a normal message
+              }
+            }
 
             pubsub.publish(EVENTS.NEW_MESSAGE, {
               newMessage: { ...msg, projectId },
@@ -189,7 +241,7 @@ export class AgentManager {
               // Check if there are more pending goals — query with names
               const db = this.getDb();
               const remainingRows = db
-                .prepare("SELECT id, name, description FROM goals WHERE project_id = ? AND status = 'pending' ORDER BY rowid LIMIT 1")
+                .prepare("SELECT id, name, description FROM goals WHERE project_id = ? AND status IN ('pending', 'ready') ORDER BY rowid LIMIT 1")
                 .all(projectId) as { id: string; name: string; description: string }[];
               if (remainingRows.length > 0) {
                 const next = remainingRows[0];

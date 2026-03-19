@@ -27,6 +27,7 @@ interface GoalView {
   id: string;
   name: string;
   description: string;
+  approach?: string;
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
@@ -51,12 +52,13 @@ interface ProjectView {
 function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
   const rows = db
     .prepare(
-      "SELECT id, name, description, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
     )
     .all(projectId) as {
     id: string;
     name: string;
     description: string;
+    approach: string | null;
     acceptance_criteria: string;
     depends_on: string;
     status: string;
@@ -76,6 +78,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
       retries: r.retries,
       costUsd: r.cost_usd,
     };
+    if (r.approach != null) goal.approach = r.approach;
     if (r.error != null) goal.error = r.error;
     return goal;
   });
@@ -84,12 +87,13 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
 function getGoalView(db: Database.Database, projectId: string, goalId: string): GoalView | null {
   const r = db
     .prepare(
-      "SELECT id, name, description, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
     )
     .get(projectId, goalId) as {
     id: string;
     name: string;
     description: string;
+    approach: string | null;
     acceptance_criteria: string;
     depends_on: string;
     status: string;
@@ -110,6 +114,7 @@ function getGoalView(db: Database.Database, projectId: string, goalId: string): 
     retries: r.retries,
     costUsd: r.cost_usd,
   };
+  if (r.approach != null) goal.approach = r.approach;
   if (r.error != null) goal.error = r.error;
   return goal;
 }
@@ -294,6 +299,7 @@ export function createResolvers(
           goalId: string;
           name?: string;
           description?: string;
+          approach?: string;
           acceptanceCriteria?: string[];
           dependsOn?: string[];
           status?: string;
@@ -305,6 +311,7 @@ export function createResolvers(
         const updates: Record<string, unknown> = {};
         if (args.name !== undefined) updates.name = args.name;
         if (args.description !== undefined) updates.description = args.description;
+        if (args.approach !== undefined) updates.approach = args.approach;
         if (args.acceptanceCriteria !== undefined) updates.acceptanceCriteria = args.acceptanceCriteria;
         if (args.dependsOn !== undefined) updates.dependsOn = args.dependsOn;
         if (args.status !== undefined) updates.status = args.status;
@@ -355,6 +362,77 @@ export function createResolvers(
         }
 
         return getGoalView(db, args.projectId, id)!;
+      },
+
+      refineGoal(
+        _: unknown,
+        args: { projectId: string; goalId: string },
+      ): GoalView | null {
+        const db = getDb();
+        const row = db
+          .prepare("SELECT id, name, description FROM goals WHERE project_id = ? AND id = ?")
+          .get(args.projectId, args.goalId) as { id: string; name: string; description: string } | undefined;
+        if (!row) throw new Error("Goal not found");
+
+        if (agentManager?.isRunning(args.projectId)) {
+          agentManager.sendMessage(
+            args.projectId,
+            `[System] A new goal needs refinement. Goal: "${row.name}". Description: "${row.description || "none"}".
+
+Please interview the user about this goal to understand it better. Ask focused questions ONE AT A TIME:
+- What specifically needs to happen?
+- Are there constraints or preferences?
+- What does "done" look like?
+- Any technical considerations?
+
+After you have enough information (3-5 questions), generate the following and respond with EXACTLY this JSON format:
+\`\`\`json
+{
+  "criteria": ["criterion 1", "criterion 2", ...],
+  "approach": "Brief technical approach description",
+  "specUpdate": "Any updates to the project overview/spec"
+}
+\`\`\`
+
+Start by asking your first question about this goal.`,
+          );
+        }
+
+        // Update status to 'draft' to indicate refinement in progress
+        const store = new SQLiteStore(db, args.projectId);
+        store.updateGoal(args.goalId, { status: "draft" });
+
+        // Return current goal state
+        const goalViews = getGoalViews(db, args.projectId);
+        return goalViews.find((g) => g.id === args.goalId) || null;
+      },
+
+      approveGoal(
+        _: unknown,
+        args: { projectId: string; goalId: string; startImmediately?: boolean },
+      ): GoalView | null {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+
+        // Move from refined -> ready (or pending if startImmediately)
+        const newStatus = args.startImmediately ? "pending" : "ready";
+        store.updateGoal(args.goalId, { status: newStatus });
+
+        // If startImmediately and agent is running, tell it to start
+        if (args.startImmediately && agentManager?.isRunning(args.projectId)) {
+          const row = db
+            .prepare("SELECT name, description, approach FROM goals WHERE project_id = ? AND id = ?")
+            .get(args.projectId, args.goalId) as { name: string; description: string; approach: string | null } | undefined;
+          if (row) {
+            agentManager.sendMessage(
+              args.projectId,
+              `[System] Goal "${row.name}" has been approved. Approach: ${row.approach || row.description}. Begin implementation now.`,
+            );
+          }
+        }
+
+        const goalViews = getGoalViews(db, args.projectId);
+        return goalViews.find((g) => g.id === args.goalId) || null;
       },
 
       removeGoal(

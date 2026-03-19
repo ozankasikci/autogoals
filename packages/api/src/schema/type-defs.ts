@@ -30,6 +30,7 @@ export const typeDefs = `#graphql
     id: ID!
     name: String!
     description: String!
+    approach: String
     acceptanceCriteria: [String!]!
     dependsOn: [ID!]!
     status: String!
@@ -67,8 +68,10 @@ export const typeDefs = `#graphql
     stopAgent(projectId: ID!): Project!
     sendMessage(projectId: ID!, content: String!): Message!
     updateSpec(projectId: ID!, overview: String!, technicalDecisions: [String!]!): Spec!
-    updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String): Goal!
+    updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, approach: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String): Goal!
     addGoal(projectId: ID!, name: String!, description: String!, acceptanceCriteria: [String!]!, dependsOn: [ID!]!): Goal!
+    refineGoal(projectId: ID!, goalId: ID!): Goal!
+    approveGoal(projectId: ID!, goalId: ID!, startImmediately: Boolean): Goal!
     removeGoal(projectId: ID!, goalId: ID!): Boolean!
   }
 
