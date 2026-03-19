@@ -422,20 +422,29 @@ export function ProjectDetail() {
 
   const { data: projectsData } = useQuery<{ projects: ProjectListItem[] }>(GET_PROJECTS);
 
-  const { data, loading, error } = useQuery<{ project: Project | null }>(
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+
+  const { data, loading, error, refetch } = useQuery<{ project: Project | null }>(
     GET_PROJECT,
-    { variables: { id }, skip: !id }
+    { variables: { id }, skip: !id, pollInterval: isAgentRunning ? 5000 : 0 }
   );
+
+  useEffect(() => {
+    setIsAgentRunning(data?.project?.isRunning ?? false);
+  }, [data?.project?.isRunning]);
 
   useSubscription(PROJECT_UPDATED, {
     variables: { projectId: id },
     skip: !id,
+    onData: () => {
+      refetch();
+    },
   });
 
   // Clear selectedGoalId when the goal no longer exists (e.g. after deletion)
   useEffect(() => {
     if (selectedGoalId && data?.project) {
-      const exists = data.project.goals.some((g) => g.id === selectedGoalId);
+      const exists = data.project.goals.some((g: Goal) => g.id === selectedGoalId);
       if (!exists) setSelectedGoalId(null);
     }
   }, [selectedGoalId, data?.project?.goals]);
@@ -486,10 +495,11 @@ export function ProjectDetail() {
       if (event.message.startsWith("Using ")) {
         autoOpenPanel("activity");
       }
-      // Goal completion: switch to goals panel
-      if (event.message.includes("→ done")) {
-        autoOpenedRef.current = false; // treat goal completion as important
+      // Goal completion: switch to goals panel and refetch
+      if (event.message.includes("→ done") || event.message.includes("→ active")) {
+        autoOpenedRef.current = false;
         setActivePanel("goals");
+        refetch();
       }
     },
   });
@@ -601,7 +611,7 @@ export function ProjectDetail() {
   }
 
   const project = data.project;
-  const doneGoals = project.goals.filter((g) => g.status === "done").length;
+  const doneGoals = project.goals.filter((g: Goal) => g.status === "done").length;
   const panelOpen = activePanel !== null;
 
   const panelTitles: Record<PanelTab, string> = {
@@ -829,9 +839,9 @@ export function ProjectDetail() {
                     />
                   )}
                   {activePanel === "goals" && selectedGoalId && (
-                    project.goals.find((g) => g.id === selectedGoalId) ? (
+                    project.goals.find((g: Goal) => g.id === selectedGoalId) ? (
                       <GoalDetail
-                        goal={project.goals.find((g) => g.id === selectedGoalId)!}
+                        goal={project.goals.find((g: Goal) => g.id === selectedGoalId)!}
                         projectId={project.id}
                         allGoals={project.goals}
                         onBack={() => setSelectedGoalId(null)}
