@@ -196,7 +196,7 @@ export class AgentManager {
 
         // --- Phase B2: Work on actionable goals ---
         const actionable = goals.find(g =>
-          g.status === "pending" || g.status === "ready" || g.status === "regressed"
+          g.status === "pending" || g.status === "ready" || g.status === "regressed" || g.status === "active"
         );
         if (actionable) {
           store.setPhase("execution");
