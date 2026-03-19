@@ -317,7 +317,7 @@ export function ProjectDetail() {
 
   const { data, loading, error, refetch } = useQuery<{ project: Project | null }>(
     GET_PROJECT,
-    { variables: { id }, skip: !id, pollInterval: isAgentRunning ? 5000 : 0 }
+    { variables: { id }, skip: !id, pollInterval: isAgentRunning ? 30000 : 0 }
   );
 
   useEffect(() => {
