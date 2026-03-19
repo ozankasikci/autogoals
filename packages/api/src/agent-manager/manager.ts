@@ -114,8 +114,8 @@ export class AgentManager {
     const store = new SQLiteStore(db, projectId);
     const goals = store.getGoals();
 
-    // Only pick up pending or ready goals (skip draft, refined)
-    const pending = goals.find(g => g.status === "pending" || g.status === "ready");
+    // Pick up actionable goals — pending, ready, or draft (draft gets auto-promoted)
+    const pending = goals.find(g => g.status === "pending" || g.status === "ready" || g.status === "draft");
     if (!pending) return;
 
     store.updateGoal(pending.id, { status: "active" });
