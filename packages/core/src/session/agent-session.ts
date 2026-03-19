@@ -60,6 +60,7 @@ export class AgentSession {
         model: options.model ?? "sonnet",
         maxTurns: options.maxTurns ?? 200,
         permissionMode: (options.permissionMode ?? "bypassPermissions") as any,
+        settingSources: ["project"],
       },
     })[Symbol.asyncIterator]();
   }
