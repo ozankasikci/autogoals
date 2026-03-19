@@ -344,7 +344,7 @@ export class AgentManager {
 
         if (result === "timeout") {
           console.log(`[Task:${pid}] TIMEOUT after ${TASK_TIMEOUT / 1000}s`);
-          this.publishLogEvent(projectId, "warning", "Task timed out after 5 minutes");
+          this.publishLogEvent(projectId, "warning", `Task timed out after ${TASK_TIMEOUT / 60000} minutes`);
           session.close();
           break;
         }
@@ -379,7 +379,10 @@ export class AgentManager {
             totalCost += event.result?.costUsd ?? 0;
             store.addCost(event.result?.costUsd ?? 0);
             this.publishLogEvent(projectId, "info", `Task done (cost: $${totalCost.toFixed(4)})`);
-            break;
+            console.log(`[Task:${pid}] Result received, ending task`);
+            session.close();
+            this.sessions.delete(projectId);
+            return { text: lastText, costUsd: totalCost };
           }
           case "error": {
             this.publishLogEvent(projectId, "error", `Agent error: ${event.error}`);
