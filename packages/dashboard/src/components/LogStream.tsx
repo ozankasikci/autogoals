@@ -97,6 +97,9 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
                   key={i}
                   className="flex gap-1.5 py-px hover:bg-muted/30 rounded px-1 -mx-1"
                 >
+                  <span className="shrink-0 text-muted-foreground/50 tabular-nums">
+                    {formatTimestamp(log.timestamp)}
+                  </span>
                   <span
                     className={cn(
                       "shrink-0",
