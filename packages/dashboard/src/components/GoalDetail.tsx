@@ -462,38 +462,32 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
         </section>
 
         {/* -- Approach -- */}
-        {(goal.approach || isRefined || isReady) && (
-          <section>
-            <SectionHeader label="Approach" />
-            <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
-              {editingApproach ? (
-                <textarea
-                  ref={approachRef}
-                  value={approach}
-                  onChange={(e) => {
-                    handleApproachChange(e.target.value);
-                    autoGrow(e.target);
-                  }}
-                  onBlur={handleApproachBlur}
-                  className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/50 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
-                  rows={1}
-                  autoFocus
-                />
-              ) : (
-                <p
-                  onClick={() => {
-                    if (isRefined || isDraft) setEditingApproach(true);
-                  }}
-                  className={`text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap ${
-                    isRefined || isDraft ? "cursor-text" : ""
-                  }`}
-                >
-                  {approach || "No approach defined yet"}
-                </p>
-              )}
-            </div>
-          </section>
-        )}
+        <section>
+          <SectionHeader label="Approach" />
+          <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+            {editingApproach ? (
+              <textarea
+                ref={approachRef}
+                value={approach}
+                onChange={(e) => {
+                  handleApproachChange(e.target.value);
+                  autoGrow(e.target);
+                }}
+                onBlur={handleApproachBlur}
+                className="w-full bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/50 outline-none border-none focus:ring-0 resize-none min-h-[40px] leading-relaxed"
+                rows={1}
+                autoFocus
+              />
+            ) : (
+              <p
+                onClick={() => setEditingApproach(true)}
+                className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap cursor-text"
+              >
+                {approach || "Click to add an approach..."}
+              </p>
+            )}
+          </div>
+        </section>
 
         {/* -- Acceptance Criteria -- */}
         <section>
