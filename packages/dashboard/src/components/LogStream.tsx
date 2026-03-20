@@ -43,11 +43,19 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
     fetchPolicy: "network-only",
   });
 
+  const initialLoadRef = useRef(true);
+
   // Seed logs from historical data
   useEffect(() => {
     if (historicalData?.activityEvents) {
       setLogs(historicalData.activityEvents);
       if (historicalData.activityEvents.length < LOG_PAGE_SIZE) setHasMore(false);
+      if (initialLoadRef.current) {
+        initialLoadRef.current = false;
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 50);
+      }
     }
   }, [historicalData]);
 
