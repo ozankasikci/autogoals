@@ -250,7 +250,7 @@ export function createResolvers(
 
         const resolvedBase = resolvePath(record.path);
         const targetPath = args.path ? resolve(resolvedBase, args.path) : resolvedBase;
-        const maxDepth = args.depth ?? 3;
+        const maxDepth = args.depth ?? 10;
 
         return scanDirectory(targetPath, resolvedBase, maxDepth, 0);
       },

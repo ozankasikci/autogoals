@@ -15,21 +15,33 @@ interface LogEvent {
 interface LogStreamProps {
   projectId: string;
   compact?: boolean;
+  visible?: boolean;
 }
-
-const logTypeColors: Record<string, string> = {
-  info: "text-blue-400",
-  error: "text-red-400",
-  warning: "text-amber-400",
-  success: "text-emerald-400",
-  cost: "text-purple-400",
-  phase: "text-cyan-400",
-  goal: "text-indigo-400",
-};
 
 const LOG_PAGE_SIZE = 100;
 
-export function LogStream({ projectId, compact = false }: LogStreamProps) {
+function logTypeBadgeClass(type: string): string {
+  switch (type) {
+    case "error":
+      return "bg-red-500/15 text-red-400";
+    case "warning":
+      return "bg-amber-500/15 text-amber-400";
+    case "info":
+      return "bg-blue-500/10 text-blue-400";
+    case "success":
+      return "bg-emerald-500/10 text-emerald-400";
+    case "cost":
+      return "bg-purple-500/10 text-purple-400";
+    case "phase":
+      return "bg-cyan-500/10 text-cyan-400";
+    case "goal":
+      return "bg-indigo-500/10 text-indigo-400";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+export function LogStream({ projectId, compact = false, visible }: LogStreamProps) {
   const client = useApolloClient();
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -79,6 +91,17 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [logs, autoScroll]);
+
+  // Auto-scroll to bottom when panel becomes visible
+  const prevVisibleRef = useRef(false);
+  useEffect(() => {
+    if (visible && !prevVisibleRef.current) {
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
+    }
+    prevVisibleRef.current = visible ?? false;
+  }, [visible]);
 
   // Load older activity events when scrolling to top
   const loadOlderLogs = useCallback(async () => {
@@ -165,11 +188,11 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
                   </span>
                   <span
                     className={cn(
-                      "shrink-0",
-                      logTypeColors[log.type] ?? "text-muted-foreground"
+                      "shrink-0 text-xs px-1.5 py-0.5 rounded font-mono",
+                      logTypeBadgeClass(log.type)
                     )}
                   >
-                    [{log.type}]
+                    {log.type}
                   </span>
                   <span className="text-foreground/80 break-all line-clamp-2">
                     {log.message}
@@ -256,11 +279,11 @@ export function LogStream({ projectId, compact = false }: LogStreamProps) {
                 </span>
                 <span
                   className={cn(
-                    "shrink-0 w-14 text-right",
-                    logTypeColors[log.type] ?? "text-muted-foreground"
+                    "shrink-0 text-xs px-1.5 py-0.5 rounded font-mono",
+                    logTypeBadgeClass(log.type)
                   )}
                 >
-                  [{log.type}]
+                  {log.type}
                 </span>
                 <span className="text-foreground/90 break-all">
                   {log.message}

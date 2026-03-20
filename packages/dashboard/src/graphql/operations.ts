@@ -275,12 +275,6 @@ export const GET_FILE_TREE = gql`
         path
         type
         size
-        children {
-          name
-          path
-          type
-          size
-        }
       }
     }
   }

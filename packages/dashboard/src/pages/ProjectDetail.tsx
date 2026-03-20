@@ -532,7 +532,7 @@ export function ProjectDetail() {
   }
 
   const project = data.project;
-  const doneGoals = project.goals.filter((g: Goal) => g.status === "done").length;
+  const activeGoals = project.goals.filter((g: Goal) => g.status === "active").length;
   const panelOpen = activePanel !== null;
 
   const panelTitles: Record<PanelTab, string> = {
@@ -618,8 +618,19 @@ export function ProjectDetail() {
 
             {/* Goals progress */}
             <span className="text-xs text-muted-foreground tabular-nums">
-              {doneGoals}/{project.goals.length}
-              <span className="text-muted-foreground/60 ml-0.5 hidden sm:inline">goals</span>
+              {activeGoals > 0 ? (
+                <>
+                  {activeGoals} active
+                  <span className="text-muted-foreground/60 ml-0.5 hidden sm:inline">
+                    · {project.goals.length} total
+                  </span>
+                </>
+              ) : (
+                <>
+                  {project.goals.length}
+                  <span className="text-muted-foreground/60 ml-0.5 hidden sm:inline">goals</span>
+                </>
+              )}
             </span>
 
             {/* Divider */}
@@ -780,7 +791,7 @@ export function ProjectDetail() {
                       action={
                         activePanel === "goals" ? (
                           <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-                            {doneGoals}/{project.goals.length} done
+                            {activeGoals > 0 ? `${activeGoals} active · ` : ""}{project.goals.length} goals
                           </span>
                         ) : activePanel === "rules" ? (
                           <span className="text-[11px] text-muted-foreground/70">
@@ -836,13 +847,13 @@ export function ProjectDetail() {
               )}
               {/* LogStream always mounted to preserve state + subscription */}
               <div className={`flex-1 min-h-0 px-4 py-4 flex flex-col ${activePanel === "activity" ? "" : "hidden"}`}>
-                <LogStream projectId={project.id} compact />
+                <LogStream projectId={project.id} compact visible={activePanel === "activity"} />
               </div>
             </div>
           </div>
 
           {/* -- Tab Rail -- */}
-          <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col pt-2">
+          <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col">
             <RailButton
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Goals"

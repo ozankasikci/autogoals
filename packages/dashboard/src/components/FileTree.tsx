@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import { GET_FILE_TREE, GET_FILE_CONTENT, WRITE_FILE } from "@/graphql/operations";
 import hljs from "highlight.js";
 import {
@@ -96,26 +96,64 @@ function TreeNode({
   level,
   selectedPath,
   onSelect,
+  projectId,
 }: {
   node: FileNode;
   level: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  projectId: string;
 }) {
   const [expanded, setExpanded] = useState(level < 1);
+  const [loadedChildren, setLoadedChildren] = useState<FileNode[] | null>(node.children);
+  const [loadingChildren, setLoadingChildren] = useState(false);
+  const client = useApolloClient();
   const isDirectory = node.type === "directory";
   const isSelected = node.path === selectedPath;
+
+  // Keep loadedChildren in sync if parent re-fetches and provides new children
+  useEffect(() => {
+    if (node.children && node.children.length > 0) {
+      setLoadedChildren(node.children);
+    }
+  }, [node.children]);
+
+  const handleToggle = useCallback(async () => {
+    if (!isDirectory) {
+      onSelect(node.path);
+      return;
+    }
+
+    const willExpand = !expanded;
+    setExpanded(willExpand);
+
+    // Lazy-load children if expanding and we don't have them yet
+    if (willExpand && (!loadedChildren || loadedChildren.length === 0)) {
+      // Check if the directory might actually be empty vs not-yet-loaded
+      // If node.children is an empty array, it was loaded and is genuinely empty
+      if (node.children && node.children.length === 0) return;
+
+      setLoadingChildren(true);
+      try {
+        const { data } = await client.query<{ fileTree: FileNode[] }>({
+          query: GET_FILE_TREE,
+          variables: { projectId, path: node.path, depth: 2 },
+          fetchPolicy: "network-only",
+        });
+        if (data?.fileTree) {
+          setLoadedChildren(data.fileTree);
+        }
+      } catch {
+        // Failed to load — leave empty
+      }
+      setLoadingChildren(false);
+    }
+  }, [isDirectory, expanded, loadedChildren, node.path, node.children, projectId, client, onSelect]);
 
   return (
     <div>
       <button
-        onClick={() => {
-          if (isDirectory) {
-            setExpanded((prev) => !prev);
-          } else {
-            onSelect(node.path);
-          }
-        }}
+        onClick={handleToggle}
         className={`
           flex items-center gap-1.5 w-full text-left py-1 px-1.5 rounded-md transition-colors group
           ${isSelected
@@ -127,7 +165,9 @@ function TreeNode({
       >
         {isDirectory ? (
           <>
-            {expanded ? (
+            {loadingChildren ? (
+              <Loader2 className="h-3 w-3 shrink-0 text-muted-foreground animate-spin" />
+            ) : expanded ? (
               <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
             ) : (
               <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -151,15 +191,16 @@ function TreeNode({
           </span>
         )}
       </button>
-      {isDirectory && expanded && node.children && (
+      {isDirectory && expanded && loadedChildren && (
         <div>
-          {node.children.map((child) => (
+          {loadedChildren.map((child) => (
             <TreeNode
               key={child.path}
               node={child}
               level={level + 1}
               selectedPath={selectedPath}
               onSelect={onSelect}
+              projectId={projectId}
             />
           ))}
         </div>
@@ -406,7 +447,7 @@ export function FileTree({ projectId }: FileTreeProps) {
   const { data, loading, error } = useQuery<{
     fileTree: FileNode[];
   }>(GET_FILE_TREE, {
-    variables: { projectId, depth: 3 },
+    variables: { projectId, depth: 2 },
   });
 
   const handleFileSelect = useCallback((path: string) => {
@@ -466,6 +507,7 @@ export function FileTree({ projectId }: FileTreeProps) {
           level={0}
           selectedPath={selectedPath}
           onSelect={handleFileSelect}
+          projectId={projectId}
         />
       ))}
     </div>

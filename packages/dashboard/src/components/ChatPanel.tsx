@@ -155,7 +155,7 @@ export function ChatPanel({
 
   const [agentTyping, setAgentTyping] = useState(false);
   const [agentAction, setAgentAction] = useState("");
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useSubscription(NEW_MESSAGE, {
     variables: { projectId },
