@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCost } from "@/lib/utils";
 import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
-import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2 } from "lucide-react";
+import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2, ChevronRight } from "lucide-react";
 
 const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"];
 
@@ -227,15 +227,11 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
 
   // -- Compact sidebar mode --
   if (compact) {
-    return (
-      <div className="space-y-2">
-        {goals.length === 0 && !addingGoal && (
-          <p className="text-sm text-muted-foreground py-6 text-center">
-            No goals yet.
-          </p>
-        )}
+    const activeGoals = goals.filter(g => g.status !== "achieved");
+    const achievedGoals = goals.filter(g => g.status === "achieved");
+    const [showAchieved, setShowAchieved] = useState(false);
 
-        {goals.map((goal) => {
+    const renderGoalCard = (goal: Goal) => {
           const progress = getCriteriaProgress(goal.acceptanceCriteria);
           const progressPct = progress.total > 0 ? (progress.checked / progress.total) * 100 : 0;
           const isComplete = goal.status === "done";
@@ -357,7 +353,35 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
               </div>
             </button>
           );
-        })}
+        };
+
+    return (
+      <div className="space-y-2">
+        {activeGoals.length === 0 && achievedGoals.length === 0 && !addingGoal && (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No goals yet.
+          </p>
+        )}
+
+        {activeGoals.map(renderGoalCard)}
+
+        {/* Achieved goals — collapsible section */}
+        {achievedGoals.length > 0 && (
+          <div className="pt-2">
+            <button
+              onClick={() => setShowAchieved(!showAchieved)}
+              className="w-full flex items-center gap-2 py-2 px-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showAchieved ? "rotate-90" : ""}`} />
+              <span>{achievedGoals.length} achieved</span>
+            </button>
+            {showAchieved && (
+              <div className="space-y-2 mt-1">
+                {achievedGoals.map(renderGoalCard)}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick-add goal */}
         {addingGoal ? (
