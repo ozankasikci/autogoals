@@ -217,15 +217,21 @@ export function ChatPanel({
   }, [loadingMore, hasMore, messages, projectId, client]);
 
   // Detect scroll to top
+  const isNearBottomRef = useRef(true);
+
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    if (scrollRef.current.scrollTop < 100 && hasMore && !loadingMore) {
+    // Check if user is near bottom
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
+    // Infinite scroll: load older when near top
+    if (scrollTop < 100 && hasMore && !loadingMore) {
       loadOlder();
     }
   }, [hasMore, loadingMore, loadOlder]);
 
   useEffect(() => {
-    if (!initialLoadRef.current && bottomRef.current) {
+    if (!initialLoadRef.current && isNearBottomRef.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
