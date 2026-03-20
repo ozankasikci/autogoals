@@ -259,7 +259,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 <span
                   className={`shrink-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${STATUS_DOT_COLORS[goal.status] ?? "bg-zinc-500"}`}
                 />
-                <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isComplete || isAchieved ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>
+                <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isAchieved ? "text-muted-foreground line-through decoration-muted-foreground/30" : isComplete ? "text-muted-foreground" : "text-foreground"}`}>
                   {goal.name}
                 </span>
                 {goal.costUsd > 0 && (

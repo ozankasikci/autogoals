@@ -452,9 +452,21 @@ export function createResolvers(
         if (args.status !== undefined) updates.status = args.status;
 
         // If a done/achieved goal has its content updated (not just status), auto-regress it
-        const contentChanged = args.name !== undefined || args.description !== undefined
-          || args.approach !== undefined || args.acceptanceCriteria !== undefined;
+        // But NOT if only checkbox state changed on criteria (same labels, different [x]/[ ] prefix)
         const currentGoal = store.getGoal(args.goalId);
+        let contentChanged = args.name !== undefined || args.description !== undefined || args.approach !== undefined;
+
+        if (args.acceptanceCriteria !== undefined) {
+          const stripCheck = (s: string) => s.replace(/^\[[ x]\] /, "");
+          const row = db.prepare("SELECT acceptance_criteria FROM goals WHERE project_id = ? AND id = ?")
+            .get(args.projectId, args.goalId) as { acceptance_criteria: string } | undefined;
+          const currentCriteria: string[] = row ? JSON.parse(row.acceptance_criteria) : [];
+          const newLabels = args.acceptanceCriteria.map(stripCheck).sort();
+          const curLabels = currentCriteria.map(stripCheck).sort();
+          const labelsChanged = newLabels.length !== curLabels.length || newLabels.some((l, i) => l !== curLabels[i]);
+          if (labelsChanged) contentChanged = true;
+        }
+
         if (contentChanged && currentGoal && (currentGoal.status === "done" || currentGoal.status === "achieved") && args.status === undefined) {
           updates.status = "regressed";
         }

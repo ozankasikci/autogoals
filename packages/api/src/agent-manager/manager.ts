@@ -215,7 +215,9 @@ export class AgentManager {
             this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 active`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
-            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\nACCEPTANCE CRITERIA:\n${criteria.map((c: string) => `- ${c}`).join("\n") || "- none specified"}\n\nImplement it completely, then verify all criteria are met.`;
+            const uncheckedCriteria = criteria.filter((c: string) => !c.startsWith("[x] "));
+            const checkedCriteria = criteria.filter((c: string) => c.startsWith("[x] "));
+            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\n\nOUTSTANDING CRITERIA (work on these):\n${uncheckedCriteria.map((c: string) => `- ${c.replace(/^\[ \] /, "")}`).join("\n") || "- none specified"}${checkedCriteria.length > 0 ? `\n\nALREADY DONE (skip these):\n${checkedCriteria.map((c: string) => `- ✓ ${c.replace(/^\[x\] /, "")}`).join("\n")}` : ""}\n\nImplement the outstanding criteria. Skip the ones already done.`;
 
             await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: goalPrompt,
