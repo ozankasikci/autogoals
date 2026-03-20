@@ -451,13 +451,23 @@ export function createResolvers(
         if (args.dependsOn !== undefined) updates.dependsOn = args.dependsOn;
         if (args.status !== undefined) updates.status = args.status;
 
+        // If a done/achieved goal has its content updated (not just status), auto-regress it
+        const contentChanged = args.name !== undefined || args.description !== undefined
+          || args.approach !== undefined || args.acceptanceCriteria !== undefined;
+        const currentGoal = store.getGoal(args.goalId);
+        if (contentChanged && currentGoal && (currentGoal.status === "done" || currentGoal.status === "achieved") && args.status === undefined) {
+          updates.status = "regressed";
+        }
+
         store.updateGoal(args.goalId, updates);
 
         if (agentManager?.isRunning(args.projectId)) {
           try {
+            const goalRow = db.prepare("SELECT name FROM goals WHERE project_id = ? AND id = ?")
+              .get(args.projectId, args.goalId) as { name: string } | undefined;
             agentManager.sendMessage(
               args.projectId,
-              `[System] Goal '${args.goalId}' was updated by the user. Please take note of the changes.`,
+              `[System] Goal '${goalRow?.name ?? args.goalId}' was updated by the user. ${updates.status === "regressed" ? "Status changed to regressed — re-evaluate and implement the updated requirements." : "Please take note of the changes."}`,
             );
           } catch {}
         }

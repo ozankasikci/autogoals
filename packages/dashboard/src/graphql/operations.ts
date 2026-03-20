@@ -200,9 +200,9 @@ export const UPDATE_SPEC = gql`
 `;
 
 export const UPDATE_GOAL = gql`
-  mutation UpdateGoal($projectId: ID!, $goalId: ID!, $name: String, $description: String, $acceptanceCriteria: [String!], $dependsOn: [ID!], $status: String) {
-    updateGoal(projectId: $projectId, goalId: $goalId, name: $name, description: $description, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, status: $status) {
-      id name description acceptanceCriteria dependsOn status retries costUsd error
+  mutation UpdateGoal($projectId: ID!, $goalId: ID!, $name: String, $description: String, $approach: String, $acceptanceCriteria: [String!], $dependsOn: [ID!], $status: String) {
+    updateGoal(projectId: $projectId, goalId: $goalId, name: $name, description: $description, approach: $approach, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, status: $status) {
+      id name description approach acceptanceCriteria dependsOn status retries costUsd error
     }
   }
 `;
