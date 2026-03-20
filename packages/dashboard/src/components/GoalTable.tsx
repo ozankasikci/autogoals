@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCost } from "@/lib/utils";
 import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
-import { Plus, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2 } from "lucide-react";
 
 const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"];
 
@@ -258,18 +258,43 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 }
               `}
             >
-              {/* Top row: status + name + cost */}
+              {/* Top row: status + name + archive button */}
               <div className="flex items-center gap-2.5 px-3 pt-3 pb-1.5">
                 <span
                   className={`shrink-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${STATUS_DOT_COLORS[goal.status] ?? "bg-zinc-500"}`}
                 />
-                <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isComplete ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>
+                <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isComplete || isAchieved ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>
                   {goal.name}
                 </span>
                 {goal.costUsd > 0 && (
                   <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {formatCost(goal.costUsd)}
                   </span>
+                )}
+                {/* Quick archive/unarchive button */}
+                {(goal.status === "done" || goal.status === "achieved") && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newStatus = goal.status === "achieved" ? "done" : "achieved";
+                      updateGoal({
+                        variables: { projectId, goalId: goal.id, status: newStatus },
+                      });
+                    }}
+                    disabled={updatingGoal}
+                    className={`shrink-0 h-6 w-6 rounded-md flex items-center justify-center transition-colors ${
+                      goal.status === "achieved"
+                        ? "text-emerald-400 hover:bg-emerald-500/20"
+                        : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-emerald-400 hover:bg-emerald-500/10"
+                    }`}
+                    title={goal.status === "achieved" ? "Unarchive" : "Mark as achieved"}
+                  >
+                    {goal.status === "achieved" ? (
+                      <Undo2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    )}
+                  </button>
                 )}
               </div>
 
