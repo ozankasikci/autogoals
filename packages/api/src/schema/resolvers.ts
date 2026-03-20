@@ -11,8 +11,8 @@ import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
 import { randomUUID } from "crypto";
 import { homedir } from "os";
-import { resolve } from "path";
-import { mkdirSync } from "fs";
+import { resolve, join, relative } from "path";
+import { mkdirSync, readdirSync, statSync } from "fs";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
 
@@ -21,6 +21,51 @@ function resolvePath(p: string): string {
     p = p.replace("~", homedir());
   }
   return resolve(p);
+}
+
+interface FileNode {
+  name: string;
+  path: string;
+  type: string;
+  size: number | null;
+  children: FileNode[] | null;
+}
+
+function scanDirectory(dirPath: string, basePath: string, maxDepth: number, currentDepth: number): FileNode[] {
+  if (currentDepth >= maxDepth) return [];
+  try {
+    const entries = readdirSync(dirPath, { withFileTypes: true });
+    return entries
+      .filter(e => !e.name.startsWith('.') && e.name !== 'node_modules' && e.name !== 'dist' && e.name !== '.git')
+      .sort((a, b) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .map(entry => {
+        const fullPath = join(dirPath, entry.name);
+        const relativePath = relative(basePath, fullPath);
+        if (entry.isDirectory()) {
+          return {
+            name: entry.name,
+            path: relativePath,
+            type: "directory",
+            size: null,
+            children: scanDirectory(fullPath, basePath, maxDepth, currentDepth + 1),
+          };
+        }
+        const stat = statSync(fullPath);
+        return {
+          name: entry.name,
+          path: relativePath,
+          type: "file",
+          size: stat.size,
+          children: null,
+        };
+      });
+  } catch {
+    return [];
+  }
 }
 
 interface GoalView {
@@ -190,6 +235,19 @@ export function createResolvers(
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
         return store.getRules();
+      },
+
+      fileTree(_: unknown, args: { projectId: string; path?: string; depth?: number }): FileNode[] {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const resolvedBase = resolvePath(record.path);
+        const targetPath = args.path ? resolve(resolvedBase, args.path) : resolvedBase;
+        const maxDepth = args.depth ?? 3;
+
+        return scanDirectory(targetPath, resolvedBase, maxDepth, 0);
       },
 
       activityEvents(_: unknown, args: { projectId: string; limit?: number; beforeId?: string }) {

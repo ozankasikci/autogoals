@@ -16,6 +16,7 @@ import { GoalDetail } from "@/components/GoalDetail";
 import { RulesPanel } from "@/components/RulesPanel";
 import { LogStream } from "@/components/LogStream";
 import { ChatPanel } from "@/components/ChatPanel";
+import { FileTree } from "@/components/FileTree";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ import {
   Loader2,
   Menu,
   Plus,
+  FolderTree,
 } from "lucide-react";
 
 interface Goal {
@@ -107,7 +109,7 @@ interface ProjectListItem {
   isRunning: boolean;
 }
 
-type PanelTab = "goals" | "rules" | "activity";
+type PanelTab = "goals" | "rules" | "activity" | "project";
 
 /* ------------------------------------------------------------------ */
 /*  Phase Indicator                                                    */
@@ -480,6 +482,9 @@ export function ProjectDetail() {
       } else if (mod && e.key === "3") {
         e.preventDefault();
         togglePanel("activity");
+      } else if (mod && e.key === "4") {
+        e.preventDefault();
+        togglePanel("project");
       } else if (e.key === "[" && !mod && !isInput) {
         e.preventDefault();
         toggleSidebar();
@@ -530,6 +535,7 @@ export function ProjectDetail() {
   const panelOpen = activePanel !== null;
 
   const panelTitles: Record<PanelTab, string> = {
+    project: "Project Files",
     goals: "Goals",
     rules: "Rules",
     activity: "Activity",
@@ -821,6 +827,9 @@ export function ProjectDetail() {
                     {activePanel === "rules" && (
                       <RulesPanel projectId={project.id} />
                     )}
+                    {activePanel === "project" && (
+                      <FileTree projectId={project.id} />
+                    )}
                   </div>
                 </>
               )}
@@ -833,6 +842,12 @@ export function ProjectDetail() {
 
           {/* -- Tab Rail -- */}
           <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col pt-2">
+            <RailButton
+              icon={<FolderTree className="h-4 w-4" />}
+              label="Project"
+              active={activePanel === "project"}
+              onClick={() => togglePanel("project")}
+            />
             <RailButton
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Goals"

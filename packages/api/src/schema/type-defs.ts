@@ -62,12 +62,21 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  type FileNode {
+    name: String!
+    path: String!
+    type: String!
+    size: Int
+    children: [FileNode!]
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
     messages(projectId: ID!, limit: Int, beforeId: ID): [Message!]!
     activityEvents(projectId: ID!, limit: Int, beforeId: ID): [LogEvent!]!
     rules(projectId: ID!): [Rule!]!
+    fileTree(projectId: ID!, path: String, depth: Int): [FileNode!]!
   }
 
   type Mutation {

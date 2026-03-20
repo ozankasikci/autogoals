@@ -260,3 +260,26 @@ export const REMOVE_RULE = gql`
     removeRule(projectId: $projectId, ruleId: $ruleId)
   }
 `;
+
+export const GET_FILE_TREE = gql`
+  query GetFileTree($projectId: ID!, $path: String, $depth: Int) {
+    fileTree(projectId: $projectId, path: $path, depth: $depth) {
+      name
+      path
+      type
+      size
+      children {
+        name
+        path
+        type
+        size
+        children {
+          name
+          path
+          type
+          size
+        }
+      }
+    }
+  }
+`;
