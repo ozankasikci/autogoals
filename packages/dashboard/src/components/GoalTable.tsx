@@ -282,7 +282,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                       });
                     }}
                     disabled={updatingGoal}
-                    className={`shrink-0 h-6 w-6 rounded-md flex items-center justify-center transition-colors ${
+                    className={`shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${
                       goal.status === "achieved"
                         ? "text-emerald-400 hover:bg-emerald-500/20"
                         : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-emerald-400 hover:bg-emerald-500/10"
@@ -290,9 +290,9 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                     title={goal.status === "achieved" ? "Unarchive" : "Mark as achieved"}
                   >
                     {goal.status === "achieved" ? (
-                      <Undo2 className="h-3.5 w-3.5" />
+                      <Undo2 className="h-5 w-5" />
                     ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <CheckCircle2 className="h-5 w-5" />
                     )}
                   </button>
                 )}
