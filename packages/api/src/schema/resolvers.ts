@@ -12,7 +12,7 @@ import { withFilter } from "graphql-subscriptions";
 import { randomUUID } from "crypto";
 import { homedir } from "os";
 import { resolve, join, relative } from "path";
-import { mkdirSync, readdirSync, statSync } from "fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
 
@@ -263,6 +263,27 @@ export function createResolvers(
           timestamp: e.createdAt,
           projectId: args.projectId,
         }));
+      },
+
+      fileContent(_: unknown, args: { projectId: string; path: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const resolvedBase = resolvePath(record.path);
+        const filePath = resolve(resolvedBase, args.path);
+
+        // Security: ensure path is within project directory
+        if (!filePath.startsWith(resolvedBase)) throw new Error("Path outside project");
+
+        try {
+          const content = readFileSync(filePath, "utf-8");
+          const stat = statSync(filePath);
+          return { path: args.path, content, size: stat.size };
+        } catch {
+          return null;
+        }
       },
     },
 
@@ -628,6 +649,23 @@ Start by asking your first question about this goal.`,
         }
 
         return true;
+      },
+
+      writeFile(_: unknown, args: { projectId: string; path: string; content: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const resolvedBase = resolvePath(record.path);
+        const filePath = resolve(resolvedBase, args.path);
+
+        // Security: ensure path is within project directory
+        if (!filePath.startsWith(resolvedBase)) throw new Error("Path outside project");
+
+        writeFileSync(filePath, args.content, "utf-8");
+        const stat = statSync(filePath);
+        return { path: args.path, content: args.content, size: stat.size };
       },
     },
 

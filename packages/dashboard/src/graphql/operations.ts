@@ -283,3 +283,23 @@ export const GET_FILE_TREE = gql`
     }
   }
 `;
+
+export const GET_FILE_CONTENT = gql`
+  query GetFileContent($projectId: ID!, $path: String!) {
+    fileContent(projectId: $projectId, path: $path) {
+      path
+      content
+      size
+    }
+  }
+`;
+
+export const WRITE_FILE = gql`
+  mutation WriteFile($projectId: ID!, $path: String!, $content: String!) {
+    writeFile(projectId: $projectId, path: $path, content: $content) {
+      path
+      content
+      size
+    }
+  }
+`;

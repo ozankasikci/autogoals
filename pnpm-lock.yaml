@@ -160,6 +160,9 @@ importers:
       graphql-ws:
         specifier: ^6.0.4
         version: 6.0.7(graphql@16.13.1)(ws@8.19.0)
+      highlight.js:
+        specifier: ^11.11.1
+        version: 11.11.1
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)

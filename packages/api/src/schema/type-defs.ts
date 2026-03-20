@@ -70,6 +70,12 @@ export const typeDefs = `#graphql
     children: [FileNode!]
   }
 
+  type FileContent {
+    path: String!
+    content: String!
+    size: Int!
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
@@ -77,6 +83,7 @@ export const typeDefs = `#graphql
     activityEvents(projectId: ID!, limit: Int, beforeId: ID): [LogEvent!]!
     rules(projectId: ID!): [Rule!]!
     fileTree(projectId: ID!, path: String, depth: Int): [FileNode!]!
+    fileContent(projectId: ID!, path: String!): FileContent
   }
 
   type Mutation {
@@ -96,6 +103,7 @@ export const typeDefs = `#graphql
     addRule(projectId: ID!, content: String!): Rule!
     updateRule(projectId: ID!, ruleId: ID!, content: String!): Rule!
     removeRule(projectId: ID!, ruleId: ID!): Boolean!
+    writeFile(projectId: ID!, path: String!, content: String!): FileContent!
   }
 
   type Subscription {
