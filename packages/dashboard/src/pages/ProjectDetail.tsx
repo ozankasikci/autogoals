@@ -861,7 +861,6 @@ export function ProjectDetail() {
               active={activePanel === "activity"}
               onClick={() => togglePanel("activity")}
             />
-            <div className="flex-1" />
             <RailButton
               icon={<FolderTree className="h-4 w-4" />}
               label="Project"
