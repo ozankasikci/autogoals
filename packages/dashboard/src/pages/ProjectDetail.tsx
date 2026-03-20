@@ -843,12 +843,6 @@ export function ProjectDetail() {
           {/* -- Tab Rail -- */}
           <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col pt-2">
             <RailButton
-              icon={<FolderTree className="h-4 w-4" />}
-              label="Project"
-              active={activePanel === "project"}
-              onClick={() => togglePanel("project")}
-            />
-            <RailButton
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Goals"
               count={project.goals.length}
@@ -866,6 +860,13 @@ export function ProjectDetail() {
               label="Activity"
               active={activePanel === "activity"}
               onClick={() => togglePanel("activity")}
+            />
+            <div className="flex-1" />
+            <RailButton
+              icon={<FolderTree className="h-4 w-4" />}
+              label="Project"
+              active={activePanel === "project"}
+              onClick={() => togglePanel("project")}
             />
           </aside>
         </div>
