@@ -17,10 +17,13 @@ function buildToolSummary(tool: string, input: Record<string, unknown>): string 
   }
 }
 
+const VERIFY_COOLDOWN = 30 * 60 * 1000; // 30 min between re-verifying the same goal
+
 export class AgentManager {
   private loops = new Map<string, boolean>(); // projectId → running flag
   private sessions = new Map<string, AgentSession>();
   private activeGoals = new Map<string, string>(); // projectId → goalId
+  private lastVerified = new Map<string, number>(); // goalId → timestamp
   private getDb: () => Database.Database;
 
   constructor(getDb: () => Database.Database) {
@@ -230,12 +233,16 @@ export class AgentManager {
           continue;
         }
 
-        // --- Phase C: Verify completed goals (rotate, one per cycle) ---
+        // --- Phase C: Verify completed goals (rotate, skip recently verified) ---
         const doneGoals = goals.filter(g => g.status === "done");
-        if (doneGoals.length > 0) {
+        const now = Date.now();
+        const needsVerification = doneGoals.filter(g => {
+          const lastCheck = this.lastVerified.get(g.id) ?? 0;
+          return (now - lastCheck) > VERIFY_COOLDOWN;
+        });
+        if (needsVerification.length > 0) {
           store.setPhase("monitoring");
-          // Pick one goal to verify (round-robin based on timestamp)
-          const goalToVerify = doneGoals[Math.floor(Date.now() / IDLE_COOLDOWN) % doneGoals.length];
+          const goalToVerify = needsVerification[0];
           const goalRow = db.prepare(
             "SELECT id, name, acceptance_criteria FROM goals WHERE project_id = ? AND id = ?"
           ).get(projectId, goalToVerify.id) as any;
@@ -253,6 +260,9 @@ export class AgentManager {
                 maxTurns: 20,
               });
 
+              // Mark as verified regardless of outcome
+              this.lastVerified.set(goalToVerify.id, Date.now());
+
               if (result?.text?.includes("REGRESSED")) {
                 store.updateGoal(goalToVerify.id, { status: "regressed" });
                 this.publishLogEvent(projectId, "warning", `Goal '${goalRow.name}' regressed!`);
@@ -260,15 +270,18 @@ export class AgentManager {
                 await this.sleep(POST_WORK_COOLDOWN, projectId);
                 continue; // Next iteration will pick it up as incomplete
               } else {
-                this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' verified`);
+                this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' verified ✓ (next check in 30m)`);
               }
             }
           }
         }
 
-        // --- Phase D: Check rules ---
+        // --- Phase D: Check rules (with cooldown) ---
+        const rulesKey = `rules:${projectId}`;
+        const lastRulesCheck = this.lastVerified.get(rulesKey) ?? 0;
         const rules = store.getRules();
-        if (rules.length > 0) {
+        if (rules.length > 0 && (now - lastRulesCheck) > VERIFY_COOLDOWN) {
+          this.lastVerified.set(rulesKey, Date.now());
           const rulesText = rules.map(r => `- ${r.content}`).join("\n");
           this.publishLogEvent(projectId, "info", "Checking rules compliance...");
 
