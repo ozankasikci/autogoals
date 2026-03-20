@@ -474,8 +474,15 @@ export function createResolvers(
           if (labelsChanged) contentChanged = true;
         }
 
-        if (contentChanged && currentGoal && (currentGoal.status === "done" || currentGoal.status === "achieved") && args.status === undefined) {
-          updates.status = "regressed";
+        if (contentChanged && currentGoal && args.status === undefined) {
+          if (currentGoal.status === "done" || currentGoal.status === "achieved") {
+            // Non-recurring done goals: regress so agent re-executes
+            updates.status = "regressed";
+          } else if (currentGoal.status === "active") {
+            // Active goal updated: reset to pending so next execution uses new content
+            updates.status = "pending";
+          }
+          // For pending/draft/regressed: content is saved, agent will pick up new version on next execution
         }
 
         store.updateGoal(args.goalId, updates);
@@ -484,9 +491,14 @@ export function createResolvers(
           try {
             const goalRow = db.prepare("SELECT name FROM goals WHERE project_id = ? AND id = ?")
               .get(args.projectId, args.goalId) as { name: string } | undefined;
+            const statusMsg = updates.status === "regressed"
+              ? "Status changed to regressed — re-evaluate and implement the updated requirements."
+              : updates.status === "pending"
+                ? "Goal reset to pending — will re-execute with updated requirements on next cycle."
+                : "Please take note of the changes and apply them on the next execution.";
             agentManager.sendMessage(
               args.projectId,
-              `[System] Goal '${goalRow?.name ?? args.goalId}' was updated by the user. ${updates.status === "regressed" ? "Status changed to regressed — re-evaluate and implement the updated requirements." : "Please take note of the changes."}`,
+              `[System] Goal '${goalRow?.name ?? args.goalId}' was updated by the user. ${statusMsg}`,
             );
           } catch {}
         }
