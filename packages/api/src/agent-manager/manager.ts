@@ -204,7 +204,7 @@ export class AgentManager {
         if (actionable) {
           store.setPhase("execution");
           const goalRow = db.prepare(
-            "SELECT id, name, description, approach, acceptance_criteria FROM goals WHERE project_id = ? AND id = ?"
+            "SELECT id, name, description, approach, acceptance_criteria, ongoing FROM goals WHERE project_id = ? AND id = ?"
           ).get(projectId, actionable.id) as any;
 
           if (goalRow) {
@@ -225,10 +225,17 @@ export class AgentManager {
               maxTurns: 100,
             });
 
-            // Mark goal as done
-            store.updateGoal(actionable.id, { status: "done" });
-            this.activeGoals.delete(projectId);
-            this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 done`);
+            // After goal execution completes:
+            if (goalRow.ongoing) {
+              // Don't mark as done — reset to pending so it runs again next cycle
+              store.updateGoal(actionable.id, { status: "pending" });
+              this.activeGoals.delete(projectId);
+              this.publishLogEvent(projectId, "info", `Ongoing goal '${goalRow.name}' \u2192 pending (will re-execute next cycle)`);
+            } else {
+              store.updateGoal(actionable.id, { status: "done" });
+              this.activeGoals.delete(projectId);
+              this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 done`);
+            }
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
           }
           await this.sleep(POST_WORK_COOLDOWN, projectId);
@@ -236,7 +243,8 @@ export class AgentManager {
         }
 
         // --- Phase C: Verify completed goals (rotate, skip recently verified) ---
-        const doneGoals = goals.filter(g => g.status === "done");
+        // Skip ongoing goals — they cycle pending→active→pending, never stay "done"
+        const doneGoals = goals.filter(g => g.status === "done" && !g.ongoing);
         const now = Date.now();
         const needsVerification = doneGoals.filter(g => {
           const lastCheck = this.lastVerified.get(g.id) ?? 0;

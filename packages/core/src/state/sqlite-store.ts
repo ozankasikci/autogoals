@@ -141,7 +141,7 @@ export class SQLiteStore implements StateStore {
   getGoals(): GoalState[] {
     const rows = this.db
       .prepare(
-        "SELECT id, status, retries, cost_usd, error, session_id, approach FROM goals WHERE project_id = ? ORDER BY rowid",
+        "SELECT id, status, retries, cost_usd, error, session_id, approach, ongoing FROM goals WHERE project_id = ? ORDER BY rowid",
       )
       .all(this.projectId) as {
       id: string;
@@ -151,6 +151,7 @@ export class SQLiteStore implements StateStore {
       error: string | null;
       session_id: string | null;
       approach: string | null;
+      ongoing: number;
     }[];
 
     return rows.map((r) => {
@@ -159,6 +160,7 @@ export class SQLiteStore implements StateStore {
         status: r.status as GoalStatus,
         retries: r.retries,
         costUsd: r.cost_usd,
+        ongoing: !!r.ongoing,
       };
       if (r.error != null) goal.error = r.error;
       if (r.session_id != null) goal.sessionId = r.session_id;
@@ -170,7 +172,7 @@ export class SQLiteStore implements StateStore {
   getGoal(id: string): GoalState | null {
     const r = this.db
       .prepare(
-        "SELECT id, status, retries, cost_usd, error, session_id, approach FROM goals WHERE project_id = ? AND id = ?",
+        "SELECT id, status, retries, cost_usd, error, session_id, approach, ongoing FROM goals WHERE project_id = ? AND id = ?",
       )
       .get(this.projectId, id) as
       | {
@@ -181,6 +183,7 @@ export class SQLiteStore implements StateStore {
           error: string | null;
           session_id: string | null;
           approach: string | null;
+          ongoing: number;
         }
       | undefined;
 
@@ -191,6 +194,7 @@ export class SQLiteStore implements StateStore {
       status: r.status as GoalStatus,
       retries: r.retries,
       costUsd: r.cost_usd,
+      ongoing: !!r.ongoing,
     };
     if (r.error != null) goal.error = r.error;
     if (r.session_id != null) goal.sessionId = r.session_id;
@@ -439,6 +443,7 @@ export class SQLiteStore implements StateStore {
       acceptanceCriteria: string[];
       dependsOn: string[];
       status: string;
+      ongoing: boolean;
     }>,
   ): void {
     const setClauses: string[] = [];
@@ -468,6 +473,10 @@ export class SQLiteStore implements StateStore {
       setClauses.push("status = ?");
       values.push(updates.status);
     }
+    if (updates.ongoing !== undefined) {
+      setClauses.push("ongoing = ?");
+      values.push(updates.ongoing ? 1 : 0);
+    }
 
     if (setClauses.length === 0) return;
 
@@ -486,10 +495,11 @@ export class SQLiteStore implements StateStore {
     acceptanceCriteria: string[];
     dependsOn: string[];
     approach?: string;
+    ongoing?: boolean;
   }): void {
     this.db
       .prepare(
-        "INSERT INTO goals (project_id, id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 0, 0)",
+        "INSERT INTO goals (project_id, id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd, ongoing) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 0, 0, ?)",
       )
       .run(
         this.projectId,
@@ -499,6 +509,7 @@ export class SQLiteStore implements StateStore {
         goal.approach ?? null,
         JSON.stringify(goal.acceptanceCriteria),
         JSON.stringify(goal.dependsOn),
+        goal.ongoing ? 1 : 0,
       );
   }
 

@@ -18,6 +18,7 @@ interface Goal {
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
+  ongoing: boolean;
   retries: number;
   costUsd: number;
   error?: string | null;
@@ -262,6 +263,11 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 <span className={`text-sm font-medium truncate flex-1 min-w-0 ${isAchieved ? "text-muted-foreground line-through decoration-muted-foreground/30" : isComplete ? "text-muted-foreground" : "text-foreground"}`}>
                   {goal.name}
                 </span>
+                {goal.ongoing && (
+                  <span className="shrink-0 text-xs text-teal-400 bg-teal-500/10 rounded px-1.5 py-0.5" title="Ongoing — re-executes each cycle">
+                    ♻️
+                  </span>
+                )}
                 {goal.costUsd > 0 && (
                   <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {formatCost(goal.costUsd)}

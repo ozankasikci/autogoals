@@ -76,6 +76,7 @@ interface GoalView {
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
+  ongoing: boolean;
   retries: number;
   costUsd: number;
   error?: string;
@@ -103,7 +104,7 @@ interface ProjectView {
 function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
   const rows = db
     .prepare(
-      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, ongoing, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
     )
     .all(projectId) as {
     id: string;
@@ -113,6 +114,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
     acceptance_criteria: string;
     depends_on: string;
     status: string;
+    ongoing: number;
     retries: number;
     cost_usd: number;
     error: string | null;
@@ -126,6 +128,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
       acceptanceCriteria: JSON.parse(r.acceptance_criteria) as string[],
       dependsOn: JSON.parse(r.depends_on) as string[],
       status: r.status,
+      ongoing: !!r.ongoing,
       retries: r.retries,
       costUsd: r.cost_usd,
     };
@@ -138,7 +141,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
 function getGoalView(db: Database.Database, projectId: string, goalId: string): GoalView | null {
   const r = db
     .prepare(
-      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, ongoing, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
     )
     .get(projectId, goalId) as {
     id: string;
@@ -148,6 +151,7 @@ function getGoalView(db: Database.Database, projectId: string, goalId: string): 
     acceptance_criteria: string;
     depends_on: string;
     status: string;
+    ongoing: number;
     retries: number;
     cost_usd: number;
     error: string | null;
@@ -162,6 +166,7 @@ function getGoalView(db: Database.Database, projectId: string, goalId: string): 
     acceptanceCriteria: JSON.parse(r.acceptance_criteria) as string[],
     dependsOn: JSON.parse(r.depends_on) as string[],
     status: r.status,
+    ongoing: !!r.ongoing,
     retries: r.retries,
     costUsd: r.cost_usd,
   };
@@ -438,6 +443,7 @@ export function createResolvers(
           acceptanceCriteria?: string[];
           dependsOn?: string[];
           status?: string;
+          ongoing?: boolean;
         },
       ): GoalView {
         const db = getDb();
@@ -450,6 +456,7 @@ export function createResolvers(
         if (args.acceptanceCriteria !== undefined) updates.acceptanceCriteria = args.acceptanceCriteria;
         if (args.dependsOn !== undefined) updates.dependsOn = args.dependsOn;
         if (args.status !== undefined) updates.status = args.status;
+        if (args.ongoing !== undefined) updates.ongoing = args.ongoing;
 
         // If a done/achieved goal has its content updated (not just status), auto-regress it
         // But NOT if only checkbox state changed on criteria (same labels, different [x]/[ ] prefix)
@@ -495,6 +502,7 @@ export function createResolvers(
           description: string;
           acceptanceCriteria: string[];
           dependsOn: string[];
+          ongoing?: boolean;
         },
       ): GoalView {
         const db = getDb();
@@ -507,6 +515,7 @@ export function createResolvers(
           description: args.description,
           acceptanceCriteria: args.acceptanceCriteria,
           dependsOn: args.dependsOn,
+          ongoing: args.ongoing,
         });
 
         if (agentManager?.isRunning(args.projectId)) {

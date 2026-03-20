@@ -48,6 +48,7 @@ export const GET_PROJECT = gql`
         acceptanceCriteria
         dependsOn
         status
+        ongoing
         retries
         costUsd
         error
@@ -124,6 +125,7 @@ export const PROJECT_UPDATED = gql`
         id
         name
         status
+        ongoing
         costUsd
       }
     }
@@ -200,17 +202,17 @@ export const UPDATE_SPEC = gql`
 `;
 
 export const UPDATE_GOAL = gql`
-  mutation UpdateGoal($projectId: ID!, $goalId: ID!, $name: String, $description: String, $approach: String, $acceptanceCriteria: [String!], $dependsOn: [ID!], $status: String) {
-    updateGoal(projectId: $projectId, goalId: $goalId, name: $name, description: $description, approach: $approach, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, status: $status) {
-      id name description approach acceptanceCriteria dependsOn status retries costUsd error
+  mutation UpdateGoal($projectId: ID!, $goalId: ID!, $name: String, $description: String, $approach: String, $acceptanceCriteria: [String!], $dependsOn: [ID!], $status: String, $ongoing: Boolean) {
+    updateGoal(projectId: $projectId, goalId: $goalId, name: $name, description: $description, approach: $approach, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, status: $status, ongoing: $ongoing) {
+      id name description approach acceptanceCriteria dependsOn status ongoing retries costUsd error
     }
   }
 `;
 
 export const ADD_GOAL = gql`
-  mutation AddGoal($projectId: ID!, $name: String!, $description: String!, $acceptanceCriteria: [String!]!, $dependsOn: [ID!]!) {
-    addGoal(projectId: $projectId, name: $name, description: $description, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn) {
-      id name description acceptanceCriteria dependsOn status retries costUsd
+  mutation AddGoal($projectId: ID!, $name: String!, $description: String!, $acceptanceCriteria: [String!]!, $dependsOn: [ID!]!, $ongoing: Boolean) {
+    addGoal(projectId: $projectId, name: $name, description: $description, acceptanceCriteria: $acceptanceCriteria, dependsOn: $dependsOn, ongoing: $ongoing) {
+      id name description acceptanceCriteria dependsOn status ongoing retries costUsd
     }
   }
 `;

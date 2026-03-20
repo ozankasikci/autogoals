@@ -35,6 +35,7 @@ interface Goal {
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
+  ongoing: boolean;
   retries: number;
   costUsd: number;
   error?: string | null;
@@ -88,6 +89,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
   const [editingApproach, setEditingApproach] = useState(false);
   const [criteria, setCriteria] = useState(goal.acceptanceCriteria);
   const [status, setStatus] = useState(goal.status);
+  const [ongoing, setOngoing] = useState(goal.ongoing);
   const [dependencies, setDependencies] = useState(goal.dependsOn);
   const [newCriterion, setNewCriterion] = useState("");
   const [showDepPicker, setShowDepPicker] = useState(false);
@@ -111,8 +113,9 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
     setApproach(goal.approach ?? "");
     setCriteria(goal.acceptanceCriteria);
     setStatus(goal.status);
+    setOngoing(goal.ongoing);
     setDependencies(goal.dependsOn);
-  }, [goal.id, goal.name, goal.description, goal.approach, goal.acceptanceCriteria, goal.dependsOn, goal.status]);
+  }, [goal.id, goal.name, goal.description, goal.approach, goal.acceptanceCriteria, goal.dependsOn, goal.status, goal.ongoing]);
 
   const refetchOpts = {
     refetchQueries: [{ query: GET_PROJECT, variables: { id: projectId } }],
@@ -240,6 +243,12 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
     const updated = dependencies.filter((d) => d !== depId);
     setDependencies(updated);
     saveGoalNow({ dependsOn: updated });
+  }
+
+  function handleOngoingToggle() {
+    const newValue = !ongoing;
+    setOngoing(newValue);
+    saveGoalNow({ ongoing: newValue });
   }
 
   function handleApproachChange(value: string) {
@@ -371,6 +380,34 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
             )}
           </div>
         </div>
+      </div>
+
+      {/* -- Ongoing toggle -- */}
+      <div className="shrink-0 py-3 border-b border-border/50">
+        <button
+          onClick={handleOngoingToggle}
+          className="w-full flex items-center gap-2.5 group"
+        >
+          <div
+            className={`relative shrink-0 h-4 w-7 rounded-full transition-colors duration-200 ${
+              ongoing ? "bg-teal-500" : "bg-muted-foreground/20"
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform duration-200 ${
+                ongoing ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </div>
+          <div className="flex-1 text-left">
+            <span className={`text-xs font-medium ${ongoing ? "text-teal-400" : "text-muted-foreground"}`}>
+              Ongoing
+            </span>
+            <span className="text-xs text-muted-foreground/50 ml-1.5">
+              Agent will continuously work on this goal
+            </span>
+          </div>
+        </button>
       </div>
 
       {/* -- Action bar (status-dependent) -- */}

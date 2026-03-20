@@ -57,8 +57,9 @@ export interface StateStore {
     acceptanceCriteria: string[];
     dependsOn: string[];
     status: string;
+    ongoing: boolean;
   }>): void;
-  addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[]; approach?: string }): void;
+  addGoal(goal: { id: string; name: string; description: string; acceptanceCriteria: string[]; dependsOn: string[]; approach?: string; ongoing?: boolean }): void;
   removeGoal(id: string): void;
 
   // Activity
