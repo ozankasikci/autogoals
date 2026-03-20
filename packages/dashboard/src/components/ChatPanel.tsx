@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useSubscription, useApolloClient } from "@apollo/client";
-import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE } from "@/graphql/operations";
+import { GET_MESSAGES, SEND_MESSAGE, NEW_MESSAGE, LOG_EVENTS } from "@/graphql/operations";
 import { cn, formatTimestamp } from "@/lib/utils";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { Terminal, ChevronDown, Zap, User, Send, Loader2, MessageSquare } from "lucide-react";
@@ -153,6 +153,10 @@ export function ChatPanel({
 
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE);
 
+  const [agentTyping, setAgentTyping] = useState(false);
+  const [agentAction, setAgentAction] = useState("");
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
   useSubscription(NEW_MESSAGE, {
     variables: { projectId },
     onData: ({ data: subData }) => {
@@ -162,6 +166,45 @@ export function ChatPanel({
           if (prev.some((m) => m.id === incoming.id)) return prev;
           return [...prev, incoming];
         });
+        // Agent sent a text message — stop typing indicator
+        if (incoming.role === "agent") {
+          try {
+            const parsed = JSON.parse(incoming.content);
+            if (parsed._type === "tool_use") {
+              // Tool use — agent is still working, update action text
+              setAgentTyping(true);
+              setAgentAction(parsed.summary || `Using ${parsed.tool}`);
+              // Reset timeout
+              clearTimeout(typingTimeoutRef.current);
+              typingTimeoutRef.current = setTimeout(() => setAgentTyping(false), 120000);
+              return;
+            }
+          } catch {
+            // Not JSON — it's a real text response
+          }
+          setAgentTyping(false);
+          setAgentAction("");
+        }
+      }
+    },
+  });
+
+  // Log events also indicate agent is working
+  useSubscription(LOG_EVENTS, {
+    variables: { projectId },
+    skip: !isAgentRunning,
+    onData: ({ data: subData }) => {
+      const event = subData.data?.logEvent;
+      if (event?.message) {
+        if (event.message.startsWith("Using ") || event.message.includes("→ active")) {
+          setAgentTyping(true);
+          setAgentAction(event.message.slice(0, 60));
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setAgentTyping(false), 120000);
+        } else if (event.message.includes("Task done") || event.message.includes("All clear") || event.message.includes("Sleeping")) {
+          setAgentTyping(false);
+          setAgentAction("");
+        }
       }
     },
   });
@@ -334,6 +377,28 @@ export function ChatPanel({
               const msg = item as Message;
               return <MessageBubble key={msg.id} msg={msg} />;
             })}
+            {/* Typing indicator */}
+            {agentTyping && (
+              <div className="flex gap-2.5 justify-start">
+                <div className="shrink-0 h-7 w-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center mt-0.5">
+                  <Zap className="h-3.5 w-3.5 text-primary animate-pulse" />
+                </div>
+                <div className="rounded-xl px-4 py-3 bg-card border border-border max-w-[85%]">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    {agentAction && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[250px]">
+                        {agentAction}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
         )}
