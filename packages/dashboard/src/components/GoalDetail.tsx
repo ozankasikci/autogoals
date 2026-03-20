@@ -51,7 +51,7 @@ interface GoalDetailProps {
 
 /* -- Constants -- */
 
-const GOAL_STATUSES = ["draft", "refined", "ready", "pending", "active", "verifying", "done", "failed", "skipped", "regressed"] as const;
+const GOAL_STATUSES = ["draft", "refined", "ready", "pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-violet-500",
@@ -64,6 +64,7 @@ const STATUS_COLORS: Record<string, string> = {
   verifying: "bg-amber-500",
   skipped: "bg-orange-500",
   regressed: "bg-orange-500",
+  achieved: "bg-emerald-600",
 };
 
 /* -- Helpers -- */

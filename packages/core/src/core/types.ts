@@ -51,7 +51,8 @@ export type GoalStatus =
   | "failed"
   | "retrying"
   | "skipped"
-  | "regressed";
+  | "regressed"
+  | "achieved";
 
 export interface GoalState {
   id: string;

@@ -22,6 +22,7 @@ const goalStatusColors: Record<string, BadgeProps["variant"]> = {
   failed: "destructive",
   skipped: "outline",
   regressed: "warning",
+  achieved: "success",
 };
 
 interface StatusBadgeProps {

@@ -8,7 +8,7 @@ import { formatCost } from "@/lib/utils";
 import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
 import { Plus, X, Pencil, Trash2 } from "lucide-react";
 
-const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed"];
+const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"];
 
 interface Goal {
   id: string;
@@ -51,6 +51,7 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   verifying: "bg-amber-500",
   skipped: "bg-orange-500",
   regressed: "bg-orange-500",
+  achieved: "bg-emerald-600",
 };
 
 /* -- Helpers -- */
@@ -239,6 +240,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
           const progressPct = progress.total > 0 ? (progress.checked / progress.total) * 100 : 0;
           const isComplete = goal.status === "done";
           const isActive = goal.status === "active";
+          const isAchieved = goal.status === "achieved";
 
           return (
             <button
@@ -246,11 +248,13 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
               onClick={() => onSelectGoal?.(goal.id)}
               className={`
                 w-full text-left group rounded-lg border transition-all duration-150 cursor-pointer
-                ${isActive
-                  ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
-                  : isComplete
-                    ? "border-border/60 bg-card/50 hover:bg-card"
-                    : "border-border hover:border-border bg-card hover:bg-accent/30"
+                ${isAchieved
+                  ? "border-emerald-500/20 bg-emerald-500/5 opacity-60 hover:opacity-80"
+                  : isActive
+                    ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
+                    : isComplete
+                      ? "border-border/60 bg-card/50 hover:bg-card"
+                      : "border-border hover:border-border bg-card hover:bg-accent/30"
                 }
               `}
             >
@@ -295,6 +299,11 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                   <span className="inline-flex items-center gap-1 text-xs text-blue-400 bg-blue-500/10 rounded px-1.5 py-0.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
                     Working...
+                  </span>
+                )}
+                {goal.status === "achieved" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 rounded px-1.5 py-0.5">
+                    ✓ Achieved
                   </span>
                 )}
                 {goal.status !== "draft" && goal.status !== "refined" && goal.status !== "ready" && goal.status !== "active" && goal.status !== "regressed" && progress.total > 0 && (
