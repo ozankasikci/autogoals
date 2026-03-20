@@ -64,7 +64,7 @@ interface Goal {
   acceptanceCriteria: string[];
   dependsOn: string[];
   status: string;
-  ongoing: boolean;
+  recurring: boolean;
   retries: number;
   costUsd: number;
   error?: string | null;

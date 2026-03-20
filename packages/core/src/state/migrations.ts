@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS goals (
   acceptance_criteria TEXT NOT NULL,
   depends_on TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'draft',
-  ongoing INTEGER NOT NULL DEFAULT 0,
+  recurring INTEGER NOT NULL DEFAULT 0,
   retries INTEGER NOT NULL DEFAULT 0,
   cost_usd REAL NOT NULL DEFAULT 0,
   error TEXT,

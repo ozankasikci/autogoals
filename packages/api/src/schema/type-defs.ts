@@ -40,7 +40,7 @@ export const typeDefs = `#graphql
     acceptanceCriteria: [String!]!
     dependsOn: [ID!]!
     status: String!
-    ongoing: Boolean!
+    recurring: Boolean!
     retries: Int!
     costUsd: Float!
     error: String
@@ -96,8 +96,8 @@ export const typeDefs = `#graphql
     stopAllAgents: [Project!]!
     sendMessage(projectId: ID!, content: String!): Message!
     updateSpec(projectId: ID!, overview: String!, technicalDecisions: [String!]!): Spec!
-    updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, approach: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String, ongoing: Boolean): Goal!
-    addGoal(projectId: ID!, name: String!, description: String!, acceptanceCriteria: [String!]!, dependsOn: [ID!]!, ongoing: Boolean): Goal!
+    updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, approach: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String, recurring: Boolean): Goal!
+    addGoal(projectId: ID!, name: String!, description: String!, acceptanceCriteria: [String!]!, dependsOn: [ID!]!, recurring: Boolean): Goal!
     refineGoal(projectId: ID!, goalId: ID!): Goal!
     approveGoal(projectId: ID!, goalId: ID!, startImmediately: Boolean): Goal!
     removeGoal(projectId: ID!, goalId: ID!): Boolean!

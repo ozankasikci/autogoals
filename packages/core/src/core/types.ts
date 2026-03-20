@@ -62,7 +62,7 @@ export interface GoalState {
   error?: string;
   sessionId?: string;
   approach?: string;
-  ongoing?: boolean;
+  recurring?: boolean;
 }
 
 export interface ProjectState {
