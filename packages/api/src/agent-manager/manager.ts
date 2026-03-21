@@ -198,9 +198,25 @@ export class AgentManager {
         }
 
         // --- Phase B2: Work on actionable goals ---
-        const actionable = goals.find(g =>
-          g.status === "pending" || g.status === "ready" || g.status === "regressed" || g.status === "active"
-        );
+        // Priority: non-recurring first, then recurring (round-robin)
+        const actionableStatuses = new Set(["pending", "ready", "regressed", "active"]);
+        const nonRecurring = goals.find(g => actionableStatuses.has(g.status) && !g.recurring);
+        const recurringGoals = goals.filter(g => actionableStatuses.has(g.status) && g.recurring);
+
+        // For recurring goals, rotate using lastExecuted tracking
+        let nextRecurring: typeof goals[0] | undefined;
+        if (recurringGoals.length > 0) {
+          // Find the one that was least recently executed
+          const lastExecKey = (id: string) => `lastExec:${id}`;
+          nextRecurring = recurringGoals.reduce((oldest, g) => {
+            const oldestTime = this.lastVerified.get(lastExecKey(oldest.id)) ?? 0;
+            const gTime = this.lastVerified.get(lastExecKey(g.id)) ?? 0;
+            return gTime < oldestTime ? g : oldest;
+          });
+        }
+
+        // Non-recurring goals take priority over recurring ones
+        const actionable = nonRecurring ?? nextRecurring;
         if (actionable) {
           store.setPhase("execution");
           const goalRow = db.prepare(
@@ -230,7 +246,9 @@ export class AgentManager {
               // Don't mark as done — reset to pending so it runs again next cycle
               store.updateGoal(actionable.id, { status: "pending" });
               this.activeGoals.delete(projectId);
-              this.publishLogEvent(projectId, "info", `Recurring goal '${goalRow.name}' \u2192 pending (will re-execute next cycle)`);
+              // Track last execution time for round-robin
+              this.lastVerified.set(`lastExec:${actionable.id}`, Date.now());
+              this.publishLogEvent(projectId, "info", `Recurring goal '${goalRow.name}' \u2192 pending (will re-execute after other goals)`);
             } else {
               store.updateGoal(actionable.id, { status: "done" });
               this.activeGoals.delete(projectId);
