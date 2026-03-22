@@ -269,7 +269,9 @@ export class AgentManager {
                 unlinkSync(msgFile);
 
                 const commitHash = execSync("git rev-parse --short HEAD", { cwd: projectPath, encoding: "utf-8" }).trim();
-                const tagName = `checkpoint/${Date.now()}-${goalRow.name.slice(0, 30).replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase().replace(/-+/g, "-")}`;
+                const dateStr = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
+                const slug = goalRow.name.slice(0, 40).replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase().replace(/-+/g, "-").replace(/-$/, "");
+                const tagName = `checkpoint/${dateStr}-${slug}`;
                 execSync(`git tag "${tagName}"`, { cwd: projectPath });
 
                 store.addCheckpoint(actionable.id, goalRow.name, commitHash, tagName, commitMsg);
