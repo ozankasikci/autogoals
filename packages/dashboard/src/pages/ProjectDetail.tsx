@@ -446,6 +446,7 @@ export function ProjectDetail() {
   });
 
   const [deleteProject, { loading: deleting }] = useMutation(DELETE_PROJECT, {
+    refetchQueries: [{ query: GET_PROJECTS }],
     onCompleted: () => navigate("/"),
   });
 

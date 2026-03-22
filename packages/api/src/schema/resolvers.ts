@@ -380,6 +380,10 @@ export function createResolvers(
       },
 
       deleteProject(_: unknown, args: { id: string }): boolean {
+        // Stop agent if running
+        if (agentManager?.isRunning(args.id)) {
+          agentManager.stop(args.id);
+        }
         const db = getDb();
         const projectStore = new SQLiteProjectStore(db);
         return projectStore.deleteProject(args.id);
