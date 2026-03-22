@@ -193,7 +193,16 @@ export class AgentManager {
             let finalResult: { approach?: string; criteria?: string[] } | null = null;
 
             // First prompt: analyze codebase and ask first question
-            const optionsFormat = "Present your options using this EXACT format (a fenced code block with language 'options'):\n\n```options\n{\"mode\": \"single\", \"options\": [{\"id\": \"A\", \"label\": \"Option name\", \"description\": \"Brief explanation\"}]}\n```\n\nThe options block will render as clickable buttons for the user. Use mode \"multi\" if the user can select multiple options.";
+            const optionsFormat = `Present your options using this EXACT format (a fenced code block with language 'options'):
+
+\`\`\`options
+{"mode": "single", "options": [{"id": "A", "label": "Option name", "description": "Brief explanation"}]}
+\`\`\`
+
+The options block renders as clickable buttons for the user.
+- Use mode "single" when the user should pick exactly ONE option (e.g. "which approach?", "which library?").
+- Use mode "multi" when the user can pick MULTIPLE options (e.g. "which features to include?", "which constraints apply?").
+Choose the appropriate mode based on the nature of each question.`;
 
             const firstPrompt = `You are planning a goal through an interactive interview. You will ask ONE question, then STOP.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nProcess:\n1. Analyze the codebase to understand existing patterns and architecture.\n2. Identify 3-4 key decision areas for this goal.\n3. Ask your FIRST question.\n\n${optionsFormat}\n\nRULES:\n- Ask exactly ONE question, then stop.\n- Reference existing code files in option descriptions when relevant.\n- Do NOT proceed to the next question. STOP after asking one question.\n- Do NOT generate the final criteria JSON yet.`;
 
