@@ -7,6 +7,7 @@ logs/
 tests/test-projects/
 x-clone/
 .small-singularity/
+screenshots/
 *.png
 .playwright-mcp/
 .worktrees/
