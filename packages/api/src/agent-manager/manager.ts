@@ -181,42 +181,87 @@ export class AgentManager {
           }
 
           if (draftRow.planning_mode === "interview") {
-            // Interview mode — run an interactive task where the agent asks
-            // questions and waits for user replies via chat
+            // Interview mode — multi-turn Q&A, one question per task
             store.setPhase("interview");
             this.publishLogEvent(projectId, "info", `Interviewing user about goal: ${draftRow.name}`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
-            const interviewPrompt = `You are planning a goal through an interactive interview with the user.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nFollow this process:\n\n1. First, analyze the codebase to understand existing patterns, architecture, and conventions.\n2. Identify 3-4 key decision areas specific to this goal — things like implementation approach, data flow, UI patterns, error handling, etc.\n3. For each decision area, ask ONE focused question at a time. Present 2-3 concrete options annotated with existing code patterns when relevant. Example:\n   "For the data storage, which approach do you prefer?\n   A) SQLite (matches existing pattern in src/state/store.ts)\n   B) File-based JSON (simpler, no dependencies)\n   C) In-memory only (fastest, but no persistence)"\n4. WAIT for the user's response before asking the next question. Do NOT ask multiple questions at once.\n5. After 3-5 questions, summarize the decisions and generate the final specification.\n\nWhen you have enough information, output EXACTLY this JSON block:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\`\n\nStart by analyzing the codebase, then ask your first question.`;
+            // Track conversation history for the interview
+            const interviewHistory: string[] = [];
+            const MAX_QUESTIONS = 6;
+            let questionCount = 0;
+            let finalResult: { approach?: string; criteria?: string[] } | null = null;
 
-            const result = await this.runTask(projectId, projectPath, systemPromptBase, {
-              prompt: interviewPrompt,
-              model: "opus",
-              maxTurns: 30,
-            });
+            // First prompt: analyze codebase and ask first question
+            const firstPrompt = `You are planning a goal through an interactive interview. You will ask ONE question, then STOP.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nProcess:\n1. Analyze the codebase to understand existing patterns and architecture.\n2. Identify 3-4 key decision areas for this goal.\n3. Ask your FIRST question with 2-3 concrete options (annotated with code patterns when relevant).\n\nRULES:\n- Ask exactly ONE question, then stop.\n- Present options as A) B) C) with brief explanations.\n- Reference existing code files when relevant.\n- Do NOT proceed to the next question. STOP after asking one question.\n- Do NOT generate the final JSON yet.`;
 
-            // Parse the final JSON output
-            const jsonMatch = result?.text?.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch) {
-              try {
-                const parsed = JSON.parse(jsonMatch[1]);
-                if (parsed.criteria && parsed.approach) {
-                  store.updateGoal(draftGoal.id, {
-                    acceptanceCriteria: parsed.criteria,
-                    approach: parsed.approach,
-                    status: "refined",
-                  });
-                  store.setPhase("spec");
-                  this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' refined via interview with ${parsed.criteria.length} criteria → refined`);
-                  pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+            let currentPrompt = firstPrompt;
+
+            while (questionCount < MAX_QUESTIONS && !finalResult && this.loops.has(projectId)) {
+              const result = await this.runTask(projectId, projectPath, systemPromptBase, {
+                prompt: currentPrompt,
+                model: "opus",
+                maxTurns: 10,
+              });
+
+              if (result?.text) {
+                interviewHistory.push(`Agent: ${result.text}`);
+
+                // Check if agent output the final JSON
+                const jsonMatch = result.text.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                  try {
+                    const parsed = JSON.parse(jsonMatch[1]);
+                    if (parsed.criteria && parsed.approach) {
+                      finalResult = parsed;
+                      break;
+                    }
+                  } catch {}
                 }
-              } catch {
-                store.updateGoal(draftGoal.id, { status: "pending" });
-                this.publishLogEvent(projectId, "warning", `Could not parse interview result for '${draftRow.name}', promoting to pending`);
               }
-            } else {
+
+              questionCount++;
+
+              // Wait for user reply
+              this.publishLogEvent(projectId, "info", `Waiting for your answer (question ${questionCount})...`);
+              const lastMessageId = store.getMessages(1)[0]?.id;
+
+              // Poll for new user message
+              let userReply: string | null = null;
+              while (!userReply && this.loops.has(projectId)) {
+                await this.sleep(3000, projectId);
+                if (!this.loops.has(projectId)) break;
+
+                const newMessages = store.getMessages(5);
+                const userMsg = newMessages.find(m => m.role === "user" && m.id > (lastMessageId ?? 0));
+                if (userMsg) {
+                  userReply = userMsg.content;
+                  interviewHistory.push(`User: ${userReply}`);
+                }
+              }
+
+              if (!userReply) break; // Agent stopped
+
+              // Build next prompt with conversation history
+              const isLastQuestion = questionCount >= MAX_QUESTIONS - 1;
+              currentPrompt = `You are continuing an interview to plan a goal.\n\nGOAL: ${draftRow.name}\n\nCONVERSATION SO FAR:\n${interviewHistory.join("\n\n")}\n\n${isLastQuestion
+                ? `This is your last question. Based on all answers so far, generate the final specification.\n\nOutput EXACTLY this JSON:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\``
+                : `Ask your NEXT question with 2-3 concrete options. Ask exactly ONE question, then STOP.\nIf you have enough information to generate the spec, output the JSON instead:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\``}`;
+            }
+
+            // Apply the result
+            if (finalResult) {
+              store.updateGoal(draftGoal.id, {
+                acceptanceCriteria: finalResult.criteria!,
+                approach: finalResult.approach!,
+                status: "refined",
+              });
+              store.setPhase("spec");
+              this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' refined via interview with ${finalResult.criteria!.length} criteria → refined`);
+              pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+            } else if (this.loops.has(projectId)) {
               store.updateGoal(draftGoal.id, { status: "pending" });
-              this.publishLogEvent(projectId, "warning", `No structured output from interview for '${draftRow.name}', promoting to pending`);
+              this.publishLogEvent(projectId, "warning", `Interview incomplete for '${draftRow.name}', promoting to pending`);
             }
             await this.sleep(POST_WORK_COOLDOWN, projectId);
             continue;
