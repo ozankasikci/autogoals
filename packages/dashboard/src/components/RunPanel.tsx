@@ -13,6 +13,9 @@ import {
   GET_ENV_VARS,
   SET_ENV_VAR,
   REMOVE_ENV_VAR,
+  GET_DETECTED_ENV_VARS,
+  GET_RUNNING_PORTS,
+  KILL_PORT,
 } from "@/graphql/operations";
 import {
   Play,
@@ -29,6 +32,10 @@ import {
   FileCode,
   Container,
   X,
+  Search,
+  Wifi,
+  Download,
+  Skull,
 } from "lucide-react";
 
 interface RunCommand {
@@ -58,6 +65,18 @@ interface EnvVar {
   id: string;
   key: string;
   value: string;
+}
+
+interface DetectedEnvVar {
+  key: string;
+  value: string;
+  source: string;
+}
+
+interface RunningPort {
+  pid: number;
+  port: number;
+  command: string;
 }
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
@@ -261,6 +280,21 @@ export function RunPanel({ projectId }: RunPanelProps) {
     onCompleted: () => refetchEnvVars(),
   });
 
+  const [showDetectedEnvVars, setShowDetectedEnvVars] = useState(false);
+  const { data: detectedEnvData, refetch: refetchDetectedEnv, loading: loadingDetectedEnv } = useQuery<{ detectedEnvVars: DetectedEnvVar[] }>(
+    GET_DETECTED_ENV_VARS,
+    { variables: { projectId }, skip: !showDetectedEnvVars, fetchPolicy: "network-only" }
+  );
+
+  const { data: portsData, refetch: refetchPorts } = useQuery<{ runningPorts: RunningPort[] }>(
+    GET_RUNNING_PORTS,
+    { variables: { projectId }, fetchPolicy: "network-only", pollInterval: 5000 }
+  );
+
+  const [killPort] = useMutation(KILL_PORT, {
+    onCompleted: () => refetchPorts(),
+  });
+
   const [startProcess, { loading: starting }] = useMutation(START_PROCESS, {
     onCompleted: () => refetchProcs(),
   });
@@ -269,12 +303,25 @@ export function RunPanel({ projectId }: RunPanelProps) {
   const detectedCommands = detectedData?.detectedCommands ?? [];
   const processes = procData?.processes ?? [];
   const envVars = envData?.envVars ?? [];
+  const detectedEnvVars = detectedEnvData?.detectedEnvVars ?? [];
+  const runningPorts = portsData?.runningPorts ?? [];
 
   const handleAddCommand = () => {
     const name = newName.trim();
     const command = newCommand.trim();
     if (!name || !command) return;
     addRunCommand({ variables: { projectId, name, command } });
+  };
+
+  const handleImportEnvVar = (detected: DetectedEnvVar) => {
+    setEnvVar({ variables: { projectId, key: detected.key, value: detected.value } });
+  };
+
+  const handleAutoDetectEnv = () => {
+    setShowDetectedEnvVars(true);
+    if (showDetectedEnvVars) {
+      refetchDetectedEnv();
+    }
   };
 
   const handleAddEnvVar = () => {
@@ -327,6 +374,46 @@ export function RunPanel({ projectId }: RunPanelProps) {
                 projectId={projectId}
                 onRefresh={refetchProcs}
               />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Detected Servers */}
+      {runningPorts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Detected Servers
+            </h3>
+            <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+              {runningPorts.length} port{runningPorts.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {runningPorts.map((rp) => (
+              <div
+                key={rp.port}
+                className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card/50"
+              >
+                <Wifi className="h-3 w-3 text-cyan-400 shrink-0" />
+                <span className="text-xs font-mono font-medium text-cyan-400 shrink-0">
+                  :{rp.port}
+                </span>
+                <span className="text-[10px] text-muted-foreground/40 font-mono tabular-nums shrink-0">
+                  PID {rp.pid}
+                </span>
+                <span className="text-xs text-muted-foreground font-mono truncate flex-1" title={rp.command}>
+                  {rp.command.length > 60 ? rp.command.slice(0, 60) + "..." : rp.command}
+                </span>
+                <button
+                  onClick={() => killPort({ variables: { port: rp.port } })}
+                  className="h-6 w-6 flex items-center justify-center rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title={`Kill process on port ${rp.port}`}
+                >
+                  <Skull className="h-3 w-3" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -469,9 +556,20 @@ export function RunPanel({ projectId }: RunPanelProps) {
 
       {/* Environment Variables */}
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          Environment
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Environment
+          </h3>
+          <button
+            onClick={handleAutoDetectEnv}
+            disabled={loadingDetectedEnv}
+            className="flex items-center gap-1 h-6 px-2 rounded text-[10px] font-medium text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+            title="Auto-detect env vars from project files"
+          >
+            {loadingDetectedEnv ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            Auto-detect
+          </button>
+        </div>
         {envVars.length > 0 && (
           <div className="space-y-1 mb-2">
             {envVars.map((v) => (
@@ -491,6 +589,46 @@ export function RunPanel({ projectId }: RunPanelProps) {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+        {showDetectedEnvVars && detectedEnvVars.length > 0 && (
+          <div className="mb-2 rounded-lg border border-dashed border-cyan-500/20 bg-cyan-500/5 p-2 space-y-1">
+            <div className="text-[10px] font-medium text-cyan-400/70 mb-1.5">
+              Detected from project files
+            </div>
+            {detectedEnvVars
+              .filter((d) => !envVars.some((v) => v.key === d.key))
+              .map((d) => (
+                <div
+                  key={`${d.source}-${d.key}`}
+                  className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-cyan-500/5 transition-colors"
+                >
+                  <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">{d.source}</span>
+                  <span className="text-xs font-mono font-medium text-cyan-400">{d.key}</span>
+                  <span className="text-xs text-muted-foreground/50">=</span>
+                  <span className="text-xs font-mono text-muted-foreground truncate flex-1">{d.value}</span>
+                  <button
+                    onClick={() => handleImportEnvVar(d)}
+                    className="flex items-center gap-1 h-5 px-1.5 rounded text-[10px] font-medium text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                    title="Import this variable"
+                  >
+                    <Download className="h-2.5 w-2.5" />
+                    Import
+                  </button>
+                </div>
+              ))}
+            {detectedEnvVars.filter((d) => !envVars.some((v) => v.key === d.key)).length === 0 && (
+              <div className="text-[10px] text-muted-foreground/40 px-2 py-1">
+                All detected variables are already imported
+              </div>
+            )}
+          </div>
+        )}
+        {showDetectedEnvVars && !loadingDetectedEnv && detectedEnvVars.length === 0 && (
+          <div className="mb-2 rounded-lg border border-dashed border-border p-2">
+            <div className="text-[10px] text-muted-foreground/40 text-center py-1">
+              No .env files found in project
+            </div>
           </div>
         )}
         <div className="flex items-center gap-1.5">

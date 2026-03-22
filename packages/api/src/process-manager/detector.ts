@@ -58,3 +58,54 @@ export function detectRunCommands(projectPath: string): DetectedCommand[] {
 
   return commands;
 }
+
+export function detectEnvVars(projectPath: string): { key: string; value: string; source: string }[] {
+  const vars: { key: string; value: string; source: string }[] = [];
+
+  // Check .env, .env.local, .env.example, .env.development
+  const envFiles = [".env", ".env.local", ".env.example", ".env.development"];
+  for (const file of envFiles) {
+    const filePath = join(projectPath, file);
+    if (existsSync(filePath)) {
+      try {
+        const content = readFileSync(filePath, "utf-8");
+        const lines = content.split("\n");
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const eqIdx = trimmed.indexOf("=");
+          if (eqIdx > 0) {
+            const key = trimmed.slice(0, eqIdx).trim();
+            const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+            // Don't override if already found from a higher-priority file
+            if (!vars.some(v => v.key === key)) {
+              vars.push({ key, value, source: file });
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // Also check package.json for common port configs
+  const pkgPath = join(projectPath, "package.json");
+  if (existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+      // Check for port in scripts
+      if (pkg.scripts) {
+        for (const [, cmd] of Object.entries(pkg.scripts)) {
+          const portMatch = String(cmd).match(/--port\s+(\d+)|-p\s+(\d+)|PORT=(\d+)/);
+          if (portMatch) {
+            const port = portMatch[1] || portMatch[2] || portMatch[3];
+            if (!vars.some(v => v.key === "PORT")) {
+              vars.push({ key: "PORT", value: port, source: "package.json" });
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return vars;
+}

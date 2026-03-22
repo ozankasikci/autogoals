@@ -17,7 +17,7 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "f
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
 import type { ProcessManager } from "../process-manager/index.js";
-import { detectRunCommands } from "../process-manager/index.js";
+import { detectRunCommands, detectEnvVars } from "../process-manager/index.js";
 
 function resolvePath(p: string): string {
   if (p.startsWith("~/") || p === "~") {
@@ -339,6 +339,25 @@ export function createResolvers(
         if (!processManager) return { lines: [] };
         const lines = processManager.getProcessOutput(args.processId, args.lastN ?? undefined);
         return { lines };
+      },
+
+      detectedEnvVars(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+        const resolvedPath = resolvePath(record.path);
+        return detectEnvVars(resolvedPath);
+      },
+
+      runningPorts(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+        if (!processManager) return [];
+        const resolvedPath = resolvePath(record.path);
+        return processManager.detectRunningProcesses(resolvedPath);
       },
     },
 
@@ -891,6 +910,11 @@ Start by asking your first question about this goal.`,
           startedAt: managed.startedAt,
           outputLines: managed.output.length,
         };
+      },
+
+      killPort(_: unknown, args: { port: number }) {
+        if (!processManager) throw new Error("Process manager not available");
+        return processManager.killPort(args.port);
       },
     },
 

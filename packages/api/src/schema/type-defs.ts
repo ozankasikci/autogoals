@@ -120,6 +120,18 @@ export const typeDefs = `#graphql
     lines: [String!]!
   }
 
+  type DetectedEnvVar {
+    key: String!
+    value: String!
+    source: String!
+  }
+
+  type RunningPort {
+    pid: Int!
+    port: Int!
+    command: String!
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
@@ -134,6 +146,8 @@ export const typeDefs = `#graphql
     envVars(projectId: ID!): [EnvVar!]!
     processes(projectId: ID!): [ProcessInfo!]!
     processOutput(processId: ID!, lastN: Int): ProcessOutput!
+    detectedEnvVars(projectId: ID!): [DetectedEnvVar!]!
+    runningPorts(projectId: ID!): [RunningPort!]!
   }
 
   type Mutation {
@@ -163,6 +177,7 @@ export const typeDefs = `#graphql
     startProcess(projectId: ID!, commandId: ID!): ProcessInfo!
     stopProcess(processId: ID!): Boolean!
     restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
+    killPort(port: Int!): Boolean!
   }
 
   type Subscription {

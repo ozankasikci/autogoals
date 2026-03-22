@@ -439,3 +439,21 @@ export const REMOVE_ENV_VAR = gql`
     removeEnvVar(projectId: $projectId, envVarId: $envVarId)
   }
 `;
+
+export const GET_DETECTED_ENV_VARS = gql`
+  query GetDetectedEnvVars($projectId: ID!) {
+    detectedEnvVars(projectId: $projectId) { key value source }
+  }
+`;
+
+export const GET_RUNNING_PORTS = gql`
+  query GetRunningPorts($projectId: ID!) {
+    runningPorts(projectId: $projectId) { pid port command }
+  }
+`;
+
+export const KILL_PORT = gql`
+  mutation KillPort($port: Int!) {
+    killPort(port: $port)
+  }
+`;

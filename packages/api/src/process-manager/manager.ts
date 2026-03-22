@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "child_process";
+import { spawn, execSync, ChildProcess } from "child_process";
 
 interface ManagedProcess {
   id: string;
@@ -123,6 +123,34 @@ export class ProcessManager {
     if (!managed) return [];
     if (lastN) return managed.output.slice(-lastN);
     return managed.output;
+  }
+
+  detectRunningProcesses(_projectPath: string): { pid: number; port: number; command: string }[] {
+    const results: { pid: number; port: number; command: string }[] = [];
+    const commonPorts = [3000, 3001, 4000, 5000, 5173, 5891, 8000, 8080, 8765];
+
+    for (const port of commonPorts) {
+      try {
+        const output = execSync(`lsof -ti:${port}`, { encoding: "utf-8" }).trim();
+        if (output) {
+          const pid = parseInt(output.split("\n")[0]);
+          const cmdOutput = execSync(`ps -p ${pid} -o command=`, { encoding: "utf-8" }).trim();
+          results.push({ pid, port, command: cmdOutput });
+        }
+      } catch {
+        // Port not in use
+      }
+    }
+    return results;
+  }
+
+  killPort(port: number): boolean {
+    try {
+      execSync(`kill $(lsof -ti:${port})`, { encoding: "utf-8" });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   stopAll(): void {
