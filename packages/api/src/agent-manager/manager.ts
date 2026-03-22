@@ -258,6 +258,13 @@ export class AgentManager {
             }
             // Git checkpoint: auto-commit after goal completion
             try {
+              // Check if git repo exists, init if not
+              try {
+                execSync("git rev-parse --git-dir", { cwd: projectPath, encoding: "utf-8" });
+              } catch {
+                execSync("git init", { cwd: projectPath });
+                this.publishLogEvent(projectId, "info", "Initialized git repository");
+              }
               const hasChanges = execSync("git status --porcelain", { cwd: projectPath, encoding: "utf-8" }).trim();
               if (hasChanges) {
                 // Get summary of what changed
