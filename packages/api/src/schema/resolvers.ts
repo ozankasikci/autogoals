@@ -676,18 +676,9 @@ export function createResolvers(
 
         const planningMode = args.mode === "interview" ? "interview" : "yolo";
 
-        // Store planning mode on the goal
+        // Store planning mode and set to draft — supervisor picks it up
         db.prepare("UPDATE goals SET planning_mode = ? WHERE project_id = ? AND id = ?")
           .run(planningMode, args.projectId, args.goalId);
-
-        if (planningMode === "interview" && agentManager?.isRunning(args.projectId)) {
-          // Interview mode: agent asks questions in chat, user replies
-          agentManager.sendMessage(
-            args.projectId,
-            `[System] Plan goal "${row.name}" through interview.\n\nDescription: "${row.description || "none"}"\n\nYour job is to help the user refine this goal by asking targeted questions. Follow this process:\n\n1. First, analyze the codebase to understand existing patterns, architecture, and conventions.\n2. Identify 3-4 key decision areas (gray areas) specific to this goal — things like layout approach, data flow, API design, error handling, etc.\n3. For each area, ask ONE focused question at a time with 2-3 concrete options annotated with existing code patterns when relevant. Example:\n   "For the auth flow, which approach do you prefer?\n   A) JWT with httpOnly cookies (matches pattern in src/lib/api.ts)\n   B) Session-based auth (would need new middleware)\n   C) OAuth only (minimal server state)"\n4. Wait for the user's response before asking the next question.\n5. After 3-5 questions, summarize the decisions and generate the goal specification.\n\nWhen you have enough information, output EXACTLY this JSON:\n\`\`\`json\n{\n  "approach": "Technical approach based on the user's decisions",\n  "criteria": ["criterion 1", "criterion 2", ...],\n  "decisions": ["Decision 1: user chose X because Y", "Decision 2: ..."]\n}\n\`\`\`\n\nStart by analyzing the codebase, then ask your first question.`,
-          );
-        }
-        // YOLO mode: supervisor's Phase B1 will auto-refine via runTask (no chat interaction)
 
         const store = new SQLiteStore(db, args.projectId);
         store.updateGoal(args.goalId, { status: "draft" });

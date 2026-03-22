@@ -181,39 +181,43 @@ export class AgentManager {
           }
 
           if (draftRow.planning_mode === "interview") {
-            // Interview mode — the resolver already sent the interview prompt to chat.
-            // The agent will ask questions and the user will reply.
-            // When the agent outputs the JSON block, we parse it from chat messages.
-            // Check if the interview has completed (look for JSON in recent agent messages)
-            const recentMessages = store.getMessages(10);
-            const agentMessages = recentMessages.filter(m => m.role === "agent");
-            let parsed: { approach?: string; criteria?: string[]; decisions?: string[] } | null = null;
+            // Interview mode — run an interactive task where the agent asks
+            // questions and waits for user replies via chat
+            store.setPhase("interview");
+            this.publishLogEvent(projectId, "info", `Interviewing user about goal: ${draftRow.name}`);
+            pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
-            for (const msg of agentMessages) {
-              const jsonMatch = msg.content.match(/```json\s*([\s\S]*?)\s*```/);
-              if (jsonMatch) {
-                try {
-                  const candidate = JSON.parse(jsonMatch[1]);
-                  if (candidate.criteria && candidate.approach) {
-                    parsed = candidate;
-                    break;
-                  }
-                } catch {}
+            const interviewPrompt = `You are planning a goal through an interactive interview with the user.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nFollow this process:\n\n1. First, analyze the codebase to understand existing patterns, architecture, and conventions.\n2. Identify 3-4 key decision areas specific to this goal — things like implementation approach, data flow, UI patterns, error handling, etc.\n3. For each decision area, ask ONE focused question at a time. Present 2-3 concrete options annotated with existing code patterns when relevant. Example:\n   "For the data storage, which approach do you prefer?\n   A) SQLite (matches existing pattern in src/state/store.ts)\n   B) File-based JSON (simpler, no dependencies)\n   C) In-memory only (fastest, but no persistence)"\n4. WAIT for the user's response before asking the next question. Do NOT ask multiple questions at once.\n5. After 3-5 questions, summarize the decisions and generate the final specification.\n\nWhen you have enough information, output EXACTLY this JSON block:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\`\n\nStart by analyzing the codebase, then ask your first question.`;
+
+            const result = await this.runTask(projectId, projectPath, systemPromptBase, {
+              prompt: interviewPrompt,
+              model: "opus",
+              maxTurns: 30,
+            });
+
+            // Parse the final JSON output
+            const jsonMatch = result?.text?.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[1]);
+                if (parsed.criteria && parsed.approach) {
+                  store.updateGoal(draftGoal.id, {
+                    acceptanceCriteria: parsed.criteria,
+                    approach: parsed.approach,
+                    status: "refined",
+                  });
+                  store.setPhase("spec");
+                  this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' refined via interview with ${parsed.criteria.length} criteria → refined`);
+                  pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+                }
+              } catch {
+                store.updateGoal(draftGoal.id, { status: "pending" });
+                this.publishLogEvent(projectId, "warning", `Could not parse interview result for '${draftRow.name}', promoting to pending`);
               }
+            } else {
+              store.updateGoal(draftGoal.id, { status: "pending" });
+              this.publishLogEvent(projectId, "warning", `No structured output from interview for '${draftRow.name}', promoting to pending`);
             }
-
-            if (parsed) {
-              // Interview complete — apply the results
-              store.updateGoal(draftGoal.id, {
-                acceptanceCriteria: parsed.criteria!,
-                approach: parsed.approach!,
-                status: "refined",
-              });
-              store.setPhase("spec");
-              this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' refined via interview with ${parsed.criteria!.length} criteria → refined`);
-              pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
-            }
-            // If not complete yet, just skip — the user is still chatting with the agent
             await this.sleep(POST_WORK_COOLDOWN, projectId);
             continue;
           }
