@@ -964,6 +964,93 @@ Start by asking your first question about this goal.`,
         if (!processManager) throw new Error("Process manager not available");
         return processManager.killPort(args.port);
       },
+
+      async autoSetupProject(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+        const resolvedPath = resolvePath(record.path);
+        const store = new SQLiteStore(db, args.projectId);
+
+        if (!agentManager) throw new Error("Agent manager not available");
+
+        // Use the agent to analyze the project
+        const { AgentSession } = await import("@small-singularity/core");
+        const { execSync: exec } = await import("child_process");
+
+        let claudePath: string;
+        try {
+          claudePath = exec("which claude", { encoding: "utf-8" }).trim();
+        } catch {
+          throw new Error("Claude CLI not found");
+        }
+
+        const { query } = await import("@anthropic-ai/claude-agent-sdk");
+
+        const result: string[] = [];
+        for await (const msg of query({
+          prompt: `Analyze this project and determine:
+1. What commands are needed to run this project in development mode (dev server, build watch, etc.)
+2. What port the dev server should run on
+3. Any environment variables needed
+
+Look at package.json, Makefile, docker-compose.yml, README, and any config files.
+
+Respond with EXACTLY this JSON format and nothing else:
+\`\`\`json
+{
+  "commands": [
+    { "name": "descriptive name", "command": "the actual command to run" }
+  ],
+  "envVars": [
+    { "key": "PORT", "value": "8080" }
+  ]
+}
+\`\`\``,
+          options: {
+            pathToClaudeCodeExecutable: claudePath,
+            cwd: resolvedPath,
+            model: "haiku",
+            maxTurns: 10,
+            permissionMode: "bypassPermissions" as any,
+            allowedTools: ["Read", "Glob", "Grep", "Bash"],
+            settingSources: ["project"],
+          },
+        })) {
+          if (msg.type === "assistant" && msg.message?.content) {
+            for (const block of msg.message.content) {
+              if (block.type === "text") result.push(block.text);
+            }
+          }
+        }
+
+        const fullText = result.join("\n");
+        const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[1]);
+            // Save commands
+            if (parsed.commands) {
+              for (const cmd of parsed.commands) {
+                if (cmd.name && cmd.command) {
+                  store.addRunCommand(cmd.name, cmd.command);
+                }
+              }
+            }
+            // Save env vars
+            if (parsed.envVars) {
+              for (const v of parsed.envVars) {
+                if (v.key && v.value) {
+                  store.setEnvVar(v.key, v.value);
+                }
+              }
+            }
+          } catch {}
+        }
+
+        return true;
+      },
     },
 
     Subscription: {

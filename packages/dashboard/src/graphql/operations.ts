@@ -483,3 +483,9 @@ export const KILL_PORT = gql`
     killPort(port: $port)
   }
 `;
+
+export const AUTO_SETUP_PROJECT = gql`
+  mutation AutoSetupProject($projectId: ID!) {
+    autoSetupProject(projectId: $projectId)
+  }
+`;

@@ -181,6 +181,7 @@ export const typeDefs = `#graphql
     restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
     openInFinder(projectId: ID!): Boolean!
     killPort(port: Int!): Boolean!
+    autoSetupProject(projectId: ID!): Boolean!
   }
 
   type Subscription {

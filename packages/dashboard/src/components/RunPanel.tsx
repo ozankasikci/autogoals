@@ -18,6 +18,7 @@ import {
   GET_DETECTED_ENV_VARS,
   GET_RUNNING_PORTS,
   KILL_PORT,
+  AUTO_SETUP_PROJECT,
 } from "@/graphql/operations";
 import {
   Play,
@@ -424,6 +425,14 @@ export function RunPanel({ projectId }: RunPanelProps) {
     setEnvVar({ variables: { projectId, key: detected.key, value: detected.value } });
   };
 
+  const [autoSetup, { loading: autoSettingUp }] = useMutation(AUTO_SETUP_PROJECT, {
+    onCompleted: () => {
+      refetchCmds();
+      refetchEnv();
+      refetchDetectedEnv();
+    },
+  });
+
   const handleAutoDetectEnv = () => {
     setShowDetectedEnvVars(true);
     if (showDetectedEnvVars) {
@@ -667,13 +676,13 @@ export function RunPanel({ projectId }: RunPanelProps) {
             Environment
           </h3>
           <button
-            onClick={handleAutoDetectEnv}
-            disabled={loadingDetectedEnv}
-            className="flex items-center gap-1 h-6 px-2 rounded text-[10px] font-medium text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
-            title="Auto-detect env vars from project files"
+            onClick={() => autoSetup({ variables: { projectId } })}
+            disabled={autoSettingUp}
+            className="flex items-center gap-1 h-6 px-2 rounded text-[10px] font-medium text-primary/60 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"
+            title="Use AI to analyze project and set up commands + env vars"
           >
-            {loadingDetectedEnv ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
-            Auto-detect
+            {autoSettingUp ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            {autoSettingUp ? "Analyzing..." : "AI Setup"}
           </button>
         </div>
         {envVars.length > 0 && (
