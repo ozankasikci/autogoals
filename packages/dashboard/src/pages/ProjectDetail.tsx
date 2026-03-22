@@ -198,7 +198,7 @@ function ProjectSidebar({
               key={p.id}
               to={`/projects/${p.id}`}
               className={`
-                flex items-center gap-2.5 px-3 py-2 transition-colors relative
+                flex items-center gap-2.5 px-3 py-3 transition-colors relative
                 ${isActive
                   ? "bg-muted border-l-2 border-primary"
                   : "border-l-2 border-transparent hover:bg-muted/50"
@@ -209,7 +209,7 @@ function ProjectSidebar({
               {/* Status dot + initial */}
               <div className="shrink-0 relative">
                 <div className={`
-                  h-6 w-6 rounded-md flex items-center justify-center text-sm font-semibold
+                  h-8 w-8 rounded-md flex items-center justify-center text-sm font-semibold
                   ${isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}
                 `}>
                   {initial}
@@ -274,7 +274,7 @@ function RailButton({
     <button
       onClick={onClick}
       className={`
-        relative flex flex-col items-center justify-center gap-1 w-full py-3 transition-colors
+        relative flex flex-col items-center justify-center gap-1.5 w-full py-4 transition-colors
         ${active
           ? "bg-muted text-foreground border-l-2 border-primary"
           : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-l-2 border-transparent"
@@ -862,7 +862,7 @@ export function ProjectDetail() {
           </div>
 
           {/* -- Tab Rail -- */}
-          <aside className="shrink-0 w-12 border-l border-border bg-sidebar flex flex-col">
+          <aside className="shrink-0 w-14 border-l border-border bg-sidebar flex flex-col">
             <RailButton
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Goals"
