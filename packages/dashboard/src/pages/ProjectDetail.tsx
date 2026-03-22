@@ -186,7 +186,7 @@ function ProjectSidebar({
         ${expanded ? "w-[220px]" : "w-12"}
       `}
     >
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="flex-1 overflow-y-auto">
         {projects.map((p) => {
           const isActive = p.id === activeProjectId;
           const initial = p.name.charAt(0).toUpperCase();
