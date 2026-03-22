@@ -119,16 +119,17 @@ export function HistoryPanel({ projectId }: HistoryPanelProps) {
                   </span>
                 </div>
 
-                <div className="mt-1 flex items-center gap-2">
+                {/* Approach/description */}
+                {checkpoint.message && checkpoint.message !== checkpoint.goalName && (
+                  <p className="mt-1 text-xs text-muted-foreground/70 line-clamp-2 leading-relaxed">
+                    {checkpoint.message}
+                  </p>
+                )}
+
+                <div className="mt-1.5 flex items-center gap-2">
                   <code className="text-[11px] font-mono text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
                     {checkpoint.commitHash}
                   </code>
-                </div>
-
-                <div className="mt-1">
-                  <span className="text-[11px] text-muted-foreground/50 font-mono truncate block">
-                    {checkpoint.tag}
-                  </span>
                 </div>
 
                 {/* Restore button — visible on hover */}

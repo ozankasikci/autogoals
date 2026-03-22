@@ -260,11 +260,34 @@ export class AgentManager {
             try {
               const hasChanges = execSync("git status --porcelain", { cwd: projectPath, encoding: "utf-8" }).trim();
               if (hasChanges) {
+                // Get summary of what changed
+                const changedFiles = hasChanges.split("\n").map((l: string) => l.trim().split(/\s+/).pop()).filter(Boolean);
+                const filesAdded = hasChanges.split("\n").filter((l: string) => l.startsWith("?") || l.startsWith("A")).length;
+                const filesModified = hasChanges.split("\n").filter((l: string) => l.startsWith(" M") || l.startsWith("M")).length;
+                const changesSummary = [
+                  filesModified > 0 ? `${filesModified} modified` : "",
+                  filesAdded > 0 ? `${filesAdded} added` : "",
+                ].filter(Boolean).join(", ");
+
                 execSync("git add -A", { cwd: projectPath });
 
-                const commitMsg = `[small-singularity] Goal completed: ${goalRow.name}`;
+                // Use approach as description if available, otherwise goal name
+                const description = goalRow.approach
+                  ? goalRow.approach.slice(0, 200)
+                  : goalRow.name;
+                const commitTitle = `[checkpoint] ${goalRow.name.slice(0, 72)}`;
+                const commitBody = [
+                  "",
+                  `Approach: ${description}`,
+                  "",
+                  `Files: ${changesSummary} (${changedFiles.length} total)`,
+                  "",
+                  "Criteria:",
+                  ...criteria.map((c: string) => `- ${c}`),
+                ].join("\n");
+
                 const msgFile = join(projectPath, ".ss-commit-msg");
-                writeFileSync(msgFile, commitMsg + "\n\nCriteria:\n" + criteria.map((c: string) => `- ${c}`).join("\n"));
+                writeFileSync(msgFile, commitTitle + "\n" + commitBody);
                 execSync(`git commit -F "${msgFile}"`, { cwd: projectPath });
                 unlinkSync(msgFile);
 
@@ -274,8 +297,10 @@ export class AgentManager {
                 const tagName = `checkpoint/${dateStr}-${slug}`;
                 execSync(`git tag "${tagName}"`, { cwd: projectPath });
 
-                store.addCheckpoint(actionable.id, goalRow.name, commitHash, tagName, commitMsg);
-                this.publishLogEvent(projectId, "info", `Checkpoint: ${commitHash} [${tagName}]`);
+                // Store with descriptive message
+                const checkpointMsg = `${goalRow.name} — ${changesSummary}`;
+                store.addCheckpoint(actionable.id, checkpointMsg, commitHash, tagName, description);
+                this.publishLogEvent(projectId, "info", `Checkpoint: ${commitHash} — ${changesSummary}`);
               }
             } catch (err: any) {
               this.publishLogEvent(projectId, "warning", `Git commit failed: ${err.message?.slice(0, 100)}`);
