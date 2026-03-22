@@ -299,3 +299,23 @@ export const WRITE_FILE = gql`
     }
   }
 `;
+
+export const GET_CHECKPOINTS = gql`
+  query GetCheckpoints($projectId: ID!) {
+    checkpoints(projectId: $projectId) {
+      id
+      goalId
+      goalName
+      commitHash
+      tag
+      message
+      createdAt
+    }
+  }
+`;
+
+export const RESTORE_CHECKPOINT = gql`
+  mutation RestoreCheckpoint($projectId: ID!, $tag: String!) {
+    restoreCheckpoint(projectId: $projectId, tag: $tag)
+  }
+`;

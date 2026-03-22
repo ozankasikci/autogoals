@@ -573,6 +573,42 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId, type, message, costUsd ?? null);
   }
 
+  // ── Checkpoints ─────────────────────────────────────────
+
+  getCheckpoints(limit = 50): { id: number; goalId: string | null; goalName: string; commitHash: string; tag: string; message: string; createdAt: string }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, goal_id, goal_name, commit_hash, tag, message, created_at FROM checkpoints WHERE project_id = ? ORDER BY id DESC LIMIT ?",
+      )
+      .all(this.projectId, limit) as {
+      id: number;
+      goal_id: string | null;
+      goal_name: string;
+      commit_hash: string;
+      tag: string;
+      message: string;
+      created_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      id: r.id,
+      goalId: r.goal_id,
+      goalName: r.goal_name,
+      commitHash: r.commit_hash,
+      tag: r.tag,
+      message: r.message,
+      createdAt: r.created_at,
+    }));
+  }
+
+  addCheckpoint(goalId: string | null, goalName: string, commitHash: string, tag: string, message: string): void {
+    this.db
+      .prepare(
+        "INSERT INTO checkpoints (project_id, goal_id, goal_name, commit_hash, tag, message) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run(this.projectId, goalId, goalName, commitHash, tag, message);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

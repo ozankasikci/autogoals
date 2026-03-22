@@ -66,6 +66,10 @@ export interface StateStore {
   getActivityEvents(limit?: number, beforeId?: number): { id: number; type: string; message: string; costUsd: number | null; createdAt: string }[];
   addActivityEvent(type: string, message: string, costUsd?: number): void;
 
+  // Checkpoints
+  getCheckpoints(limit?: number): { id: number; goalId: string | null; goalName: string; commitHash: string; tag: string; message: string; createdAt: string }[];
+  addCheckpoint(goalId: string | null, goalName: string, commitHash: string, tag: string, message: string): void;
+
   // Lifecycle
   close(): void;
 }

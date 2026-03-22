@@ -77,6 +77,16 @@ export const typeDefs = `#graphql
     size: Int!
   }
 
+  type Checkpoint {
+    id: ID!
+    goalId: ID
+    goalName: String!
+    commitHash: String!
+    tag: String!
+    message: String!
+    createdAt: String!
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
@@ -85,6 +95,7 @@ export const typeDefs = `#graphql
     rules(projectId: ID!): [Rule!]!
     fileTree(projectId: ID!, path: String, depth: Int): [FileNode!]!
     fileContent(projectId: ID!, path: String!): FileContent
+    checkpoints(projectId: ID!): [Checkpoint!]!
   }
 
   type Mutation {
@@ -105,6 +116,7 @@ export const typeDefs = `#graphql
     updateRule(projectId: ID!, ruleId: ID!, content: String!): Rule!
     removeRule(projectId: ID!, ruleId: ID!): Boolean!
     writeFile(projectId: ID!, path: String!, content: String!): FileContent!
+    restoreCheckpoint(projectId: ID!, tag: String!): Boolean!
   }
 
   type Subscription {

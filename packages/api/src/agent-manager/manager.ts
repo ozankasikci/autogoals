@@ -1,6 +1,8 @@
 import { AgentSession, SQLiteStore, type AgentEvent } from "@small-singularity/core";
 import type Database from "better-sqlite3";
-import { basename } from "path";
+import { basename, join } from "path";
+import { writeFileSync, unlinkSync } from "fs";
+import { execSync } from "child_process";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 
 function buildToolSummary(tool: string, input: Record<string, unknown>): string {
@@ -254,6 +256,29 @@ export class AgentManager {
               this.activeGoals.delete(projectId);
               this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 done`);
             }
+            // Git checkpoint: auto-commit after goal completion
+            try {
+              const hasChanges = execSync("git status --porcelain", { cwd: projectPath, encoding: "utf-8" }).trim();
+              if (hasChanges) {
+                execSync("git add -A", { cwd: projectPath });
+
+                const commitMsg = `[small-singularity] Goal completed: ${goalRow.name}`;
+                const msgFile = join(projectPath, ".ss-commit-msg");
+                writeFileSync(msgFile, commitMsg + "\n\nCriteria:\n" + criteria.map((c: string) => `- ${c}`).join("\n"));
+                execSync(`git commit -F "${msgFile}"`, { cwd: projectPath });
+                unlinkSync(msgFile);
+
+                const commitHash = execSync("git rev-parse --short HEAD", { cwd: projectPath, encoding: "utf-8" }).trim();
+                const tagName = `checkpoint/${Date.now()}-${goalRow.name.slice(0, 30).replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase().replace(/-+/g, "-")}`;
+                execSync(`git tag "${tagName}"`, { cwd: projectPath });
+
+                store.addCheckpoint(actionable.id, goalRow.name, commitHash, tagName, commitMsg);
+                this.publishLogEvent(projectId, "info", `Checkpoint: ${commitHash} [${tagName}]`);
+              }
+            } catch (err: any) {
+              this.publishLogEvent(projectId, "warning", `Git commit failed: ${err.message?.slice(0, 100)}`);
+            }
+
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
           }
           await this.sleep(POST_WORK_COOLDOWN, projectId);

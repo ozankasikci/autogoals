@@ -10,6 +10,7 @@ import {
 import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
 import { randomUUID } from "crypto";
+import { execSync } from "child_process";
 import { homedir } from "os";
 import { resolve, join, relative } from "path";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
@@ -289,6 +290,12 @@ export function createResolvers(
         } catch {
           return null;
         }
+      },
+
+      checkpoints(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getCheckpoints();
       },
     },
 
@@ -709,6 +716,29 @@ Start by asking your first question about this goal.`,
         writeFileSync(filePath, args.content, "utf-8");
         const stat = statSync(filePath);
         return { path: args.path, content: args.content, size: stat.size };
+      },
+
+      restoreCheckpoint(_: unknown, args: { projectId: string; tag: string }): boolean {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const resolvedPath = resolvePath(record.path);
+
+        // Stop agent if running
+        if (agentManager?.isRunning(args.projectId)) {
+          agentManager.stop(args.projectId);
+        }
+
+        try {
+          // Create a backup branch first
+          execSync(`git stash`, { cwd: resolvedPath });
+          execSync(`git checkout "${args.tag}"`, { cwd: resolvedPath });
+          return true;
+        } catch (err: any) {
+          throw new Error(`Failed to restore: ${err.message}`);
+        }
       },
     },
 

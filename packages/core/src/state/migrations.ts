@@ -77,4 +77,15 @@ CREATE TABLE IF NOT EXISTS activity_events (
   cost_usd REAL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS checkpoints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  goal_id TEXT,
+  goal_name TEXT NOT NULL,
+  commit_hash TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;

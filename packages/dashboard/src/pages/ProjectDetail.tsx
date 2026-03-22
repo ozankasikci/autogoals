@@ -17,6 +17,7 @@ import { RulesPanel } from "@/components/RulesPanel";
 import { LogStream } from "@/components/LogStream";
 import { ChatPanel } from "@/components/ChatPanel";
 import { FileTree } from "@/components/FileTree";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ import {
   Menu,
   Plus,
   FolderTree,
+  History,
 } from "lucide-react";
 
 interface Goal {
@@ -110,7 +112,7 @@ interface ProjectListItem {
   isRunning: boolean;
 }
 
-type PanelTab = "goals" | "rules" | "activity" | "project";
+type PanelTab = "goals" | "rules" | "activity" | "history" | "project";
 
 /* ------------------------------------------------------------------ */
 /*  Phase Indicator                                                    */
@@ -485,6 +487,9 @@ export function ProjectDetail() {
         togglePanel("activity");
       } else if (mod && e.key === "4") {
         e.preventDefault();
+        togglePanel("history");
+      } else if (mod && e.key === "5") {
+        e.preventDefault();
         togglePanel("project");
       } else if (e.key === "[" && !mod && !isInput) {
         e.preventDefault();
@@ -540,6 +545,7 @@ export function ProjectDetail() {
     goals: "Goals",
     rules: "Rules",
     activity: "Activity",
+    history: "History",
   };
 
   return (
@@ -839,6 +845,9 @@ export function ProjectDetail() {
                     {activePanel === "rules" && (
                       <RulesPanel projectId={project.id} />
                     )}
+                    {activePanel === "history" && (
+                      <HistoryPanel projectId={project.id} />
+                    )}
                     {activePanel === "project" && (
                       <FileTree projectId={project.id} />
                     )}
@@ -872,6 +881,12 @@ export function ProjectDetail() {
               label="Activity"
               active={activePanel === "activity"}
               onClick={() => togglePanel("activity")}
+            />
+            <RailButton
+              icon={<History className="h-4 w-4" />}
+              label="History"
+              active={activePanel === "history"}
+              onClick={() => togglePanel("history")}
             />
             <RailButton
               icon={<FolderTree className="h-4 w-4" />}
