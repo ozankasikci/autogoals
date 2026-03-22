@@ -238,7 +238,7 @@ export class AgentManager {
         if (actionable) {
           store.setPhase("execution");
           const goalRow = db.prepare(
-            "SELECT id, name, description, approach, acceptance_criteria, recurring FROM goals WHERE project_id = ? AND id = ?"
+            "SELECT id, name, description, approach, acceptance_criteria, depends_on, recurring FROM goals WHERE project_id = ? AND id = ?"
           ).get(projectId, actionable.id) as any;
 
           if (goalRow) {
@@ -249,30 +249,27 @@ export class AgentManager {
             this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 active`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
-            const screenshots = store.getGoalScreenshots(actionable.id);
-            let screenshotInfo = "";
-            if (screenshots.length > 0) {
-              screenshotInfo = `\n\nSCREENSHOTS (${screenshots.length} attached — read these files to see what the user wants):\n`;
-              screenshotInfo += screenshots.map(s => `- ${s.filePath}`).join("\n");
-              screenshotInfo += `\n\nIMPORTANT: Read the screenshot files using the Read tool to understand the visual context.`;
-            }
+            // Build rich context for the fresh agent session
+            const goalPrompt = this.buildGoalPrompt(db, projectId, actionable.id, goalRow, store);
 
-            const uncheckedCriteria = criteria.filter((c: string) => !c.startsWith("[x] "));
-            const checkedCriteria = criteria.filter((c: string) => c.startsWith("[x] "));
-            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\n\nOUTSTANDING CRITERIA (work on these):\n${uncheckedCriteria.map((c: string) => `- ${c.replace(/^\[ \] /, "")}`).join("\n") || "- none specified"}${checkedCriteria.length > 0 ? `\n\nALREADY DONE (skip these):\n${checkedCriteria.map((c: string) => `- ✓ ${c.replace(/^\[x\] /, "")}`).join("\n")}` : ""}${screenshotInfo}\n\nImplement the outstanding criteria. Skip the ones already done.`;
-
-            await this.runTask(projectId, projectPath, systemPromptBase, {
+            const result = await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: goalPrompt,
               model: "opus",
               maxTurns: 100,
             });
 
+            // Track cost against this goal
+            if (result?.costUsd) {
+              const currentCost = (db.prepare("SELECT cost_usd FROM goals WHERE project_id = ? AND id = ?")
+                .get(projectId, actionable.id) as any)?.cost_usd ?? 0;
+              db.prepare("UPDATE goals SET cost_usd = ? WHERE project_id = ? AND id = ?")
+                .run(currentCost + result.costUsd, projectId, actionable.id);
+            }
+
             // After goal execution completes:
             if (goalRow.recurring) {
-              // Don't mark as done — reset to pending so it runs again next cycle
               store.updateGoal(actionable.id, { status: "pending" });
               this.activeGoals.delete(projectId);
-              // Track last execution time for round-robin
               this.lastVerified.set(`lastExec:${actionable.id}`, Date.now());
               this.publishLogEvent(projectId, "info", `Recurring goal '${goalRow.name}' \u2192 pending (will re-execute after other goals)`);
             } else {
@@ -443,6 +440,93 @@ export class AgentManager {
     }
 
     console.log(`[Supervisor] Loop ended for ${projectId}`);
+  }
+
+  // Build a rich prompt for goal execution with full project context
+  private buildGoalPrompt(
+    db: Database.Database,
+    projectId: string,
+    goalId: string,
+    goalRow: any,
+    store: InstanceType<typeof SQLiteStore>,
+  ): string {
+    const criteria = JSON.parse(goalRow.acceptance_criteria || "[]");
+    const uncheckedCriteria = criteria.filter((c: string) => !c.startsWith("[x] "));
+    const checkedCriteria = criteria.filter((c: string) => c.startsWith("[x] "));
+
+    // 1. Project context: what goals are already done (so the fresh agent knows the codebase state)
+    const allGoalRows = db.prepare(
+      "SELECT id, name, status FROM goals WHERE project_id = ?"
+    ).all(projectId) as { id: string; name: string; status: string }[];
+    const completedGoals = allGoalRows.filter(g => g.status === "done" || g.status === "achieved");
+    const otherActiveGoals = allGoalRows.filter(g => g.id !== goalId && (g.status === "pending" || g.status === "ready"));
+
+    let projectContext = "";
+    if (completedGoals.length > 0) {
+      projectContext += `\n\nPROJECT CONTEXT — Already completed goals (the codebase already has these):\n`;
+      projectContext += completedGoals.map(g => `- ✓ ${g.name}`).join("\n");
+    }
+    if (otherActiveGoals.length > 0) {
+      projectContext += `\n\nUPCOMING GOALS (don't implement these, but be aware they exist):\n`;
+      projectContext += otherActiveGoals.map(g => `- ${g.name}`).join("\n");
+    }
+
+    // 2. Retry history: what failed before so the agent doesn't repeat mistakes
+    const retries = (db.prepare("SELECT retries, error FROM goals WHERE project_id = ? AND id = ?")
+      .get(projectId, goalId) as any);
+    let retryContext = "";
+    if (retries?.retries > 0 && retries?.error) {
+      retryContext += `\n\nPREVIOUS ATTEMPT FAILED (retry #${retries.retries}):\n`;
+      retryContext += `Error: ${retries.error}\n`;
+      retryContext += `IMPORTANT: Do NOT repeat the same approach that failed. Try a different strategy.`;
+    }
+
+    // 3. Screenshots
+    const screenshots = store.getGoalScreenshots(goalId);
+    let screenshotInfo = "";
+    if (screenshots.length > 0) {
+      screenshotInfo = `\n\nSCREENSHOTS (${screenshots.length} attached — read these files to see what the user wants):\n`;
+      screenshotInfo += screenshots.map(s => `- ${s.filePath}`).join("\n");
+      screenshotInfo += `\n\nIMPORTANT: Read the screenshot files using the Read tool to understand the visual context.`;
+    }
+
+    // 4. Dependencies: what this goal depends on
+    const dependsOn = JSON.parse(goalRow.depends_on || "[]") as string[];
+    let depContext = "";
+    if (dependsOn.length > 0) {
+      const depGoals = dependsOn
+        .map(id => allGoalRows.find(g => g.id === id))
+        .filter((g): g is NonNullable<typeof g> => g != null);
+      if (depGoals.length > 0) {
+        depContext += `\n\nDEPENDENCIES (this goal builds on top of these):\n`;
+        depContext += depGoals.map(g => `- ${g.name} (${g.status})`).join("\n");
+      }
+    }
+
+    // Assemble the prompt
+    return [
+      `Implement this goal:`,
+      ``,
+      `GOAL: ${goalRow.name}`,
+      `DESCRIPTION: ${goalRow.description || "none"}`,
+      `APPROACH: ${goalRow.approach || "none"}`,
+      ``,
+      `OUTSTANDING CRITERIA (work on these):`,
+      uncheckedCriteria.length > 0
+        ? uncheckedCriteria.map((c: string) => `- ${c.replace(/^\[ \] /, "")}`).join("\n")
+        : "- none specified",
+      ...(checkedCriteria.length > 0 ? [
+        ``,
+        `ALREADY DONE (skip these):`,
+        checkedCriteria.map((c: string) => `- ✓ ${c.replace(/^\[x\] /, "")}`).join("\n"),
+      ] : []),
+      projectContext,
+      depContext,
+      retryContext,
+      screenshotInfo,
+      ``,
+      `Implement the outstanding criteria. Skip the ones already done.`,
+    ].filter(Boolean).join("\n");
   }
 
   // Run a single focused task session with timeout
