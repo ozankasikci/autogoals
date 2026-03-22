@@ -1,13 +1,12 @@
-import { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useMutation } from "@apollo/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCost } from "@/lib/utils";
-import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
-import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2, ChevronRight } from "lucide-react";
-import { QuickAddCard } from "./QuickAddCard";
+import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, REFINE_GOAL, GET_PROJECT } from "@/graphql/operations";
+import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2, ChevronRight, Lightbulb, Zap } from "lucide-react";
 
 const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"];
 
@@ -120,6 +119,10 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<GoalFormState | null>(null);
   const [addingGoal, setAddingGoal] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddValue, setQuickAddValue] = useState("");
+  const [quickAddSubmitting, setQuickAddSubmitting] = useState(false);
+  const quickAddRef = useRef<HTMLTextAreaElement>(null);
   const [newGoalForm, setNewGoalForm] = useState<GoalFormState>({
     name: "",
     description: "",
@@ -135,7 +138,30 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
   const [updateGoal, { loading: updatingGoal }] = useMutation(UPDATE_GOAL, refetchOpts);
   const [addGoal, { loading: addingGoalMut }] = useMutation(ADD_GOAL, refetchOpts);
   const [removeGoal, { loading: removingGoal }] = useMutation(REMOVE_GOAL, refetchOpts);
+  const [refineGoal] = useMutation(REFINE_GOAL, refetchOpts);
 
+  useEffect(() => {
+    if (quickAddOpen && quickAddRef.current) quickAddRef.current.focus();
+  }, [quickAddOpen]);
+
+  async function handleQuickAdd(mode: "interview" | "yolo") {
+    const name = quickAddValue.trim();
+    if (!name) return;
+    setQuickAddSubmitting(true);
+    try {
+      const { data } = await addGoal({
+        variables: { projectId, name, description: "", acceptanceCriteria: [], dependsOn: [] },
+      });
+      const goalId = data?.addGoal?.id;
+      if (goalId) {
+        await refineGoal({ variables: { projectId, goalId, mode } });
+      }
+      setQuickAddValue("");
+      setQuickAddOpen(false);
+    } finally {
+      setQuickAddSubmitting(false);
+    }
+  }
 
   function startEditing(goal: Goal) {
     setEditingId(goal.id);
@@ -367,23 +393,59 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
           </div>
         )}
 
-        {/* Quick-add goal */}
-        <QuickAddCard
-          placeholder="Describe a goal... What should the agent work on?"
-          buttonLabel="Add Goal"
-          onAdd={(value) => {
-            addGoal({
-              variables: {
-                projectId,
-                name: value,
-                description: "",
-                acceptanceCriteria: [],
-                dependsOn: [],
-              },
-            });
-          }}
-          disabled={addingGoalMut}
-        />
+        {/* Quick-add goal with mode selection */}
+        {!quickAddOpen ? (
+          <button
+            onClick={() => setQuickAddOpen(true)}
+            className="w-full flex items-center gap-2 py-2.5 px-3 rounded-lg border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-card transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Goal</span>
+          </button>
+        ) : (
+          <div className="rounded-lg border border-primary/30 bg-card overflow-hidden transition-all">
+            <textarea
+              ref={quickAddRef}
+              value={quickAddValue}
+              onChange={(e) => {
+                setQuickAddValue(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { setQuickAddValue(""); setQuickAddOpen(false); }
+              }}
+              onBlur={() => { if (!quickAddValue.trim()) setQuickAddOpen(false); }}
+              placeholder="Describe a goal... What should the agent work on?"
+              disabled={quickAddSubmitting}
+              rows={2}
+              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 outline-none resize-none px-3 pt-3 pb-2 min-h-[60px] max-h-[200px]"
+            />
+            <div className="flex items-center justify-between px-3 pb-2.5">
+              <span className="text-xs text-muted-foreground/40">
+                Esc to cancel
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleQuickAdd("interview")}
+                  disabled={quickAddSubmitting || !quickAddValue.trim()}
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <Lightbulb className="h-3 w-3" />
+                  Interview
+                </button>
+                <button
+                  onClick={() => handleQuickAdd("yolo")}
+                  disabled={quickAddSubmitting || !quickAddValue.trim()}
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <Zap className="h-3 w-3" />
+                  Auto-Plan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
