@@ -667,6 +667,31 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId, id);
   }
 
+  // ── Environment Variables ─────────────────────────────────
+
+  getEnvVars(): { id: number; key: string; value: string }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, key, value FROM env_vars WHERE project_id = ? ORDER BY id ASC",
+      )
+      .all(this.projectId) as { id: number; key: string; value: string }[];
+    return rows;
+  }
+
+  setEnvVar(key: string, value: string): void {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO env_vars (project_id, key, value) VALUES (?, ?, ?)",
+      )
+      .run(this.projectId, key, value);
+  }
+
+  removeEnvVar(id: number): void {
+    this.db
+      .prepare("DELETE FROM env_vars WHERE project_id = ? AND id = ?")
+      .run(this.projectId, id);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

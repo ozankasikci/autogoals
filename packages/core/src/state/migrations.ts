@@ -97,4 +97,12 @@ CREATE TABLE IF NOT EXISTS run_commands (
   auto_start INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS env_vars (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  UNIQUE(project_id, key)
+);
 `;

@@ -10,6 +10,9 @@ import {
   START_PROCESS,
   STOP_PROCESS,
   RESTART_PROCESS,
+  GET_ENV_VARS,
+  SET_ENV_VAR,
+  REMOVE_ENV_VAR,
 } from "@/graphql/operations";
 import {
   Play,
@@ -25,6 +28,7 @@ import {
   Package,
   FileCode,
   Container,
+  X,
 } from "lucide-react";
 
 interface RunCommand {
@@ -48,6 +52,12 @@ interface ProcessInfo {
   status: string;
   startedAt: string | null;
   outputLines: number;
+}
+
+interface EnvVar {
+  id: string;
+  key: string;
+  value: string;
 }
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
@@ -204,6 +214,8 @@ export function RunPanel({ projectId }: RunPanelProps) {
   const [setupMode, setSetupMode] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCommand, setNewCommand] = useState("");
+  const [newEnvKey, setNewEnvKey] = useState("");
+  const [newEnvValue, setNewEnvValue] = useState("");
 
   const { data: cmdData, refetch: refetchCmds } = useQuery<{ runCommands: RunCommand[] }>(
     GET_RUN_COMMANDS,
@@ -232,6 +244,23 @@ export function RunPanel({ projectId }: RunPanelProps) {
     onCompleted: () => refetchCmds(),
   });
 
+  const { data: envData, refetch: refetchEnvVars } = useQuery<{ envVars: EnvVar[] }>(
+    GET_ENV_VARS,
+    { variables: { projectId }, fetchPolicy: "network-only" }
+  );
+
+  const [setEnvVar] = useMutation(SET_ENV_VAR, {
+    onCompleted: () => {
+      refetchEnvVars();
+      setNewEnvKey("");
+      setNewEnvValue("");
+    },
+  });
+
+  const [removeEnvVar] = useMutation(REMOVE_ENV_VAR, {
+    onCompleted: () => refetchEnvVars(),
+  });
+
   const [startProcess, { loading: starting }] = useMutation(START_PROCESS, {
     onCompleted: () => refetchProcs(),
   });
@@ -239,12 +268,20 @@ export function RunPanel({ projectId }: RunPanelProps) {
   const savedCommands = cmdData?.runCommands ?? [];
   const detectedCommands = detectedData?.detectedCommands ?? [];
   const processes = procData?.processes ?? [];
+  const envVars = envData?.envVars ?? [];
 
   const handleAddCommand = () => {
     const name = newName.trim();
     const command = newCommand.trim();
     if (!name || !command) return;
     addRunCommand({ variables: { projectId, name, command } });
+  };
+
+  const handleAddEnvVar = () => {
+    const key = newEnvKey.trim().toUpperCase().replace(/\s+/g, "_");
+    const value = newEnvValue.trim();
+    if (!key || !value) return;
+    setEnvVar({ variables: { projectId, key, value } });
   };
 
   const handleStartDetected = (cmd: DetectedCommand) => {
@@ -429,6 +466,61 @@ export function RunPanel({ projectId }: RunPanelProps) {
           </div>
         </div>
       )}
+
+      {/* Environment Variables */}
+      <div>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+          Environment
+        </h3>
+        {envVars.length > 0 && (
+          <div className="space-y-1 mb-2">
+            {envVars.map((v) => (
+              <div
+                key={v.id}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card/50 group"
+              >
+                <span className="text-xs font-mono font-medium text-emerald-400">{v.key}</span>
+                <span className="text-xs text-muted-foreground/50">=</span>
+                <span className="text-xs font-mono text-muted-foreground truncate flex-1">{v.value}</span>
+                <button
+                  onClick={() => removeEnvVar({ variables: { projectId, envVarId: v.id } })}
+                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Remove"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <input
+            type="text"
+            placeholder="KEY"
+            value={newEnvKey}
+            onChange={(e) => setNewEnvKey(e.target.value.toUpperCase().replace(/\s+/g, "_"))}
+            className="w-24 h-7 px-2 rounded-md bg-secondary border border-border text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/30"
+          />
+          <span className="text-xs text-muted-foreground/40">=</span>
+          <input
+            type="text"
+            placeholder="value"
+            value={newEnvValue}
+            onChange={(e) => setNewEnvValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAddEnvVar();
+            }}
+            className="flex-1 h-7 px-2 rounded-md bg-secondary border border-border text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/30"
+          />
+          <button
+            onClick={handleAddEnvVar}
+            disabled={!newEnvKey.trim() || !newEnvValue.trim()}
+            className="h-7 px-2.5 rounded-md text-[11px] font-medium text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          >
+            Add
+          </button>
+        </div>
+      </div>
 
       {/* Empty state */}
       {!hasAnything && (

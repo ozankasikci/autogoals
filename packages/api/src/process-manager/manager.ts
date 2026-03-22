@@ -22,6 +22,7 @@ export class ProcessManager {
     name: string,
     command: string,
     cwd: string,
+    envVars?: Record<string, string>,
   ): ManagedProcess {
     if (this.processes.has(processId)) {
       const existing = this.processes.get(processId)!;
@@ -30,7 +31,7 @@ export class ProcessManager {
 
     const child = spawn("sh", ["-c", command], {
       cwd,
-      env: { ...process.env, FORCE_COLOR: "1" },
+      env: { ...process.env, FORCE_COLOR: "1", ...envVars },
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -101,9 +102,10 @@ export class ProcessManager {
     name: string,
     command: string,
     cwd: string,
+    envVars?: Record<string, string>,
   ): ManagedProcess {
     this.stopProcess(processId);
-    return this.startProcess(projectId, processId, name, command, cwd);
+    return this.startProcess(projectId, processId, name, command, cwd, envVars);
   }
 
   getProcess(processId: string): ManagedProcess | undefined {

@@ -443,6 +443,14 @@ export class AgentManager {
       systemPrompt += `\n\nYou must comply with ALL rules above. If a goal conflicts with a rule, the rule wins.`;
     }
 
+    // Append environment variables so the agent knows about them
+    const envVars = store.getEnvVars();
+    if (envVars.length > 0) {
+      systemPrompt += `\n\nEnvironment variables for this project:\n`;
+      systemPrompt += envVars.map(v => `${v.key}=${v.value}`).join("\n");
+      systemPrompt += `\n\nUse these values when configuring or running services.`;
+    }
+
     console.log(`[Task:${pid}] Creating AgentSession...`);
     const session = new AgentSession({
       cwd: projectPath,

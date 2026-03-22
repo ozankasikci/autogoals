@@ -76,6 +76,11 @@ export interface StateStore {
   updateRunCommand(id: number, updates: Partial<{ name: string; command: string; autoStart: boolean }>): void;
   removeRunCommand(id: number): void;
 
+  // Environment variables
+  getEnvVars(): { id: number; key: string; value: string }[];
+  setEnvVar(key: string, value: string): void;
+  removeEnvVar(id: number): void;
+
   // Lifecycle
   close(): void;
 }

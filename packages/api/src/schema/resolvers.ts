@@ -316,6 +316,12 @@ export function createResolvers(
         return detectRunCommands(resolvedPath);
       },
 
+      envVars(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getEnvVars();
+      },
+
       processes(_: unknown, args: { projectId: string }) {
         if (!processManager) return [];
         return processManager.getProjectProcesses(args.projectId).map((p) => ({
@@ -803,6 +809,21 @@ Start by asking your first question about this goal.`,
         return true;
       },
 
+      setEnvVar(_: unknown, args: { projectId: string; key: string; value: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        store.setEnvVar(args.key, args.value);
+        const allVars = store.getEnvVars();
+        return allVars.find((v) => v.key === args.key)!;
+      },
+
+      removeEnvVar(_: unknown, args: { projectId: string; envVarId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        store.removeEnvVar(parseInt(args.envVarId, 10));
+        return true;
+      },
+
       startProcess(_: unknown, args: { projectId: string; commandId: string }) {
         if (!processManager) throw new Error("Process manager not available");
         const db = getDb();
@@ -815,9 +836,16 @@ Start by asking your first question about this goal.`,
         const cmd = commands.find((c) => c.id === parseInt(args.commandId, 10));
         if (!cmd) throw new Error("Command not found");
 
+        // Load env vars and pass to process
+        const envVarRows = store.getEnvVars();
+        const envVars: Record<string, string> = {};
+        for (const row of envVarRows) {
+          envVars[row.key] = row.value;
+        }
+
         const resolvedPath = resolvePath(record.path);
         const processId = `${args.projectId}-cmd-${args.commandId}`;
-        const managed = processManager.startProcess(args.projectId, processId, cmd.name, cmd.command, resolvedPath);
+        const managed = processManager.startProcess(args.projectId, processId, cmd.name, cmd.command, resolvedPath, envVars);
         return {
           id: managed.id,
           name: managed.name,
@@ -844,8 +872,16 @@ Start by asking your first question about this goal.`,
         const existing = processManager.getProcess(args.processId);
         if (!existing) throw new Error("Process not found");
 
+        // Load env vars and pass to process
+        const store = new SQLiteStore(db, args.projectId);
+        const envVarRows = store.getEnvVars();
+        const envVars: Record<string, string> = {};
+        for (const row of envVarRows) {
+          envVars[row.key] = row.value;
+        }
+
         const resolvedPath = resolvePath(record.path);
-        const managed = processManager.restartProcess(args.projectId, args.processId, existing.name, existing.command, resolvedPath);
+        const managed = processManager.restartProcess(args.projectId, args.processId, existing.name, existing.command, resolvedPath, envVars);
         return {
           id: managed.id,
           name: managed.name,

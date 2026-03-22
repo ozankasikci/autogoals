@@ -413,3 +413,29 @@ export const RESTART_PROCESS = gql`
     }
   }
 `;
+
+export const GET_ENV_VARS = gql`
+  query GetEnvVars($projectId: ID!) {
+    envVars(projectId: $projectId) {
+      id
+      key
+      value
+    }
+  }
+`;
+
+export const SET_ENV_VAR = gql`
+  mutation SetEnvVar($projectId: ID!, $key: String!, $value: String!) {
+    setEnvVar(projectId: $projectId, key: $key, value: $value) {
+      id
+      key
+      value
+    }
+  }
+`;
+
+export const REMOVE_ENV_VAR = gql`
+  mutation RemoveEnvVar($projectId: ID!, $envVarId: ID!) {
+    removeEnvVar(projectId: $projectId, envVarId: $envVarId)
+  }
+`;

@@ -94,6 +94,12 @@ export const typeDefs = `#graphql
     autoStart: Boolean!
   }
 
+  type EnvVar {
+    id: ID!
+    key: String!
+    value: String!
+  }
+
   type DetectedCommand {
     name: String!
     command: String!
@@ -125,6 +131,7 @@ export const typeDefs = `#graphql
     checkpoints(projectId: ID!): [Checkpoint!]!
     runCommands(projectId: ID!): [RunCommand!]!
     detectedCommands(projectId: ID!): [DetectedCommand!]!
+    envVars(projectId: ID!): [EnvVar!]!
     processes(projectId: ID!): [ProcessInfo!]!
     processOutput(processId: ID!, lastN: Int): ProcessOutput!
   }
@@ -151,6 +158,8 @@ export const typeDefs = `#graphql
     addRunCommand(projectId: ID!, name: String!, command: String!): RunCommand!
     updateRunCommand(projectId: ID!, commandId: ID!, name: String, command: String, autoStart: Boolean): RunCommand!
     removeRunCommand(projectId: ID!, commandId: ID!): Boolean!
+    setEnvVar(projectId: ID!, key: String!, value: String!): EnvVar!
+    removeEnvVar(projectId: ID!, envVarId: ID!): Boolean!
     startProcess(projectId: ID!, commandId: ID!): ProcessInfo!
     stopProcess(processId: ID!): Boolean!
     restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
