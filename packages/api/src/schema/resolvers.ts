@@ -876,9 +876,43 @@ Start by asking your first question about this goal.`,
         };
       },
 
+      startDetectedProcess(_: unknown, args: { projectId: string; name: string; command: string }) {
+        if (!processManager) throw new Error("Process manager not available");
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        // Load env vars
+        const store = new SQLiteStore(db, args.projectId);
+        const envVarRows = store.getEnvVars();
+        const envVars: Record<string, string> = {};
+        for (const row of envVarRows) {
+          envVars[row.key] = row.value;
+        }
+
+        const resolvedPath = resolvePath(record.path);
+        const processId = `${args.projectId}-detected-${Date.now()}`;
+        const managed = processManager.startProcess(args.projectId, processId, args.name, args.command, resolvedPath, envVars);
+        return {
+          id: managed.id,
+          name: managed.name,
+          command: managed.command,
+          pid: managed.pid,
+          status: managed.status,
+          startedAt: managed.startedAt,
+          outputLines: managed.output.length,
+        };
+      },
+
       stopProcess(_: unknown, args: { processId: string }) {
         if (!processManager) throw new Error("Process manager not available");
         return processManager.stopProcess(args.processId);
+      },
+
+      removeProcess(_: unknown, args: { processId: string }) {
+        if (!processManager) throw new Error("Process manager not available");
+        return processManager.removeProcess(args.processId);
       },
 
       restartProcess(_: unknown, args: { projectId: string; processId: string }) {
@@ -910,6 +944,20 @@ Start by asking your first question about this goal.`,
           startedAt: managed.startedAt,
           outputLines: managed.output.length,
         };
+      },
+
+      openInFinder(_: unknown, args: { projectId: string }): boolean {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+        const resolvedPath = resolvePath(record.path);
+        try {
+          execSync(`open "${resolvedPath}"`);
+          return true;
+        } catch {
+          return false;
+        }
       },
 
       killPort(_: unknown, args: { port: number }) {

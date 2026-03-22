@@ -175,8 +175,11 @@ export const typeDefs = `#graphql
     setEnvVar(projectId: ID!, key: String!, value: String!): EnvVar!
     removeEnvVar(projectId: ID!, envVarId: ID!): Boolean!
     startProcess(projectId: ID!, commandId: ID!): ProcessInfo!
+    startDetectedProcess(projectId: ID!, name: String!, command: String!): ProcessInfo!
     stopProcess(processId: ID!): Boolean!
+    removeProcess(processId: ID!): Boolean!
     restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
+    openInFinder(projectId: ID!): Boolean!
     killPort(port: Int!): Boolean!
   }
 

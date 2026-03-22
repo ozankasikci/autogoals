@@ -7,6 +7,7 @@ import {
   START_AGENT,
   STOP_AGENT,
   DELETE_PROJECT,
+  OPEN_IN_FINDER,
   PROJECT_UPDATED,
   LOG_EVENTS,
   NEW_MESSAGE,
@@ -55,6 +56,7 @@ import {
   Menu,
   Plus,
   FolderTree,
+  FolderOpen,
   History,
 } from "lucide-react";
 
@@ -447,6 +449,8 @@ export function ProjectDetail() {
     onCompleted: () => navigate("/"),
   });
 
+  const [openInFinder] = useMutation(OPEN_IN_FINDER);
+
   const togglePanel = useCallback((panel: PanelTab) => {
     setActivePanel(panel);
     autoOpenedRef.current = false;
@@ -663,6 +667,12 @@ export function ProjectDetail() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => openInFinder({ variables: { projectId: id } })}
+                >
+                  <FolderOpen className="mr-2 h-3.5 w-3.5" />
+                  Open in Finder
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
                   disabled={deleting || project.isRunning}

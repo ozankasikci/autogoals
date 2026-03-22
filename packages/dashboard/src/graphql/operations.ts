@@ -452,6 +452,32 @@ export const GET_RUNNING_PORTS = gql`
   }
 `;
 
+export const START_DETECTED_PROCESS = gql`
+  mutation StartDetectedProcess($projectId: ID!, $name: String!, $command: String!) {
+    startDetectedProcess(projectId: $projectId, name: $name, command: $command) {
+      id
+      name
+      command
+      pid
+      status
+      startedAt
+      outputLines
+    }
+  }
+`;
+
+export const REMOVE_PROCESS = gql`
+  mutation RemoveProcess($processId: ID!) {
+    removeProcess(processId: $processId)
+  }
+`;
+
+export const OPEN_IN_FINDER = gql`
+  mutation OpenInFinder($projectId: ID!) {
+    openInFinder(projectId: $projectId)
+  }
+`;
+
 export const KILL_PORT = gql`
   mutation KillPort($port: Int!) {
     killPort(port: $port)

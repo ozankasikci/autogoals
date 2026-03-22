@@ -8,7 +8,9 @@ import {
   ADD_RUN_COMMAND,
   REMOVE_RUN_COMMAND,
   START_PROCESS,
+  START_DETECTED_PROCESS,
   STOP_PROCESS,
+  REMOVE_PROCESS,
   RESTART_PROCESS,
   GET_ENV_VARS,
   SET_ENV_VAR,
@@ -169,6 +171,9 @@ function ProcessCard({
   const [restartProcess, { loading: restarting }] = useMutation(RESTART_PROCESS, {
     onCompleted: () => onRefresh(),
   });
+  const [removeProcess] = useMutation(REMOVE_PROCESS, {
+    onCompleted: () => onRefresh(),
+  });
 
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -206,7 +211,16 @@ function ProcessCard({
               </button>
             </>
           ) : (
-            <span className="text-[10px] text-muted-foreground/50 capitalize">{process.status}</span>
+            <>
+              <span className="text-[10px] text-muted-foreground/50 capitalize">{process.status}</span>
+              <button
+                onClick={() => removeProcess({ variables: { processId: process.id } })}
+                className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Dismiss"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </>
           )}
           <button
             onClick={() => setExpanded(!expanded)}
@@ -295,9 +309,15 @@ export function RunPanel({ projectId }: RunPanelProps) {
     onCompleted: () => refetchPorts(),
   });
 
-  const [startProcess, { loading: starting }] = useMutation(START_PROCESS, {
+  const [startProcess, { loading: startingSaved }] = useMutation(START_PROCESS, {
     onCompleted: () => refetchProcs(),
   });
+
+  const [startDetectedProcess, { loading: startingDetected }] = useMutation(START_DETECTED_PROCESS, {
+    onCompleted: () => refetchProcs(),
+  });
+
+  const starting = startingSaved || startingDetected;
 
   const savedCommands = cmdData?.runCommands ?? [];
   const detectedCommands = detectedData?.detectedCommands ?? [];
@@ -332,13 +352,8 @@ export function RunPanel({ projectId }: RunPanelProps) {
   };
 
   const handleStartDetected = (cmd: DetectedCommand) => {
-    // First add as a run command, then start it
-    addRunCommand({
+    startDetectedProcess({
       variables: { projectId, name: cmd.name, command: cmd.command },
-    }).then(({ data }) => {
-      if (data?.addRunCommand?.id) {
-        startProcess({ variables: { projectId, commandId: data.addRunCommand.id } });
-      }
     });
   };
 

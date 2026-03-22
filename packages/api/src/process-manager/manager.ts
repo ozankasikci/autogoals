@@ -108,6 +108,14 @@ export class ProcessManager {
     return this.startProcess(projectId, processId, name, command, cwd, envVars);
   }
 
+  removeProcess(processId: string): boolean {
+    const managed = this.processes.get(processId);
+    if (!managed) return false;
+    if (managed.status === "running") return false;
+    this.processes.delete(processId);
+    return true;
+  }
+
   getProcess(processId: string): ManagedProcess | undefined {
     return this.processes.get(processId);
   }
