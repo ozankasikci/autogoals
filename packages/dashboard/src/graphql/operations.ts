@@ -224,9 +224,9 @@ export const REMOVE_GOAL = gql`
 `;
 
 export const REFINE_GOAL = gql`
-  mutation RefineGoal($projectId: ID!, $goalId: ID!) {
-    refineGoal(projectId: $projectId, goalId: $goalId) {
-      id name status approach
+  mutation RefineGoal($projectId: ID!, $goalId: ID!, $mode: String) {
+    refineGoal(projectId: $projectId, goalId: $goalId, mode: $mode) {
+      id name status approach planningMode
     }
   }
 `;

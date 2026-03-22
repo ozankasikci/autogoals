@@ -164,20 +164,61 @@ export class AgentManager {
           continue;
         }
 
-        // --- Phase B1: Refine draft goals first ---
+        // --- Phase B1: Refine draft goals ---
+        // YOLO mode: auto-refine via agent task
+        // Interview mode: skip — user is driving refinement through chat
         const goals = store.getGoals();
         const draftGoal = goals.find(g => g.status === "draft");
         if (draftGoal) {
-          store.setPhase("interview");
-          const goalRow = db.prepare(
-            "SELECT id, name, description FROM goals WHERE project_id = ? AND id = ?"
+          const draftRow = db.prepare(
+            "SELECT id, name, description, planning_mode FROM goals WHERE project_id = ? AND id = ?"
           ).get(projectId, draftGoal.id) as any;
 
-          if (goalRow) {
-            this.publishLogEvent(projectId, "info", `Refining goal: ${goalRow.name}`);
+          if (draftRow?.planning_mode === "interview") {
+            // Interview mode — the resolver already sent the interview prompt to chat.
+            // The agent will ask questions and the user will reply.
+            // When the agent outputs the JSON block, we parse it from chat messages.
+            // Check if the interview has completed (look for JSON in recent agent messages)
+            const recentMessages = store.getMessages(10);
+            const agentMessages = recentMessages.filter(m => m.role === "agent");
+            let parsed: { approach?: string; criteria?: string[]; decisions?: string[] } | null = null;
+
+            for (const msg of agentMessages) {
+              const jsonMatch = msg.content.match(/```json\s*([\s\S]*?)\s*```/);
+              if (jsonMatch) {
+                try {
+                  const candidate = JSON.parse(jsonMatch[1]);
+                  if (candidate.criteria && candidate.approach) {
+                    parsed = candidate;
+                    break;
+                  }
+                } catch {}
+              }
+            }
+
+            if (parsed) {
+              // Interview complete — apply the results
+              store.updateGoal(draftGoal.id, {
+                acceptanceCriteria: parsed.criteria!,
+                approach: parsed.approach!,
+                status: "refined",
+              });
+              store.setPhase("spec");
+              this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' refined via interview with ${parsed.criteria!.length} criteria → refined`);
+              pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
+            }
+            // If not complete yet, just skip — the user is still chatting with the agent
+            await this.sleep(POST_WORK_COOLDOWN, projectId);
+            continue;
+          }
+
+          // YOLO mode: auto-refine
+          if (draftRow) {
+            store.setPhase("interview");
+            this.publishLogEvent(projectId, "info", `Auto-refining goal: ${draftRow.name}`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
-            const refinePrompt = `A goal needs to be refined before implementation.\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\n\nAnalyze this goal and generate:\n1. A clear technical approach (2-3 sentences)\n2. Specific, testable acceptance criteria (3-7 items)\n\nRespond with EXACTLY this JSON format:\n\`\`\`json\n{\n  "approach": "your technical approach here",\n  "criteria": ["criterion 1", "criterion 2", "criterion 3"]\n}\n\`\`\``;
+            const refinePrompt = `A goal needs to be refined before implementation.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nAnalyze the codebase and generate:\n1. A clear technical approach (2-3 sentences)\n2. Specific, testable acceptance criteria (3-7 items)\n\nRespond with EXACTLY this JSON format:\n\`\`\`json\n{\n  "approach": "your technical approach here",\n  "criteria": ["criterion 1", "criterion 2", "criterion 3"]\n}\n\`\`\``;
 
             const result = await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: refinePrompt,
@@ -185,7 +226,6 @@ export class AgentManager {
               maxTurns: 15,
             });
 
-            // Parse the refinement response
             const jsonMatch = result?.text?.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
               try {
@@ -197,18 +237,16 @@ export class AgentManager {
                     status: "pending",
                   });
                   store.setPhase("spec");
-                  this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' refined with ${parsed.criteria.length} criteria → pending`);
+                  this.publishLogEvent(projectId, "info", `Goal '${draftRow.name}' auto-refined with ${parsed.criteria.length} criteria → pending`);
                   pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
                 }
               } catch {
-                // JSON parse failed — promote to pending anyway so it doesn't get stuck
                 store.updateGoal(draftGoal.id, { status: "pending" });
-                this.publishLogEvent(projectId, "warning", `Could not parse refinement for '${goalRow.name}', promoting to pending`);
+                this.publishLogEvent(projectId, "warning", `Could not parse refinement for '${draftRow.name}', promoting to pending`);
               }
             } else {
-              // No JSON block — promote to pending anyway
               store.updateGoal(draftGoal.id, { status: "pending" });
-              this.publishLogEvent(projectId, "warning", `No structured refinement for '${goalRow.name}', promoting to pending`);
+              this.publishLogEvent(projectId, "warning", `No structured refinement for '${draftRow.name}', promoting to pending`);
             }
           }
           await this.sleep(POST_WORK_COOLDOWN, projectId);

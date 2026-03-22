@@ -3,13 +3,15 @@ import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { createClient } from "graphql-ws";
 import { getMainDefinition } from "@apollo/client/utilities";
 
+const apiPort = (import.meta as any).env?.VITE_API_PORT || "4000";
+
 const httpLink = new HttpLink({
-  uri: "http://localhost:4000/graphql",
+  uri: `http://localhost:${apiPort}/graphql`,
 });
 
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: "ws://localhost:4000/graphql",
+    url: `ws://localhost:${apiPort}/graphql`,
   })
 );
 

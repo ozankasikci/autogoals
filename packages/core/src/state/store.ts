@@ -15,6 +15,8 @@ function getDb(): Database.Database {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.exec(SCHEMA_SQL);
+  // Migrations for existing databases
+  try { db.exec("ALTER TABLE goals ADD COLUMN planning_mode TEXT"); } catch {}
   return db;
 }
 

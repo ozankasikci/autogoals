@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS goals (
   cost_usd REAL NOT NULL DEFAULT 0,
   error TEXT,
   session_id TEXT,
+  planning_mode TEXT,
   PRIMARY KEY (project_id, id)
 );
 

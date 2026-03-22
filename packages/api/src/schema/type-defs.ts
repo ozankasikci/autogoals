@@ -44,6 +44,7 @@ export const typeDefs = `#graphql
     retries: Int!
     costUsd: Float!
     error: String
+    planningMode: String
   }
 
   type LogEvent {
@@ -169,7 +170,7 @@ export const typeDefs = `#graphql
     updateSpec(projectId: ID!, overview: String!, technicalDecisions: [String!]!): Spec!
     updateGoal(projectId: ID!, goalId: ID!, name: String, description: String, approach: String, acceptanceCriteria: [String!], dependsOn: [ID!], status: String, recurring: Boolean): Goal!
     addGoal(projectId: ID!, name: String!, description: String!, acceptanceCriteria: [String!]!, dependsOn: [ID!]!, recurring: Boolean): Goal!
-    refineGoal(projectId: ID!, goalId: ID!): Goal!
+    refineGoal(projectId: ID!, goalId: ID!, mode: String): Goal!
     approveGoal(projectId: ID!, goalId: ID!, startImmediately: Boolean): Goal!
     removeGoal(projectId: ID!, goalId: ID!): Boolean!
     addRule(projectId: ID!, content: String!): Rule!

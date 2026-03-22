@@ -83,6 +83,7 @@ interface GoalView {
   retries: number;
   costUsd: number;
   error?: string;
+  planningMode?: string;
 }
 
 interface RuleView {
@@ -107,7 +108,7 @@ interface ProjectView {
 function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
   const rows = db
     .prepare(
-      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, recurring, retries, cost_usd, error FROM goals WHERE project_id = ? ORDER BY rowid",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, recurring, retries, cost_usd, error, planning_mode FROM goals WHERE project_id = ? ORDER BY rowid",
     )
     .all(projectId) as {
     id: string;
@@ -121,6 +122,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
     retries: number;
     cost_usd: number;
     error: string | null;
+    planning_mode: string | null;
   }[];
 
   return rows.map((r) => {
@@ -137,6 +139,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
     };
     if (r.approach != null) goal.approach = r.approach;
     if (r.error != null) goal.error = r.error;
+    if (r.planning_mode != null) goal.planningMode = r.planning_mode;
     return goal;
   });
 }
@@ -144,7 +147,7 @@ function getGoalViews(db: Database.Database, projectId: string): GoalView[] {
 function getGoalView(db: Database.Database, projectId: string, goalId: string): GoalView | null {
   const r = db
     .prepare(
-      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, recurring, retries, cost_usd, error FROM goals WHERE project_id = ? AND id = ?",
+      "SELECT id, name, description, approach, acceptance_criteria, depends_on, status, recurring, retries, cost_usd, error, planning_mode FROM goals WHERE project_id = ? AND id = ?",
     )
     .get(projectId, goalId) as {
     id: string;
@@ -158,6 +161,7 @@ function getGoalView(db: Database.Database, projectId: string, goalId: string): 
     retries: number;
     cost_usd: number;
     error: string | null;
+    planning_mode: string | null;
   } | undefined;
 
   if (!r) return null;
@@ -175,6 +179,7 @@ function getGoalView(db: Database.Database, projectId: string, goalId: string): 
   };
   if (r.approach != null) goal.approach = r.approach;
   if (r.error != null) goal.error = r.error;
+  if (r.planning_mode != null) goal.planningMode = r.planning_mode;
   return goal;
 }
 
@@ -661,7 +666,7 @@ export function createResolvers(
 
       refineGoal(
         _: unknown,
-        args: { projectId: string; goalId: string },
+        args: { projectId: string; goalId: string; mode?: string },
       ): GoalView | null {
         const db = getDb();
         const row = db
@@ -669,35 +674,28 @@ export function createResolvers(
           .get(args.projectId, args.goalId) as { id: string; name: string; description: string } | undefined;
         if (!row) throw new Error("Goal not found");
 
-        if (agentManager?.isRunning(args.projectId)) {
+        const planningMode = args.mode === "interview" ? "interview" : "yolo";
+
+        // Store planning mode on the goal
+        db.prepare("UPDATE goals SET planning_mode = ? WHERE project_id = ? AND id = ?")
+          .run(planningMode, args.projectId, args.goalId);
+
+        if (planningMode === "interview" && agentManager?.isRunning(args.projectId)) {
+          // Interview mode: agent asks questions in chat, user replies
           agentManager.sendMessage(
             args.projectId,
-            `[System] A new goal needs refinement. Goal: "${row.name}". Description: "${row.description || "none"}".
-
-Please interview the user about this goal to understand it better. Ask focused questions ONE AT A TIME:
-- What specifically needs to happen?
-- Are there constraints or preferences?
-- What does "done" look like?
-- Any technical considerations?
-
-After you have enough information (3-5 questions), generate the following and respond with EXACTLY this JSON format:
-\`\`\`json
-{
-  "criteria": ["criterion 1", "criterion 2", ...],
-  "approach": "Brief technical approach description",
-  "specUpdate": "Any updates to the project overview/spec"
-}
-\`\`\`
-
-Start by asking your first question about this goal.`,
+            `[System] Plan goal "${row.name}" through interview.\n\nDescription: "${row.description || "none"}"\n\nYour job is to help the user refine this goal by asking targeted questions. Follow this process:\n\n1. First, analyze the codebase to understand existing patterns, architecture, and conventions.\n2. Identify 3-4 key decision areas (gray areas) specific to this goal — things like layout approach, data flow, API design, error handling, etc.\n3. For each area, ask ONE focused question at a time with 2-3 concrete options annotated with existing code patterns when relevant. Example:\n   "For the auth flow, which approach do you prefer?\n   A) JWT with httpOnly cookies (matches pattern in src/lib/api.ts)\n   B) Session-based auth (would need new middleware)\n   C) OAuth only (minimal server state)"\n4. Wait for the user's response before asking the next question.\n5. After 3-5 questions, summarize the decisions and generate the goal specification.\n\nWhen you have enough information, output EXACTLY this JSON:\n\`\`\`json\n{\n  "approach": "Technical approach based on the user's decisions",\n  "criteria": ["criterion 1", "criterion 2", ...],\n  "decisions": ["Decision 1: user chose X because Y", "Decision 2: ..."]\n}\n\`\`\`\n\nStart by analyzing the codebase, then ask your first question.`,
           );
         }
+        // YOLO mode: supervisor's Phase B1 will auto-refine via runTask (no chat interaction)
 
-        // Update status to 'draft' to indicate refinement in progress
         const store = new SQLiteStore(db, args.projectId);
         store.updateGoal(args.goalId, { status: "draft" });
 
-        // Return current goal state
+        if (agentManager?.isRunning(args.projectId)) {
+          agentManager.wake(args.projectId);
+        }
+
         const goalViews = getGoalViews(db, args.projectId);
         return goalViews.find((g) => g.id === args.goalId) || null;
       },
