@@ -27,6 +27,7 @@ import {
   Plus,
   Settings,
   ChevronDown,
+  ExternalLink,
   ChevronRight,
   Loader2,
   Terminal,
@@ -227,6 +228,21 @@ function ProcessCard({
     onCompleted: () => onRefresh(),
   });
 
+  // Detect port from process output
+  const { data: outputData } = useQuery<{ processOutput: { lines: string[] } }>(GET_PROCESS_OUTPUT, {
+    variables: { processId: process.id, lastN: 20 },
+    skip: process.status !== "running",
+    pollInterval: 5000,
+  });
+  const detectedPort = React.useMemo(() => {
+    if (!outputData?.processOutput?.lines) return null;
+    for (const line of outputData.processOutput.lines) {
+      const match = line.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/);
+      if (match) return match[1];
+    }
+    return null;
+  }, [outputData]);
+
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 px-3 py-2.5">
@@ -243,6 +259,18 @@ function ProcessCard({
           </span>
         )}
         <div className="flex items-center gap-1">
+          {/* Open in browser button */}
+          {detectedPort && (
+            <a
+              href={`http://localhost:${detectedPort}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-6 w-6 flex items-center justify-center rounded text-primary/60 hover:text-primary hover:bg-primary/10 transition-colors"
+              title={`Open localhost:${detectedPort}`}
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
           {process.status === "running" ? (
             <>
               <button
