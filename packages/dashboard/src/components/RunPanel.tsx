@@ -154,6 +154,58 @@ function ProcessOutputView({ processId }: { processId: string }) {
   );
 }
 
+function EnvVarRow({ envVar, projectId, onRemove }: { envVar: { id: string; key: string; value: string }; projectId: string; onRemove: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(envVar.value);
+  const [setEnvVar] = useMutation(SET_ENV_VAR, {
+    refetchQueries: [{ query: GET_ENV_VARS, variables: { projectId } }],
+  });
+
+  function save() {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== envVar.value) {
+      setEnvVar({ variables: { projectId, key: envVar.key, value: trimmed } });
+    } else {
+      setEditValue(envVar.value);
+    }
+    setEditing(false);
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card/50 group">
+      <span className="text-xs font-mono font-medium text-emerald-400">{envVar.key}</span>
+      <span className="text-xs text-muted-foreground/50">=</span>
+      {editing ? (
+        <input
+          className="flex-1 text-xs font-mono bg-transparent text-foreground outline-none border-b border-primary/40"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); save(); }
+            if (e.key === "Escape") { setEditValue(envVar.value); setEditing(false); }
+          }}
+          autoFocus
+        />
+      ) : (
+        <span
+          onClick={() => { setEditing(true); setEditValue(envVar.value); }}
+          className="text-xs font-mono text-muted-foreground truncate flex-1 cursor-text hover:text-foreground transition-colors"
+        >
+          {envVar.value}
+        </span>
+      )}
+      <button
+        onClick={onRemove}
+        className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+        title="Remove"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
 function ProcessCard({
   process,
   projectId,
@@ -588,21 +640,7 @@ export function RunPanel({ projectId }: RunPanelProps) {
         {envVars.length > 0 && (
           <div className="space-y-1 mb-2">
             {envVars.map((v) => (
-              <div
-                key={v.id}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card/50 group"
-              >
-                <span className="text-xs font-mono font-medium text-emerald-400">{v.key}</span>
-                <span className="text-xs text-muted-foreground/50">=</span>
-                <span className="text-xs font-mono text-muted-foreground truncate flex-1">{v.value}</span>
-                <button
-                  onClick={() => removeEnvVar({ variables: { projectId, envVarId: v.id } })}
-                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Remove"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+              <EnvVarRow key={v.id} envVar={v} projectId={projectId} onRemove={() => removeEnvVar({ variables: { projectId, envVarId: v.id } })} />
             ))}
           </div>
         )}
