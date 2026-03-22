@@ -133,7 +133,7 @@ export class ProcessManager {
     return managed.output;
   }
 
-  detectRunningProcesses(_projectPath: string): { pid: number; port: number; command: string }[] {
+  detectRunningProcesses(projectPath: string): { pid: number; port: number; command: string }[] {
     const results: { pid: number; port: number; command: string }[] = [];
     const commonPorts = [3000, 3001, 4000, 5000, 5173, 5891, 8000, 8080, 8765];
 
@@ -141,9 +141,21 @@ export class ProcessManager {
       try {
         const output = execSync(`lsof -ti:${port}`, { encoding: "utf-8" }).trim();
         if (output) {
-          const pid = parseInt(output.split("\n")[0]);
-          const cmdOutput = execSync(`ps -p ${pid} -o command=`, { encoding: "utf-8" }).trim();
-          results.push({ pid, port, command: cmdOutput });
+          const pids = output.split("\n").map(p => parseInt(p.trim())).filter(p => !isNaN(p));
+          for (const pid of pids) {
+            try {
+              const cmdOutput = execSync(`ps -p ${pid} -o command=`, { encoding: "utf-8" }).trim();
+              // Check if the process is related to this project
+              let cwdOutput = "";
+              try {
+                cwdOutput = execSync(`lsof -p ${pid} | grep cwd | awk '{print $NF}'`, { encoding: "utf-8" }).trim();
+              } catch {}
+              const isRelated = cmdOutput.includes(projectPath) || cwdOutput.includes(projectPath);
+              if (isRelated) {
+                results.push({ pid, port, command: cmdOutput });
+              }
+            } catch {}
+          }
         }
       } catch {
         // Port not in use
