@@ -484,6 +484,22 @@ export const KILL_PORT = gql`
   }
 `;
 
+export const GET_GOAL_SCREENSHOTS = gql`
+  query GetGoalScreenshots($projectId: ID!, $goalId: ID!) {
+    goalScreenshots(projectId: $projectId, goalId: $goalId) {
+      id
+      filePath
+      fileName
+    }
+  }
+`;
+
+export const REMOVE_GOAL_SCREENSHOT = gql`
+  mutation RemoveGoalScreenshot($projectId: ID!, $screenshotId: ID!) {
+    removeGoalScreenshot(projectId: $projectId, screenshotId: $screenshotId)
+  }
+`;
+
 export const AUTO_SETUP_PROJECT = gql`
   mutation AutoSetupProject($projectId: ID!) {
     autoSetupProject(projectId: $projectId)

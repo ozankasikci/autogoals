@@ -13,7 +13,7 @@ import { randomUUID } from "crypto";
 import { execSync } from "child_process";
 import { homedir } from "os";
 import { resolve, join, relative } from "path";
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, unlinkSync, existsSync } from "fs";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
 import type { ProcessManager } from "../process-manager/index.js";
@@ -358,6 +358,12 @@ export function createResolvers(
         if (!processManager) return [];
         const resolvedPath = resolvePath(record.path);
         return processManager.detectRunningProcesses(resolvedPath);
+      },
+
+      goalScreenshots(_: unknown, args: { projectId: string; goalId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getGoalScreenshots(args.goalId);
       },
     },
 
@@ -963,6 +969,28 @@ Start by asking your first question about this goal.`,
       killPort(_: unknown, args: { port: number }) {
         if (!processManager) throw new Error("Process manager not available");
         return processManager.killPort(args.port);
+      },
+
+      removeGoalScreenshot(_: unknown, args: { projectId: string; screenshotId: string }): boolean {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const screenshotId = parseInt(args.screenshotId, 10);
+        // Get the file path before deleting from DB
+        const screenshots = db
+          .prepare("SELECT file_path FROM goal_screenshots WHERE project_id = ? AND id = ?")
+          .get(args.projectId, screenshotId) as { file_path: string } | undefined;
+        store.removeGoalScreenshot(screenshotId);
+        // Delete the file from disk
+        if (screenshots?.file_path) {
+          try {
+            if (existsSync(screenshots.file_path)) {
+              unlinkSync(screenshots.file_path);
+            }
+          } catch {
+            // File may already be deleted
+          }
+        }
+        return true;
       },
 
       async autoSetupProject(_: unknown, args: { projectId: string }) {

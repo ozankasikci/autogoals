@@ -81,6 +81,11 @@ export interface StateStore {
   setEnvVar(key: string, value: string): void;
   removeEnvVar(id: number): void;
 
+  // Goal screenshots
+  getGoalScreenshots(goalId: string): { id: number; filePath: string; fileName: string }[];
+  addGoalScreenshot(goalId: string, filePath: string, fileName: string): { id: number; filePath: string; fileName: string };
+  removeGoalScreenshot(id: number): void;
+
   // Lifecycle
   close(): void;
 }

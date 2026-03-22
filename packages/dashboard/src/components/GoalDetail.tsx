@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useMutation } from "@apollo/client";
-import { UPDATE_GOAL, REMOVE_GOAL, REFINE_GOAL, APPROVE_GOAL, GET_PROJECT } from "@/graphql/operations";
+import { useMutation, useQuery } from "@apollo/client";
+import { UPDATE_GOAL, REMOVE_GOAL, REFINE_GOAL, APPROVE_GOAL, GET_PROJECT, GET_GOAL_SCREENSHOTS, REMOVE_GOAL_SCREENSHOT } from "@/graphql/operations";
 import { formatCost } from "@/lib/utils";
-import { ChevronLeft, X, Trash2, ChevronDown, Plus, Check, Lightbulb, Loader2 } from "lucide-react";
+import { ChevronLeft, X, Trash2, ChevronDown, Plus, Check, Lightbulb, Loader2, ImagePlus } from "lucide-react";
 
 /* -- Saved indicator hook -- */
 
@@ -125,6 +125,15 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
   const [removeGoal, { loading: removingGoal }] = useMutation(REMOVE_GOAL, refetchOpts);
   const [refineGoal, { loading: refining }] = useMutation(REFINE_GOAL, refetchOpts);
   const [approveGoal, { loading: approving }] = useMutation(APPROVE_GOAL, refetchOpts);
+
+  // Screenshots
+  const { data: screenshotsData, refetch: refetchScreenshots } = useQuery(GET_GOAL_SCREENSHOTS, {
+    variables: { projectId, goalId: goal.id },
+  });
+  const [removeScreenshot] = useMutation(REMOVE_GOAL_SCREENSHOT);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const screenshots: { id: string; filePath: string; fileName: string }[] = screenshotsData?.goalScreenshots ?? [];
 
   // Debounced save
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,6 +275,39 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
 
   async function handleApproveGoal(startImmediately: boolean) {
     await approveGoal({ variables: { projectId, goalId: goal.id, startImmediately } });
+  }
+
+  async function handleScreenshotUpload(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const maxAllowed = 10 - screenshots.length;
+    if (maxAllowed <= 0) return;
+    const filesToUpload = Array.from(files).slice(0, maxAllowed);
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      filesToUpload.forEach(f => formData.append("screenshots", f));
+      await fetch(`http://localhost:4000/api/projects/${projectId}/goals/${goal.id}/screenshots`, {
+        method: "POST",
+        body: formData,
+      });
+      await refetchScreenshots();
+    } catch {
+      // upload failed
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemoveScreenshot(screenshotId: string) {
+    await removeScreenshot({ variables: { projectId, screenshotId } });
+    await refetchScreenshots();
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    handleScreenshotUpload(e.dataTransfer.files);
   }
 
   function handleReviseGoal() {
@@ -575,6 +617,74 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                 className="flex-1 bg-transparent text-xs text-foreground/80 placeholder:text-muted-foreground/40 outline-none border-b border-transparent focus:border-border focus:ring-0 pb-0.5 transition-colors"
               />
             </div>
+          </div>
+        </section>
+
+        {/* -- Screenshots -- */}
+        <section>
+          <div className="flex items-center justify-between">
+            <SectionHeader label="Screenshots" />
+            <span className="text-xs text-muted-foreground/70 tabular-nums">
+              {screenshots.length}/10
+            </span>
+          </div>
+          <div className="mt-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+            {screenshots.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {screenshots.map((s) => {
+                  const parts = s.filePath.split("/");
+                  const fileName = parts[parts.length - 1];
+                  const goalIdFromPath = parts[parts.length - 2];
+                  const projectIdForUrl = projectId;
+                  const thumbUrl = `http://localhost:4000/api/screenshots/${projectIdForUrl}/${goalIdFromPath}/${fileName}`;
+                  return (
+                    <div key={s.id} className="group relative rounded-lg border border-border overflow-hidden aspect-square bg-muted/50">
+                      <img
+                        src={thumbUrl}
+                        alt={s.fileName}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                        <button
+                          onClick={() => handleRemoveScreenshot(s.id)}
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center transition-opacity hover:bg-red-500/80"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] text-white truncate block">{s.fileName}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {screenshots.length < 10 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-lg border border-dashed border-border/70 cursor-pointer hover:border-border hover:bg-muted/30 transition-colors"
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 text-muted-foreground/50 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-4 w-4 text-muted-foreground/50" />
+                )}
+                <span className="text-xs text-muted-foreground/50">
+                  {uploading ? "Uploading..." : "Drop images or click to upload"}
+                </span>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleScreenshotUpload(e.target.files)}
+            />
           </div>
         </section>
 

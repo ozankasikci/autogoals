@@ -67,6 +67,7 @@ export class SQLiteProjectStore implements ProjectStore {
 
   deleteProject(id: string): boolean {
     // Delete all related data first (order matters for foreign keys)
+    this.db.prepare("DELETE FROM goal_screenshots WHERE project_id = ?").run(id);
     this.db.prepare("DELETE FROM env_vars WHERE project_id = ?").run(id);
     this.db.prepare("DELETE FROM run_commands WHERE project_id = ?").run(id);
     this.db.prepare("DELETE FROM checkpoints WHERE project_id = ?").run(id);

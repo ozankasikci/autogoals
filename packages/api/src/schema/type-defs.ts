@@ -120,6 +120,12 @@ export const typeDefs = `#graphql
     lines: [String!]!
   }
 
+  type GoalScreenshot {
+    id: ID!
+    filePath: String!
+    fileName: String!
+  }
+
   type DetectedEnvVar {
     key: String!
     value: String!
@@ -148,6 +154,7 @@ export const typeDefs = `#graphql
     processOutput(processId: ID!, lastN: Int): ProcessOutput!
     detectedEnvVars(projectId: ID!): [DetectedEnvVar!]!
     runningPorts(projectId: ID!): [RunningPort!]!
+    goalScreenshots(projectId: ID!, goalId: ID!): [GoalScreenshot!]!
   }
 
   type Mutation {
@@ -181,6 +188,7 @@ export const typeDefs = `#graphql
     restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
     openInFinder(projectId: ID!): Boolean!
     killPort(port: Int!): Boolean!
+    removeGoalScreenshot(projectId: ID!, screenshotId: ID!): Boolean!
     autoSetupProject(projectId: ID!): Boolean!
   }
 

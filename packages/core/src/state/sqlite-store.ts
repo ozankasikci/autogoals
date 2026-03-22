@@ -692,6 +692,36 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId, id);
   }
 
+  // ── Goal Screenshots ─────────────────────────────────────
+
+  getGoalScreenshots(goalId: string): { id: number; filePath: string; fileName: string }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, file_path, file_name FROM goal_screenshots WHERE project_id = ? AND goal_id = ? ORDER BY id ASC",
+      )
+      .all(this.projectId, goalId) as { id: number; file_path: string; file_name: string }[];
+    return rows.map((r) => ({
+      id: r.id,
+      filePath: r.file_path,
+      fileName: r.file_name,
+    }));
+  }
+
+  addGoalScreenshot(goalId: string, filePath: string, fileName: string): { id: number; filePath: string; fileName: string } {
+    const result = this.db
+      .prepare(
+        "INSERT INTO goal_screenshots (project_id, goal_id, file_path, file_name) VALUES (?, ?, ?, ?)",
+      )
+      .run(this.projectId, goalId, filePath, fileName);
+    return { id: Number(result.lastInsertRowid), filePath, fileName };
+  }
+
+  removeGoalScreenshot(id: number): void {
+    this.db
+      .prepare("DELETE FROM goal_screenshots WHERE project_id = ? AND id = ?")
+      .run(this.projectId, id);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

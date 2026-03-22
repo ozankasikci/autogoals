@@ -233,9 +233,17 @@ export class AgentManager {
             this.publishLogEvent(projectId, "info", `Goal '${goalRow.name}' \u2192 active`);
             pubsub.publish(EVENTS.PROJECT_UPDATED, { projectUpdated: { id: projectId } });
 
+            const screenshots = store.getGoalScreenshots(actionable.id);
+            let screenshotInfo = "";
+            if (screenshots.length > 0) {
+              screenshotInfo = `\n\nSCREENSHOTS (${screenshots.length} attached — read these files to see what the user wants):\n`;
+              screenshotInfo += screenshots.map(s => `- ${s.filePath}`).join("\n");
+              screenshotInfo += `\n\nIMPORTANT: Read the screenshot files using the Read tool to understand the visual context.`;
+            }
+
             const uncheckedCriteria = criteria.filter((c: string) => !c.startsWith("[x] "));
             const checkedCriteria = criteria.filter((c: string) => c.startsWith("[x] "));
-            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\n\nOUTSTANDING CRITERIA (work on these):\n${uncheckedCriteria.map((c: string) => `- ${c.replace(/^\[ \] /, "")}`).join("\n") || "- none specified"}${checkedCriteria.length > 0 ? `\n\nALREADY DONE (skip these):\n${checkedCriteria.map((c: string) => `- ✓ ${c.replace(/^\[x\] /, "")}`).join("\n")}` : ""}\n\nImplement the outstanding criteria. Skip the ones already done.`;
+            const goalPrompt = `Implement this goal:\n\nGOAL: ${goalRow.name}\nDESCRIPTION: ${goalRow.description || "none"}\nAPPROACH: ${goalRow.approach || "none"}\n\nOUTSTANDING CRITERIA (work on these):\n${uncheckedCriteria.map((c: string) => `- ${c.replace(/^\[ \] /, "")}`).join("\n") || "- none specified"}${checkedCriteria.length > 0 ? `\n\nALREADY DONE (skip these):\n${checkedCriteria.map((c: string) => `- ✓ ${c.replace(/^\[x\] /, "")}`).join("\n")}` : ""}${screenshotInfo}\n\nImplement the outstanding criteria. Skip the ones already done.`;
 
             await this.runTask(projectId, projectPath, systemPromptBase, {
               prompt: goalPrompt,

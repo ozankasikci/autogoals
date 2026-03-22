@@ -105,4 +105,13 @@ CREATE TABLE IF NOT EXISTS env_vars (
   value TEXT NOT NULL,
   UNIQUE(project_id, key)
 );
+
+CREATE TABLE IF NOT EXISTS goal_screenshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  goal_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;

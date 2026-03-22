@@ -9,12 +9,20 @@ import { WebSocketServer } from "ws";
 import { useServer } from "graphql-ws/use/ws";
 import Database from "better-sqlite3";
 import { mkdirSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 import { homedir } from "os";
-import { SCHEMA_SQL } from "@small-singularity/core";
+import multer from "multer";
+import { SCHEMA_SQL, SQLiteProjectStore, SQLiteStore } from "@small-singularity/core";
 import { typeDefs, createResolvers } from "./schema/index.js";
 import { AgentManager } from "./agent-manager/index.js";
 import { ProcessManager } from "./process-manager/index.js";
+
+function resolvePath(p: string): string {
+  if (p.startsWith("~/") || p === "~") {
+    p = p.replace("~", homedir());
+  }
+  return resolve(p);
+}
 
 export interface ServerInstance {
   app: Express;
@@ -77,6 +85,58 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
   });
 
   await apolloServer.start();
+
+  // Screenshot upload endpoint (REST, before GraphQL middleware)
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (req, _file, cb) => {
+        const projectId = req.params.projectId as string;
+        const goalId = req.params.goalId as string;
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(projectId);
+        if (!record) return cb(new Error("Project not found"), "");
+        const resolvedBase = resolvePath(record.path);
+        const screenshotDir = join(resolvedBase, ".small-singularity", "screenshots", goalId);
+        mkdirSync(screenshotDir, { recursive: true });
+        cb(null, screenshotDir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+      },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024, files: 10 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith("image/")) cb(null, true);
+      else cb(new Error("Only image files allowed"));
+    },
+  });
+
+  app.use(cors());
+
+  app.post(
+    "/api/projects/:projectId/goals/:goalId/screenshots",
+    upload.array("screenshots", 10),
+    (req, res) => {
+      const projectId = req.params.projectId as string;
+      const goalId = req.params.goalId as string;
+      const files = req.files as Express.Multer.File[];
+      const store = new SQLiteStore(db, projectId);
+      const results = files.map((f: Express.Multer.File) => store.addGoalScreenshot(goalId, f.path, f.originalname));
+      res.json({ screenshots: results });
+    },
+  );
+
+  // Serve screenshot files
+  app.get("/api/screenshots/:projectId/:goalId/:filename", (req, res) => {
+    const { projectId, goalId, filename } = req.params;
+    const projectStore = new SQLiteProjectStore(db);
+    const record = projectStore.getProject(projectId);
+    if (!record) return res.status(404).send("Not found");
+    const resolvedBase = resolvePath(record.path);
+    const filePath = join(resolvedBase, ".small-singularity", "screenshots", goalId, filename);
+    res.sendFile(filePath);
+  });
 
   app.use(
     "/graphql",
