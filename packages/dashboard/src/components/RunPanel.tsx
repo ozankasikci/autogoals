@@ -237,8 +237,15 @@ function ProcessCard({
   const detectedPort = React.useMemo(() => {
     if (!outputData?.processOutput?.lines) return null;
     for (const line of outputData.processOutput.lines) {
-      const match = line.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/);
-      if (match) return match[1];
+      // Match localhost:PORT, 127.0.0.1:PORT, 0.0.0.0:PORT
+      const urlMatch = line.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/);
+      if (urlMatch) return urlMatch[1];
+      // Match "port XXXX" or "PORT=XXXX" or ":XXXX"
+      const portMatch = line.match(/(?:port|PORT)[=:\s]+(\d{4,5})/i);
+      if (portMatch) return portMatch[1];
+      // Match "listening on XXXX"
+      const listenMatch = line.match(/listening\s+on\s+(?:.*:)?(\d{4,5})/i);
+      if (listenMatch) return listenMatch[1];
     }
     return null;
   }, [outputData]);
