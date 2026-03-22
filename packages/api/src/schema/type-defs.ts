@@ -87,6 +87,33 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  type RunCommand {
+    id: ID!
+    name: String!
+    command: String!
+    autoStart: Boolean!
+  }
+
+  type DetectedCommand {
+    name: String!
+    command: String!
+    source: String!
+  }
+
+  type ProcessInfo {
+    id: ID!
+    name: String!
+    command: String!
+    pid: Int
+    status: String!
+    startedAt: String
+    outputLines: Int!
+  }
+
+  type ProcessOutput {
+    lines: [String!]!
+  }
+
   type Query {
     projects: [Project!]!
     project(id: ID!): Project
@@ -96,6 +123,10 @@ export const typeDefs = `#graphql
     fileTree(projectId: ID!, path: String, depth: Int): [FileNode!]!
     fileContent(projectId: ID!, path: String!): FileContent
     checkpoints(projectId: ID!): [Checkpoint!]!
+    runCommands(projectId: ID!): [RunCommand!]!
+    detectedCommands(projectId: ID!): [DetectedCommand!]!
+    processes(projectId: ID!): [ProcessInfo!]!
+    processOutput(processId: ID!, lastN: Int): ProcessOutput!
   }
 
   type Mutation {
@@ -117,6 +148,12 @@ export const typeDefs = `#graphql
     removeRule(projectId: ID!, ruleId: ID!): Boolean!
     writeFile(projectId: ID!, path: String!, content: String!): FileContent!
     restoreCheckpoint(projectId: ID!, tag: String!): Boolean!
+    addRunCommand(projectId: ID!, name: String!, command: String!): RunCommand!
+    updateRunCommand(projectId: ID!, commandId: ID!, name: String, command: String, autoStart: Boolean): RunCommand!
+    removeRunCommand(projectId: ID!, commandId: ID!): Boolean!
+    startProcess(projectId: ID!, commandId: ID!): ProcessInfo!
+    stopProcess(processId: ID!): Boolean!
+    restartProcess(projectId: ID!, processId: ID!): ProcessInfo!
   }
 
   type Subscription {

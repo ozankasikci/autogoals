@@ -1,0 +1,131 @@
+import { spawn, ChildProcess } from "child_process";
+
+interface ManagedProcess {
+  id: string;
+  projectId: string;
+  command: string;
+  name: string;
+  pid: number | null;
+  status: "running" | "stopped" | "crashed";
+  output: string[];
+  startedAt: string | null;
+  process: ChildProcess | null;
+}
+
+export class ProcessManager {
+  private processes = new Map<string, ManagedProcess>();
+  private MAX_OUTPUT_LINES = 500;
+
+  startProcess(
+    projectId: string,
+    processId: string,
+    name: string,
+    command: string,
+    cwd: string,
+  ): ManagedProcess {
+    if (this.processes.has(processId)) {
+      const existing = this.processes.get(processId)!;
+      if (existing.status === "running") throw new Error("Process already running");
+    }
+
+    const child = spawn("sh", ["-c", command], {
+      cwd,
+      env: { ...process.env, FORCE_COLOR: "1" },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    const managed: ManagedProcess = {
+      id: processId,
+      projectId,
+      command,
+      name,
+      pid: child.pid ?? null,
+      status: "running",
+      output: [],
+      startedAt: new Date().toISOString(),
+      process: child,
+    };
+
+    child.stdout?.on("data", (data: Buffer) => {
+      const lines = data.toString().split("\n").filter(Boolean);
+      for (const line of lines) {
+        managed.output.push(line);
+        if (managed.output.length > this.MAX_OUTPUT_LINES) {
+          managed.output.shift();
+        }
+      }
+    });
+
+    child.stderr?.on("data", (data: Buffer) => {
+      const lines = data.toString().split("\n").filter(Boolean);
+      for (const line of lines) {
+        managed.output.push(`[stderr] ${line}`);
+        if (managed.output.length > this.MAX_OUTPUT_LINES) {
+          managed.output.shift();
+        }
+      }
+    });
+
+    child.on("exit", (code) => {
+      managed.status = code === 0 ? "stopped" : "crashed";
+      managed.process = null;
+      managed.pid = null;
+    });
+
+    child.on("error", (err) => {
+      managed.status = "crashed";
+      managed.output.push(`[error] ${err.message}`);
+      managed.process = null;
+    });
+
+    this.processes.set(processId, managed);
+    return managed;
+  }
+
+  stopProcess(processId: string): boolean {
+    const managed = this.processes.get(processId);
+    if (!managed?.process) return false;
+    managed.process.kill("SIGTERM");
+    setTimeout(() => {
+      if (managed.process && !managed.process.killed) {
+        managed.process.kill("SIGKILL");
+      }
+    }, 5000);
+    managed.status = "stopped";
+    return true;
+  }
+
+  restartProcess(
+    projectId: string,
+    processId: string,
+    name: string,
+    command: string,
+    cwd: string,
+  ): ManagedProcess {
+    this.stopProcess(processId);
+    return this.startProcess(projectId, processId, name, command, cwd);
+  }
+
+  getProcess(processId: string): ManagedProcess | undefined {
+    return this.processes.get(processId);
+  }
+
+  getProjectProcesses(projectId: string): ManagedProcess[] {
+    return Array.from(this.processes.values()).filter(
+      (p) => p.projectId === projectId,
+    );
+  }
+
+  getProcessOutput(processId: string, lastN?: number): string[] {
+    const managed = this.processes.get(processId);
+    if (!managed) return [];
+    if (lastN) return managed.output.slice(-lastN);
+    return managed.output;
+  }
+
+  stopAll(): void {
+    for (const [id] of this.processes) {
+      this.stopProcess(id);
+    }
+  }
+}

@@ -18,6 +18,7 @@ import { LogStream } from "@/components/LogStream";
 import { ChatPanel } from "@/components/ChatPanel";
 import { FileTree } from "@/components/FileTree";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { RunPanel } from "@/components/RunPanel";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -112,7 +113,7 @@ interface ProjectListItem {
   isRunning: boolean;
 }
 
-type PanelTab = "goals" | "rules" | "activity" | "history" | "project";
+type PanelTab = "goals" | "rules" | "activity" | "run" | "history" | "project";
 
 /* ------------------------------------------------------------------ */
 /*  Phase Indicator                                                    */
@@ -487,8 +488,11 @@ export function ProjectDetail() {
         togglePanel("activity");
       } else if (mod && e.key === "4") {
         e.preventDefault();
-        togglePanel("history");
+        togglePanel("run");
       } else if (mod && e.key === "5") {
+        e.preventDefault();
+        togglePanel("history");
+      } else if (mod && e.key === "6") {
         e.preventDefault();
         togglePanel("project");
       } else if (e.key === "[" && !mod && !isInput) {
@@ -545,6 +549,7 @@ export function ProjectDetail() {
     goals: "Goals",
     rules: "Rules",
     activity: "Activity",
+    run: "Run",
     history: "History",
   };
 
@@ -845,6 +850,9 @@ export function ProjectDetail() {
                     {activePanel === "rules" && (
                       <RulesPanel projectId={project.id} />
                     )}
+                    {activePanel === "run" && (
+                      <RunPanel projectId={project.id} />
+                    )}
                     {activePanel === "history" && (
                       <HistoryPanel projectId={project.id} />
                     )}
@@ -881,6 +889,12 @@ export function ProjectDetail() {
               label="Activity"
               active={activePanel === "activity"}
               onClick={() => togglePanel("activity")}
+            />
+            <RailButton
+              icon={<Play className="h-4 w-4" />}
+              label="Run"
+              active={activePanel === "run"}
+              onClick={() => togglePanel("run")}
             />
             <RailButton
               icon={<History className="h-4 w-4" />}

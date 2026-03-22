@@ -14,12 +14,14 @@ import { homedir } from "os";
 import { SCHEMA_SQL } from "@small-singularity/core";
 import { typeDefs, createResolvers } from "./schema/index.js";
 import { AgentManager } from "./agent-manager/index.js";
+import { ProcessManager } from "./process-manager/index.js";
 
 export interface ServerInstance {
   app: Express;
   httpServer: Server;
   db: Database.Database;
   agentManager: AgentManager;
+  processManager: ProcessManager;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -40,11 +42,13 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
 
   const db = getDatabase();
   const agentManager = new AgentManager(() => db);
+  const processManager = new ProcessManager();
 
   const resolvers = createResolvers(
     () => db,
     () => agentManager.getRunningIds(),
     agentManager,
+    processManager,
   );
 
   const schema = makeExecutableSchema({ typeDefs, resolvers });
@@ -88,6 +92,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
     httpServer,
     db,
     agentManager,
+    processManager,
     async start() {
       return new Promise<void>((resolve) => {
         httpServer.listen(port, () => {
@@ -98,6 +103,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
       });
     },
     async stop() {
+      processManager.stopAll();
       agentManager.stopAll();
       await apolloServer.stop();
       db.close();

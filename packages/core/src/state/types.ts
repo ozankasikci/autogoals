@@ -70,6 +70,12 @@ export interface StateStore {
   getCheckpoints(limit?: number): { id: number; goalId: string | null; goalName: string; commitHash: string; tag: string; message: string; createdAt: string }[];
   addCheckpoint(goalId: string | null, goalName: string, commitHash: string, tag: string, message: string): void;
 
+  // Run commands
+  getRunCommands(): { id: number; name: string; command: string; autoStart: boolean }[];
+  addRunCommand(name: string, command: string): { id: number; name: string; command: string; autoStart: boolean };
+  updateRunCommand(id: number, updates: Partial<{ name: string; command: string; autoStart: boolean }>): void;
+  removeRunCommand(id: number): void;
+
   // Lifecycle
   close(): void;
 }

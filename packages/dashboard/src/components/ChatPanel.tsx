@@ -211,6 +211,14 @@ export function ChatPanel({
 
   const initialLoadRef = useRef(true);
 
+  // Reset scroll state when switching projects
+  useEffect(() => {
+    initialLoadRef.current = true;
+    setMessages([]);
+    setHasMore(true);
+    setShowScrollButton(false);
+  }, [projectId]);
+
   useEffect(() => {
     if (data?.messages) {
       setMessages(data.messages);

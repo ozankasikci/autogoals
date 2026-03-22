@@ -609,6 +609,64 @@ export class SQLiteStore implements StateStore {
       .run(this.projectId, goalId, goalName, commitHash, tag, message);
   }
 
+  // ── Run Commands ─────────────────────────────────────────
+
+  getRunCommands(): { id: number; name: string; command: string; autoStart: boolean }[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, name, command, auto_start FROM run_commands WHERE project_id = ? ORDER BY id ASC",
+      )
+      .all(this.projectId) as { id: number; name: string; command: string; auto_start: number }[];
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      command: r.command,
+      autoStart: r.auto_start === 1,
+    }));
+  }
+
+  addRunCommand(name: string, command: string): { id: number; name: string; command: string; autoStart: boolean } {
+    const result = this.db
+      .prepare(
+        "INSERT INTO run_commands (project_id, name, command) VALUES (?, ?, ?)",
+      )
+      .run(this.projectId, name, command);
+    return { id: Number(result.lastInsertRowid), name, command, autoStart: false };
+  }
+
+  updateRunCommand(id: number, updates: Partial<{ name: string; command: string; autoStart: boolean }>): void {
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+
+    if (updates.name !== undefined) {
+      setClauses.push("name = ?");
+      values.push(updates.name);
+    }
+    if (updates.command !== undefined) {
+      setClauses.push("command = ?");
+      values.push(updates.command);
+    }
+    if (updates.autoStart !== undefined) {
+      setClauses.push("auto_start = ?");
+      values.push(updates.autoStart ? 1 : 0);
+    }
+
+    if (setClauses.length === 0) return;
+
+    values.push(this.projectId, id);
+    this.db
+      .prepare(
+        `UPDATE run_commands SET ${setClauses.join(", ")} WHERE project_id = ? AND id = ?`,
+      )
+      .run(...values);
+  }
+
+  removeRunCommand(id: number): void {
+    this.db
+      .prepare("DELETE FROM run_commands WHERE project_id = ? AND id = ?")
+      .run(this.projectId, id);
+  }
+
   // ── Lifecycle ────────────────────────────────────────────
 
   close(): void {

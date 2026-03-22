@@ -319,3 +319,97 @@ export const RESTORE_CHECKPOINT = gql`
     restoreCheckpoint(projectId: $projectId, tag: $tag)
   }
 `;
+
+export const GET_RUN_COMMANDS = gql`
+  query GetRunCommands($projectId: ID!) {
+    runCommands(projectId: $projectId) {
+      id
+      name
+      command
+      autoStart
+    }
+  }
+`;
+
+export const GET_DETECTED_COMMANDS = gql`
+  query GetDetectedCommands($projectId: ID!) {
+    detectedCommands(projectId: $projectId) {
+      name
+      command
+      source
+    }
+  }
+`;
+
+export const GET_PROCESSES = gql`
+  query GetProcesses($projectId: ID!) {
+    processes(projectId: $projectId) {
+      id
+      name
+      command
+      pid
+      status
+      startedAt
+      outputLines
+    }
+  }
+`;
+
+export const GET_PROCESS_OUTPUT = gql`
+  query GetProcessOutput($processId: ID!, $lastN: Int) {
+    processOutput(processId: $processId, lastN: $lastN) {
+      lines
+    }
+  }
+`;
+
+export const ADD_RUN_COMMAND = gql`
+  mutation AddRunCommand($projectId: ID!, $name: String!, $command: String!) {
+    addRunCommand(projectId: $projectId, name: $name, command: $command) {
+      id
+      name
+      command
+      autoStart
+    }
+  }
+`;
+
+export const REMOVE_RUN_COMMAND = gql`
+  mutation RemoveRunCommand($projectId: ID!, $commandId: ID!) {
+    removeRunCommand(projectId: $projectId, commandId: $commandId)
+  }
+`;
+
+export const START_PROCESS = gql`
+  mutation StartProcess($projectId: ID!, $commandId: ID!) {
+    startProcess(projectId: $projectId, commandId: $commandId) {
+      id
+      name
+      command
+      pid
+      status
+      startedAt
+      outputLines
+    }
+  }
+`;
+
+export const STOP_PROCESS = gql`
+  mutation StopProcess($processId: ID!) {
+    stopProcess(processId: $processId)
+  }
+`;
+
+export const RESTART_PROCESS = gql`
+  mutation RestartProcess($projectId: ID!, $processId: ID!) {
+    restartProcess(projectId: $projectId, processId: $processId) {
+      id
+      name
+      command
+      pid
+      status
+      startedAt
+      outputLines
+    }
+  }
+`;

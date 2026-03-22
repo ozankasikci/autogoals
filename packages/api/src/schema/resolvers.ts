@@ -16,6 +16,8 @@ import { resolve, join, relative } from "path";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { pubsub, EVENTS } from "../subscriptions/index.js";
 import type { AgentManager } from "../agent-manager/index.js";
+import type { ProcessManager } from "../process-manager/index.js";
+import { detectRunCommands } from "../process-manager/index.js";
 
 function resolvePath(p: string): string {
   if (p.startsWith("~/") || p === "~") {
@@ -201,6 +203,7 @@ export function createResolvers(
   getDb: () => Database.Database,
   getRunningIds: () => Set<string>,
   agentManager?: AgentManager,
+  processManager?: ProcessManager,
 ) {
   return {
     Query: {
@@ -296,6 +299,40 @@ export function createResolvers(
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
         return store.getCheckpoints();
+      },
+
+      runCommands(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.getRunCommands();
+      },
+
+      detectedCommands(_: unknown, args: { projectId: string }) {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+        const resolvedPath = resolvePath(record.path);
+        return detectRunCommands(resolvedPath);
+      },
+
+      processes(_: unknown, args: { projectId: string }) {
+        if (!processManager) return [];
+        return processManager.getProjectProcesses(args.projectId).map((p) => ({
+          id: p.id,
+          name: p.name,
+          command: p.command,
+          pid: p.pid,
+          status: p.status,
+          startedAt: p.startedAt,
+          outputLines: p.output.length,
+        }));
+      },
+
+      processOutput(_: unknown, args: { processId: string; lastN?: number }) {
+        if (!processManager) return { lines: [] };
+        const lines = processManager.getProcessOutput(args.processId, args.lastN ?? undefined);
+        return { lines };
       },
     },
 
@@ -739,6 +776,85 @@ Start by asking your first question about this goal.`,
         } catch (err: any) {
           throw new Error(`Failed to restore: ${err.message}`);
         }
+      },
+
+      addRunCommand(_: unknown, args: { projectId: string; name: string; command: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        return store.addRunCommand(args.name, args.command);
+      },
+
+      updateRunCommand(_: unknown, args: { projectId: string; commandId: string; name?: string; command?: string; autoStart?: boolean }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        const updates: Partial<{ name: string; command: string; autoStart: boolean }> = {};
+        if (args.name !== undefined) updates.name = args.name;
+        if (args.command !== undefined) updates.command = args.command;
+        if (args.autoStart !== undefined) updates.autoStart = args.autoStart;
+        store.updateRunCommand(parseInt(args.commandId, 10), updates);
+        const commands = store.getRunCommands();
+        return commands.find((c) => c.id === parseInt(args.commandId, 10)) ?? null;
+      },
+
+      removeRunCommand(_: unknown, args: { projectId: string; commandId: string }) {
+        const db = getDb();
+        const store = new SQLiteStore(db, args.projectId);
+        store.removeRunCommand(parseInt(args.commandId, 10));
+        return true;
+      },
+
+      startProcess(_: unknown, args: { projectId: string; commandId: string }) {
+        if (!processManager) throw new Error("Process manager not available");
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const store = new SQLiteStore(db, args.projectId);
+        const commands = store.getRunCommands();
+        const cmd = commands.find((c) => c.id === parseInt(args.commandId, 10));
+        if (!cmd) throw new Error("Command not found");
+
+        const resolvedPath = resolvePath(record.path);
+        const processId = `${args.projectId}-cmd-${args.commandId}`;
+        const managed = processManager.startProcess(args.projectId, processId, cmd.name, cmd.command, resolvedPath);
+        return {
+          id: managed.id,
+          name: managed.name,
+          command: managed.command,
+          pid: managed.pid,
+          status: managed.status,
+          startedAt: managed.startedAt,
+          outputLines: managed.output.length,
+        };
+      },
+
+      stopProcess(_: unknown, args: { processId: string }) {
+        if (!processManager) throw new Error("Process manager not available");
+        return processManager.stopProcess(args.processId);
+      },
+
+      restartProcess(_: unknown, args: { projectId: string; processId: string }) {
+        if (!processManager) throw new Error("Process manager not available");
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const record = projectStore.getProject(args.projectId);
+        if (!record) throw new Error("Project not found");
+
+        const existing = processManager.getProcess(args.processId);
+        if (!existing) throw new Error("Process not found");
+
+        const resolvedPath = resolvePath(record.path);
+        const managed = processManager.restartProcess(args.projectId, args.processId, existing.name, existing.command, resolvedPath);
+        return {
+          id: managed.id,
+          name: managed.name,
+          command: managed.command,
+          pid: managed.pid,
+          status: managed.status,
+          startedAt: managed.startedAt,
+          outputLines: managed.output.length,
+        };
       },
     },
 
