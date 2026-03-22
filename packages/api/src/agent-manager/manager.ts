@@ -174,7 +174,13 @@ export class AgentManager {
             "SELECT id, name, description, planning_mode FROM goals WHERE project_id = ? AND id = ?"
           ).get(projectId, draftGoal.id) as any;
 
-          if (draftRow?.planning_mode === "interview") {
+          if (!draftRow?.planning_mode) {
+            // No mode selected yet — wait for user to click Interview or Auto-Plan
+            await this.sleep(POST_WORK_COOLDOWN, projectId);
+            continue;
+          }
+
+          if (draftRow.planning_mode === "interview") {
             // Interview mode — the resolver already sent the interview prompt to chat.
             // The agent will ask questions and the user will reply.
             // When the agent outputs the JSON block, we parse it from chat messages.
