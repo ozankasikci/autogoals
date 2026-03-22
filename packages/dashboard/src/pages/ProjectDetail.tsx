@@ -50,7 +50,6 @@ import {
   ClipboardCheck,
   FileText,
   Terminal,
-  X,
   MoreVertical,
   Loader2,
   Menu,
@@ -302,11 +301,9 @@ function RailButton({
 
 function PanelHeader({
   title,
-  onClose,
   action,
 }: {
   title: string;
-  onClose: () => void;
   action?: React.ReactNode;
 }) {
   return (
@@ -314,12 +311,6 @@ function PanelHeader({
       <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
       <div className="flex items-center gap-2">
         {action}
-        <button
-          onClick={onClose}
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
     </div>
   );
@@ -333,7 +324,7 @@ export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [activePanel, setActivePanel] = useState<PanelTab | null>(null);
+  const [activePanel, setActivePanel] = useState<PanelTab>("goals");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [panelWidth, setPanelWidth] = useState(480);
@@ -391,7 +382,7 @@ export function ProjectDetail() {
   // Auto-close panel (only if it was auto-opened, not manually)
   const autoClosePanel = useCallback(() => {
     if (autoOpenedRef.current) {
-      setActivePanel(null);
+      setActivePanel("goals");
       autoOpenedRef.current = false;
     }
   }, []);
@@ -457,11 +448,8 @@ export function ProjectDetail() {
   });
 
   const togglePanel = useCallback((panel: PanelTab) => {
-    setActivePanel((prev) => {
-      const next = prev === panel ? null : panel;
-      autoOpenedRef.current = false; // user took manual control
-      return next;
-    });
+    setActivePanel(panel);
+    autoOpenedRef.current = false;
     setSelectedGoalId(null);
   }, []);
 
@@ -500,13 +488,8 @@ export function ProjectDetail() {
         toggleSidebar();
       } else if (e.key === "Escape") {
         // If viewing a goal detail, go back to list first
-        setSelectedGoalId((prevGoalId) => {
-          if (prevGoalId !== null) return null;
-          // Only close the panel if we weren't in goal detail
-          setActivePanel(null);
-          autoOpenedRef.current = false;
-          return null;
-        });
+        // Escape only goes back from goal detail, doesn't close panel
+        setSelectedGoalId(null);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -794,11 +777,6 @@ export function ProjectDetail() {
                   {!(activePanel === "goals" && selectedGoalId) && (
                     <PanelHeader
                       title={panelTitles[activePanel]}
-                      onClose={() => {
-                        setActivePanel(null);
-                        setSelectedGoalId(null);
-                        autoOpenedRef.current = false;
-                      }}
                       action={
                         activePanel === "goals" ? (
                           <span className="text-[11px] text-muted-foreground/70 tabular-nums">
@@ -811,21 +789,6 @@ export function ProjectDetail() {
                         ) : null
                       }
                     />
-                  )}
-                  {/* Goal detail header with close button */}
-                  {activePanel === "goals" && selectedGoalId && (
-                    <div className="shrink-0 flex items-center justify-end h-12 px-4 border-b border-border">
-                      <button
-                        onClick={() => {
-                          setActivePanel(null);
-                          setSelectedGoalId(null);
-                          autoOpenedRef.current = false;
-                        }}
-                        className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
                   )}
                   <div className={`flex-1 overflow-y-auto px-4 py-4 ${activePanel === "activity" ? "hidden" : ""}`}>
                     {activePanel === "goals" && !selectedGoalId && (
