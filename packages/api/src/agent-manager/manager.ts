@@ -193,7 +193,9 @@ export class AgentManager {
             let finalResult: { approach?: string; criteria?: string[] } | null = null;
 
             // First prompt: analyze codebase and ask first question
-            const firstPrompt = `You are planning a goal through an interactive interview. You will ask ONE question, then STOP.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nProcess:\n1. Analyze the codebase to understand existing patterns and architecture.\n2. Identify 3-4 key decision areas for this goal.\n3. Ask your FIRST question with 2-3 concrete options (annotated with code patterns when relevant).\n\nRULES:\n- Ask exactly ONE question, then stop.\n- Present options as A) B) C) with brief explanations.\n- Reference existing code files when relevant.\n- Do NOT proceed to the next question. STOP after asking one question.\n- Do NOT generate the final JSON yet.`;
+            const optionsFormat = "Present your options using this EXACT format (a fenced code block with language 'options'):\n\n```options\n{\"mode\": \"single\", \"options\": [{\"id\": \"A\", \"label\": \"Option name\", \"description\": \"Brief explanation\"}]}\n```\n\nThe options block will render as clickable buttons for the user. Use mode \"multi\" if the user can select multiple options.";
+
+            const firstPrompt = `You are planning a goal through an interactive interview. You will ask ONE question, then STOP.\n\nGOAL: ${draftRow.name}\nDESCRIPTION: ${draftRow.description || "none"}\n\nProcess:\n1. Analyze the codebase to understand existing patterns and architecture.\n2. Identify 3-4 key decision areas for this goal.\n3. Ask your FIRST question.\n\n${optionsFormat}\n\nRULES:\n- Ask exactly ONE question, then stop.\n- Reference existing code files in option descriptions when relevant.\n- Do NOT proceed to the next question. STOP after asking one question.\n- Do NOT generate the final criteria JSON yet.`;
 
             let currentPrompt = firstPrompt;
 
@@ -244,9 +246,11 @@ export class AgentManager {
 
               // Build next prompt with conversation history
               const isLastQuestion = questionCount >= MAX_QUESTIONS - 1;
+              const finalJsonInstruction = `Output EXACTLY this JSON:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\``;
+
               currentPrompt = `You are continuing an interview to plan a goal.\n\nGOAL: ${draftRow.name}\n\nCONVERSATION SO FAR:\n${interviewHistory.join("\n\n")}\n\n${isLastQuestion
-                ? `This is your last question. Based on all answers so far, generate the final specification.\n\nOutput EXACTLY this JSON:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\``
-                : `Ask your NEXT question with 2-3 concrete options. Ask exactly ONE question, then STOP.\nIf you have enough information to generate the spec, output the JSON instead:\n\`\`\`json\n{\n  "approach": "Technical approach based on user's decisions",\n  "criteria": ["[ ] criterion 1", "[ ] criterion 2", "[ ] criterion 3"]\n}\n\`\`\``}`;
+                ? `This is your last question. Based on all answers so far, generate the final specification.\n\n${finalJsonInstruction}`
+                : `Ask your NEXT question. Ask exactly ONE question, then STOP.\n\n${optionsFormat}\n\nIf you have enough information to generate the spec, output the JSON instead:\n${finalJsonInstruction}`}`;
             }
 
             // Apply the result

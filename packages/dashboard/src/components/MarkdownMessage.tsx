@@ -2,14 +2,39 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import React, { useState } from "react";
+import { OptionsPicker, parseOptionsBlock } from "./OptionsPicker";
 
 interface MarkdownMessageProps {
   content: string;
+  onSendMessage?: (text: string) => void;
 }
 
-export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: MarkdownMessageProps) {
+export const MarkdownMessage = React.memo(function MarkdownMessage({ content, onSendMessage }: MarkdownMessageProps) {
+  // Check for ```options block
+  const optionsParsed = parseOptionsBlock(content);
+  if (optionsParsed && onSendMessage) {
+    return (
+      <div className="markdown-message">
+        {optionsParsed.before && (
+          <MarkdownContent content={optionsParsed.before} />
+        )}
+        <OptionsPicker data={optionsParsed.data} onSelect={onSendMessage} />
+        {optionsParsed.after && (
+          <MarkdownContent content={optionsParsed.after} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="markdown-message">
+      <MarkdownContent content={content} />
+    </div>
+  );
+});
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -62,9 +87,8 @@ export const MarkdownMessage = React.memo(function MarkdownMessage({ content }: 
       >
         {content}
       </ReactMarkdown>
-    </div>
   );
-});
+}
 
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
   const [copied, setCopied] = useState(false);

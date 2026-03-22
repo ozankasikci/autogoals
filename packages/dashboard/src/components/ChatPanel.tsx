@@ -85,7 +85,7 @@ function ToolUseCard({ tools }: { tools: ToolUseData[] }) {
   );
 }
 
-const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: Message }) {
+const MessageBubble = React.memo(function MessageBubble({ msg, onSendMessage }: { msg: Message; onSendMessage?: (text: string) => void }) {
   return (
     <div
       className={cn(
@@ -107,7 +107,7 @@ const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: Message 
         )}
       >
         {msg.role === "agent" ? (
-          <MarkdownMessage content={msg.content} />
+          <MarkdownMessage content={msg.content} onSendMessage={onSendMessage} />
         ) : (
           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
             {msg.content}
@@ -295,6 +295,23 @@ export function ChatPanel({
     }
   }, []);
 
+  const sendMessageDirect = useCallback(async (content: string) => {
+    if (!content.trim()) return;
+    try {
+      const { data: mutData } = await sendMessage({
+        variables: { projectId, content },
+      });
+      if (mutData?.sendMessage) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === mutData.sendMessage.id)) return prev;
+          return [...prev, { ...mutData.sendMessage, read: true }];
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
+  }, [sendMessage, projectId]);
+
   const handleSend = useCallback(async () => {
     const content = inputValue.trim();
     if (!content || sending) return;
@@ -385,7 +402,7 @@ export function ChatPanel({
                 return <ToolUseCard key={`tg-${item.messages[0].id}`} tools={item.tools} />;
               }
               const msg = item as Message;
-              return <MessageBubble key={msg.id} msg={msg} />;
+              return <MessageBubble key={msg.id} msg={msg} onSendMessage={sendMessageDirect} />;
             })}
             {/* Typing indicator */}
             {agentTyping && (
