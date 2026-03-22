@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_RULES, ADD_RULE, UPDATE_RULE, REMOVE_RULE, GET_PROJECT } from "@/graphql/operations";
 import { X, Pencil } from "lucide-react";
+import { QuickAddCard } from "./QuickAddCard";
 
 interface Rule {
   id: string;
@@ -21,7 +22,6 @@ function RuleRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(rule.content);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const [updateRule] = useMutation(UPDATE_RULE, {
     refetchQueries: [
@@ -63,11 +63,14 @@ function RuleRow({
     <div className="group rounded-lg border border-border bg-card hover:bg-accent/30 transition-all duration-150">
       <div className="flex items-start gap-2.5 px-3 py-3">
         {editing ? (
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-sm text-foreground outline-none border-b border-primary/40 py-0.5"
+          <textarea
+            className="flex-1 bg-transparent text-sm text-foreground outline-none border-b border-primary/40 py-0.5 resize-none min-h-[40px]"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 150) + "px";
+            }}
             onBlur={save}
             onKeyDown={handleKeyDown}
             autoFocus
@@ -104,8 +107,6 @@ function RuleRow({
 }
 
 export function RulesPanel({ projectId }: RulesPanelProps) {
-  const [newRule, setNewRule] = useState("");
-
   const { data, loading } = useQuery<{ rules: Rule[] }>(GET_RULES, {
     variables: { projectId },
   });
@@ -116,20 +117,6 @@ export function RulesPanel({ projectId }: RulesPanelProps) {
       { query: GET_PROJECT, variables: { id: projectId } },
     ],
   });
-
-  function handleAdd() {
-    const trimmed = newRule.trim();
-    if (!trimmed) return;
-    addRule({ variables: { projectId, content: trimmed } });
-    setNewRule("");
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAdd();
-    }
-  }
 
   const rules = data?.rules ?? [];
 
@@ -151,15 +138,13 @@ export function RulesPanel({ projectId }: RulesPanelProps) {
         <RuleRow key={rule.id} rule={rule} projectId={projectId} />
       ))}
 
-      <div className="rounded-lg border border-dashed border-border bg-card/50 hover:border-border transition-colors">
-        <input
-          className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none py-3 px-3 transition-colors"
-          placeholder="Add a rule..."
-          value={newRule}
-          onChange={(e) => setNewRule(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-      </div>
+      <QuickAddCard
+        placeholder="Add a rule... What should the agent always follow?"
+        buttonLabel="Add Rule"
+        onAdd={(value) => {
+          addRule({ variables: { projectId, content: value } });
+        }}
+      />
     </div>
   );
 }

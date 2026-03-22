@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCost } from "@/lib/utils";
 import { UPDATE_GOAL, ADD_GOAL, REMOVE_GOAL, GET_PROJECT } from "@/graphql/operations";
 import { Plus, X, Pencil, Trash2, CheckCircle2, Undo2, ChevronRight } from "lucide-react";
+import { QuickAddCard } from "./QuickAddCard";
 
 const GOAL_STATUSES = ["pending", "active", "verifying", "done", "failed", "skipped", "regressed", "achieved"];
 
@@ -119,7 +120,6 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<GoalFormState | null>(null);
   const [addingGoal, setAddingGoal] = useState(false);
-  const [newGoalName, setNewGoalName] = useState("");
   const [newGoalForm, setNewGoalForm] = useState<GoalFormState>({
     name: "",
     description: "",
@@ -127,7 +127,6 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
     acceptanceCriteria: [""],
     dependsOn: "",
   });
-  const addInputRef = useRef<HTMLInputElement>(null);
 
   const refetchOpts = {
     refetchQueries: [{ query: GET_PROJECT, variables: { id: projectId } }],
@@ -137,12 +136,6 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
   const [addGoal, { loading: addingGoalMut }] = useMutation(ADD_GOAL, refetchOpts);
   const [removeGoal, { loading: removingGoal }] = useMutation(REMOVE_GOAL, refetchOpts);
 
-  // Focus the quick-add input when it appears
-  useEffect(() => {
-    if (addingGoal && compact && addInputRef.current) {
-      addInputRef.current.focus();
-    }
-  }, [addingGoal, compact]);
 
   function startEditing(goal: Goal) {
     setEditingId(goal.id);
@@ -181,21 +174,6 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
     setEditForm(null);
   }
 
-  async function handleQuickAddGoal() {
-    const trimmed = newGoalName.trim();
-    if (!trimmed) return;
-    await addGoal({
-      variables: {
-        projectId,
-        name: trimmed,
-        description: "",
-        acceptanceCriteria: [],
-        dependsOn: [],
-      },
-    });
-    setNewGoalName("");
-    setAddingGoal(false);
-  }
 
   async function handleAddGoal() {
     const depArray = newGoalForm.dependsOn
@@ -390,43 +368,22 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
         )}
 
         {/* Quick-add goal */}
-        {addingGoal ? (
-          <div className="mt-1 px-2.5 py-1.5">
-            <input
-              ref={addInputRef}
-              type="text"
-              value={newGoalName}
-              onChange={(e) => setNewGoalName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleQuickAddGoal();
-                }
-                if (e.key === "Escape") {
-                  setAddingGoal(false);
-                  setNewGoalName("");
-                }
-              }}
-              onBlur={() => {
-                if (!newGoalName.trim()) {
-                  setAddingGoal(false);
-                  setNewGoalName("");
-                }
-              }}
-              placeholder="Goal name... (Enter to add)"
-              disabled={addingGoalMut}
-              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/40 outline-none border-b border-border focus:border-primary/40 pb-1.5 transition-colors"
-            />
-          </div>
-        ) : (
-          <button
-            onClick={() => setAddingGoal(true)}
-            className="w-full flex items-center gap-1.5 text-sm text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2 px-2.5 mt-1"
-          >
-            <Plus className="h-3 w-3" />
-            <span>Add Goal</span>
-          </button>
-        )}
+        <QuickAddCard
+          placeholder="Describe a goal... What should the agent work on?"
+          buttonLabel="Add Goal"
+          onAdd={(value) => {
+            addGoal({
+              variables: {
+                projectId,
+                name: value,
+                description: "",
+                acceptanceCriteria: [],
+                dependsOn: [],
+              },
+            });
+          }}
+          disabled={addingGoalMut}
+        />
       </div>
     );
   }
