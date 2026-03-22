@@ -1,4 +1,4 @@
-import { AgentSession, SQLiteStore, type AgentEvent } from "@small-singularity/core";
+import { AgentSession, SQLiteStore, SQLiteProjectStore, type AgentEvent } from "@small-singularity/core";
 import type Database from "better-sqlite3";
 import { basename, join } from "path";
 import { writeFileSync, unlinkSync } from "fs";
@@ -26,6 +26,7 @@ export class AgentManager {
   private sessions = new Map<string, AgentSession>();
   private activeGoals = new Map<string, string>(); // projectId → goalId
   private lastVerified = new Map<string, number>(); // goalId → timestamp
+  private wakeResolvers = new Map<string, () => void>(); // projectId → wake callback
   private getDb: () => Database.Database;
 
   constructor(getDb: () => Database.Database) {
@@ -58,6 +59,12 @@ export class AgentManager {
   // Stop the continuous loop
   stop(projectId: string): void {
     this.loops.delete(projectId);
+    // Wake from sleep so the loop exits immediately
+    const wakeResolver = this.wakeResolvers.get(projectId);
+    if (wakeResolver) {
+      wakeResolver();
+      this.wakeResolvers.delete(projectId);
+    }
     const session = this.sessions.get(projectId);
     if (session) {
       session.close();
@@ -78,6 +85,15 @@ export class AgentManager {
 
   getRunningIds(): Set<string> {
     return new Set(this.loops.keys());
+  }
+
+  // Wake a sleeping agent so it immediately checks for work
+  wake(projectId: string): void {
+    const resolver = this.wakeResolvers.get(projectId);
+    if (resolver) {
+      resolver();
+      this.wakeResolvers.delete(projectId);
+    }
   }
 
   // Push a message to the active session, or store for next pickup
@@ -386,10 +402,11 @@ export class AgentManager {
         // --- Phase D: Check rules (with cooldown) ---
         const rulesKey = `rules:${projectId}`;
         const lastRulesCheck = this.lastVerified.get(rulesKey) ?? 0;
-        const rules = store.getRules();
-        if (rules.length > 0 && (now - lastRulesCheck) > VERIFY_COOLDOWN) {
+        const pStore = new SQLiteProjectStore(db);
+        const allRules = [...pStore.getGlobalRules(), ...store.getRules()];
+        if (allRules.length > 0 && (now - lastRulesCheck) > VERIFY_COOLDOWN) {
           this.lastVerified.set(rulesKey, Date.now());
-          const rulesText = rules.map(r => `- ${r.content}`).join("\n");
+          const rulesText = allRules.map(r => `- ${r.content}`).join("\n");
           this.publishLogEvent(projectId, "info", "Checking rules compliance...");
 
           const rulesPrompt = `Check if these project rules are being followed. Do NOT make changes \u2014 only check.\n\nRULES:\n${rulesText}\n\nScan the codebase. Respond with:\n- ALL_CLEAR: if all rules are followed\n- VIOLATION: [rule] [details] if any rule is broken`;
@@ -442,12 +459,20 @@ export class AgentManager {
     const db = this.getDb();
     const store = new SQLiteStore(db, projectId);
 
-    // Build system prompt with rules
-    const rules = store.getRules();
+    // Build system prompt with rules (global + project)
+    const projectStore = new SQLiteProjectStore(db);
+    const globalRules = projectStore.getGlobalRules();
+    const projectRules = store.getRules();
     let systemPrompt = systemPromptBase;
-    if (rules.length > 0) {
+    if (globalRules.length > 0 || projectRules.length > 0) {
       systemPrompt += `\n\nRULES (you MUST follow ALL of these):\n`;
-      systemPrompt += rules.map(r => `- ${r.content}`).join("\n");
+      if (globalRules.length > 0) {
+        systemPrompt += globalRules.map(r => `- ${r.content}`).join("\n");
+      }
+      if (projectRules.length > 0) {
+        if (globalRules.length > 0) systemPrompt += "\n";
+        systemPrompt += projectRules.map(r => `- ${r.content}`).join("\n");
+      }
       systemPrompt += `\n\nYou must comply with ALL rules above. If a goal conflicts with a rule, the rule wins.`;
     }
 
@@ -549,17 +574,17 @@ export class AgentManager {
     return { text: lastText, costUsd: totalCost };
   }
 
-  // Sleep that can be interrupted by stop()
+  // Sleep that can be interrupted by stop() or wake()
   private sleep(ms: number, projectId: string): Promise<void> {
     return new Promise(resolve => {
-      const timer = setTimeout(resolve, ms);
-      const check = setInterval(() => {
-        if (!this.loops.has(projectId)) {
-          clearTimeout(timer);
-          clearInterval(check);
-          resolve();
-        }
-      }, 1000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.wakeResolvers.delete(projectId);
+        resolve();
+      };
+      const timer = setTimeout(cleanup, ms);
+      // Register wake callback so wake() can interrupt
+      this.wakeResolvers.set(projectId, cleanup);
     });
   }
 }

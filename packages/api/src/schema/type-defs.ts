@@ -155,6 +155,7 @@ export const typeDefs = `#graphql
     detectedEnvVars(projectId: ID!): [DetectedEnvVar!]!
     runningPorts(projectId: ID!): [RunningPort!]!
     goalScreenshots(projectId: ID!, goalId: ID!): [GoalScreenshot!]!
+    globalRules: [Rule!]!
   }
 
   type Mutation {
@@ -190,6 +191,9 @@ export const typeDefs = `#graphql
     killPort(port: Int!): Boolean!
     removeGoalScreenshot(projectId: ID!, screenshotId: ID!): Boolean!
     autoSetupProject(projectId: ID!): Boolean!
+    addGlobalRule(content: String!): Rule!
+    updateGlobalRule(ruleId: ID!, content: String!): Rule!
+    removeGlobalRule(ruleId: ID!): Boolean!
   }
 
   type Subscription {

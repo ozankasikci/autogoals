@@ -205,6 +205,31 @@ export function createResolvers(
   agentManager?: AgentManager,
   processManager?: ProcessManager,
 ) {
+  function buildCombinedRulesText(db: Database.Database, projectId: string): string {
+    const projectStore = new SQLiteProjectStore(db);
+    const globalRules = projectStore.getGlobalRules();
+    const store = new SQLiteStore(db, projectId);
+    const projectRules = store.getRules();
+    const all = [...globalRules, ...projectRules];
+    if (all.length === 0) return "(no rules)";
+    return all.map(r => `- ${r.content}`).join("\n");
+  }
+
+  function notifyAgentRulesChanged(db: Database.Database, projectId: string) {
+    if (!agentManager?.isRunning(projectId)) return;
+    try {
+      const rulesText = buildCombinedRulesText(db, projectId);
+      agentManager.sendMessage(projectId, `[System] Rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
+    } catch {}
+  }
+
+  function notifyAllAgentsRulesChanged(db: Database.Database) {
+    if (!agentManager) return;
+    for (const projectId of agentManager.getRunningIds()) {
+      notifyAgentRulesChanged(db, projectId);
+    }
+  }
+
   return {
     Query: {
       projects(): ProjectView[] {
@@ -364,6 +389,12 @@ export function createResolvers(
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
         return store.getGoalScreenshots(args.goalId);
+      },
+
+      globalRules() {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        return projectStore.getGlobalRules();
       },
     },
 
@@ -580,6 +611,12 @@ export function createResolvers(
               `[System] Goal '${goalRow?.name ?? args.goalId}' was updated by the user. ${statusMsg}`,
             );
           } catch {}
+
+          // Wake agent from sleep if goal moved to an actionable state
+          const actionable = ["pending", "ready", "regressed", "draft"];
+          if (updates.status && actionable.includes(updates.status as string)) {
+            agentManager.wake(args.projectId);
+          }
         }
 
         return getGoalView(db, args.projectId, args.goalId)!;
@@ -616,6 +653,7 @@ export function createResolvers(
               `[System] The user added a new goal '${args.name}'. Please take note of the changes.`,
             );
           } catch {}
+          agentManager.wake(args.projectId);
         }
 
         return getGoalView(db, args.projectId, id)!;
@@ -675,17 +713,17 @@ Start by asking your first question about this goal.`,
         const newStatus = args.startImmediately ? "pending" : "ready";
         store.updateGoal(args.goalId, { status: newStatus });
 
-        // If startImmediately and agent is running, tell it to start
-        if (args.startImmediately && agentManager?.isRunning(args.projectId)) {
+        if (agentManager?.isRunning(args.projectId)) {
           const row = db
             .prepare("SELECT name, description, approach FROM goals WHERE project_id = ? AND id = ?")
             .get(args.projectId, args.goalId) as { name: string; description: string; approach: string | null } | undefined;
           if (row) {
             agentManager.sendMessage(
               args.projectId,
-              `[System] Goal "${row.name}" has been approved. Approach: ${row.approach || row.description}. Begin implementation now.`,
+              `[System] Goal "${row.name}" has been approved${args.startImmediately ? " — begin implementation now" : ""}. Approach: ${row.approach || row.description}.`,
             );
           }
+          agentManager.wake(args.projectId);
         }
 
         const goalViews = getGoalViews(db, args.projectId);
@@ -719,15 +757,7 @@ Start by asking your first question about this goal.`,
         const db = getDb();
         const store = new SQLiteStore(db, args.projectId);
         const rule = store.addRule(args.content);
-
-        if (agentManager?.isRunning(args.projectId)) {
-          try {
-            const allRules = store.getRules();
-            const rulesText = allRules.map(r => `- ${r.content}`).join("\n");
-            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
-          } catch {}
-        }
-
+        notifyAgentRulesChanged(db, args.projectId);
         return rule;
       },
 
@@ -739,15 +769,7 @@ Start by asking your first question about this goal.`,
         const store = new SQLiteStore(db, args.projectId);
         const ruleId = parseInt(args.ruleId, 10);
         store.updateRule(ruleId, args.content);
-
-        if (agentManager?.isRunning(args.projectId)) {
-          try {
-            const allRules = store.getRules();
-            const rulesText = allRules.map(r => `- ${r.content}`).join("\n");
-            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
-          } catch {}
-        }
-
+        notifyAgentRulesChanged(db, args.projectId);
         return { id: ruleId, content: args.content };
       },
 
@@ -759,17 +781,7 @@ Start by asking your first question about this goal.`,
         const store = new SQLiteStore(db, args.projectId);
         const ruleId = parseInt(args.ruleId, 10);
         store.removeRule(ruleId);
-
-        if (agentManager?.isRunning(args.projectId)) {
-          try {
-            const allRules = store.getRules();
-            const rulesText = allRules.length > 0
-              ? allRules.map(r => `- ${r.content}`).join("\n")
-              : "(no rules)";
-            agentManager.sendMessage(args.projectId, `[System] Project rules have been updated. Current rules:\n${rulesText}\n\nYou MUST follow all of these.`);
-          } catch {}
-        }
-
+        notifyAgentRulesChanged(db, args.projectId);
         return true;
       },
 
@@ -1029,6 +1041,8 @@ Start by asking your first question about this goal.`,
 
 Look at package.json, Makefile, docker-compose.yml, README, and any config files.
 
+IMPORTANT: Only suggest commands that are specific to THIS project. Do NOT suggest generic HTTP servers (python -m http.server, npx http-server, php -S localhost, etc.) if the project has its own dev server or start scripts (e.g. npm run dev, npm start, next dev, vite, etc.). Only suggest generic servers if the project has no other way to serve files.
+
 Respond with EXACTLY this JSON format and nothing else:
 \`\`\`json
 {
@@ -1081,6 +1095,31 @@ Respond with EXACTLY this JSON format and nothing else:
           } catch {}
         }
 
+        return true;
+      },
+
+      addGlobalRule(_: unknown, args: { content: string }): RuleView {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const rule = projectStore.addGlobalRule(args.content);
+        notifyAllAgentsRulesChanged(db);
+        return rule;
+      },
+
+      updateGlobalRule(_: unknown, args: { ruleId: string; content: string }): RuleView {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        const id = parseInt(args.ruleId, 10);
+        projectStore.updateGlobalRule(id, args.content);
+        notifyAllAgentsRulesChanged(db);
+        return { id, content: args.content };
+      },
+
+      removeGlobalRule(_: unknown, args: { ruleId: string }): boolean {
+        const db = getDb();
+        const projectStore = new SQLiteProjectStore(db);
+        projectStore.removeGlobalRule(parseInt(args.ruleId, 10));
+        notifyAllAgentsRulesChanged(db);
         return true;
       },
     },

@@ -412,19 +412,11 @@ function FileViewer({
             />
           </div>
         ) : (
-          <div className="flex min-h-full">
-            {/* Line numbers */}
-            <div className="select-none py-2 pl-2 pr-3 text-right border-r border-border/50 shrink-0">
-              {lines.map((_, i) => (
-                <div
-                  key={i}
-                  className="text-[11px] leading-[1.6] font-mono text-muted-foreground/40 h-[18px]"
-                >
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-            <pre className="flex-1 p-2 overflow-x-auto m-0">
+          <div className="flex" style={{ tabSize: 2 }}>
+            <pre className="m-0 py-2 pl-2 pr-3 text-right border-r border-border/50 select-none shrink-0 text-[13px] leading-[1.6] font-mono text-muted-foreground/40"
+              aria-hidden="true"
+            >{lines.map((_, i) => `${i + 1}`).join("\n")}</pre>
+            <pre className="m-0 py-2 pl-2 pr-2 overflow-x-auto flex-1 min-w-0">
               <code
                 ref={codeRef}
                 className={`text-[13px] leading-[1.6] font-mono ${language ? `language-${language}` : ""}`}
@@ -459,57 +451,51 @@ export function FileTree({ projectId }: FileTreeProps) {
     setViewingFile(null);
   }, []);
 
-  // File view mode
-  if (viewingFile) {
-    return (
-      <FileViewer
-        projectId={projectId}
-        filePath={viewingFile}
-        onBack={handleBack}
-      />
-    );
-  }
-
-  // Tree mode
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Loading files...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-sm text-red-400 py-4">
-        Failed to load file tree: {error.message}
-      </div>
-    );
-  }
-
   const nodes = data?.fileTree ?? [];
 
-  if (nodes.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground py-4 text-center">
-        No files found in project directory.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-0.5">
-      {nodes.map((node) => (
-        <TreeNode
-          key={node.path}
-          node={node}
-          level={0}
-          selectedPath={selectedPath}
-          onSelect={handleFileSelect}
+    <div className="flex flex-col h-full min-h-0">
+      {/* File viewer — shown on top when a file is selected */}
+      {viewingFile && (
+        <FileViewer
           projectId={projectId}
+          filePath={viewingFile}
+          onBack={handleBack}
         />
-      ))}
+      )}
+
+      {/* Tree — always mounted to preserve expanded state, hidden when viewing a file */}
+      <div className={viewingFile ? "hidden" : "space-y-0.5"}>
+        {loading && (
+          <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Loading files...</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-sm text-red-400 py-4">
+            Failed to load file tree: {error.message}
+          </div>
+        )}
+
+        {!loading && !error && nodes.length === 0 && (
+          <div className="text-sm text-muted-foreground py-4 text-center">
+            No files found in project directory.
+          </div>
+        )}
+
+        {!loading && !error && nodes.map((node) => (
+          <TreeNode
+            key={node.path}
+            node={node}
+            level={0}
+            selectedPath={selectedPath}
+            onSelect={handleFileSelect}
+            projectId={projectId}
+          />
+        ))}
+      </div>
     </div>
   );
 }

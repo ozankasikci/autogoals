@@ -380,6 +380,17 @@ export const REMOVE_RUN_COMMAND = gql`
   }
 `;
 
+export const UPDATE_RUN_COMMAND = gql`
+  mutation UpdateRunCommand($projectId: ID!, $commandId: ID!, $name: String, $command: String) {
+    updateRunCommand(projectId: $projectId, commandId: $commandId, name: $name, command: $command) {
+      id
+      name
+      command
+      autoStart
+    }
+  }
+`;
+
 export const START_PROCESS = gql`
   mutation StartProcess($projectId: ID!, $commandId: ID!) {
     startProcess(projectId: $projectId, commandId: $commandId) {
@@ -503,5 +514,29 @@ export const REMOVE_GOAL_SCREENSHOT = gql`
 export const AUTO_SETUP_PROJECT = gql`
   mutation AutoSetupProject($projectId: ID!) {
     autoSetupProject(projectId: $projectId)
+  }
+`;
+
+export const GET_GLOBAL_RULES = gql`
+  query GetGlobalRules {
+    globalRules { id content }
+  }
+`;
+
+export const ADD_GLOBAL_RULE = gql`
+  mutation AddGlobalRule($content: String!) {
+    addGlobalRule(content: $content) { id content }
+  }
+`;
+
+export const UPDATE_GLOBAL_RULE = gql`
+  mutation UpdateGlobalRule($ruleId: ID!, $content: String!) {
+    updateGlobalRule(ruleId: $ruleId, content: $content) { id content }
+  }
+`;
+
+export const REMOVE_GLOBAL_RULE = gql`
+  mutation RemoveGlobalRule($ruleId: ID!) {
+    removeGlobalRule(ruleId: $ruleId)
   }
 `;

@@ -7,6 +7,7 @@ import {
   GET_PROCESS_OUTPUT,
   ADD_RUN_COMMAND,
   REMOVE_RUN_COMMAND,
+  UPDATE_RUN_COMMAND,
   START_PROCESS,
   START_DETECTED_PROCESS,
   STOP_PROCESS,
@@ -81,6 +82,120 @@ interface RunningPort {
   pid: number;
   port: number;
   command: string;
+}
+
+function SavedCommandRow({
+  cmd,
+  projectId,
+  setupMode,
+  starting,
+  isRunning,
+  onStart,
+  onRemove,
+  onRefetch,
+}: {
+  cmd: RunCommand;
+  projectId: string;
+  setupMode: boolean;
+  starting: boolean;
+  isRunning: boolean;
+  onStart: () => void;
+  onRemove: () => void;
+  onRefetch: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(cmd.name);
+  const [editCommand, setEditCommand] = useState(cmd.command);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  const [updateCmd] = useMutation(UPDATE_RUN_COMMAND, {
+    onCompleted: () => onRefetch(),
+  });
+
+  useEffect(() => {
+    setEditName(cmd.name);
+    setEditCommand(cmd.command);
+  }, [cmd.name, cmd.command]);
+
+  useEffect(() => {
+    if (editing) nameRef.current?.focus();
+  }, [editing]);
+
+  function save() {
+    const n = editName.trim();
+    const c = editCommand.trim();
+    if (n && c && (n !== cmd.name || c !== cmd.command)) {
+      updateCmd({ variables: { projectId, commandId: cmd.id, name: n, command: c } });
+    } else {
+      setEditName(cmd.name);
+      setEditCommand(cmd.command);
+    }
+    setEditing(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    if (e.key === "Escape") { setEditName(cmd.name); setEditCommand(cmd.command); setEditing(false); }
+  }
+
+  if (setupMode) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border bg-primary/10 text-primary/70 border-primary/20 shrink-0">
+          <Terminal className="h-3 w-3" />
+          saved
+        </span>
+        <div className="flex-1 min-w-0">
+          <input
+            ref={nameRef}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={save}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-transparent text-sm text-foreground outline-none"
+            placeholder="Name"
+          />
+          <input
+            value={editCommand}
+            onChange={(e) => setEditCommand(e.target.value)}
+            onBlur={save}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-transparent text-[11px] font-mono text-muted-foreground/50 outline-none"
+            placeholder="Command"
+          />
+        </div>
+        <button
+          onClick={onRemove}
+          className="h-5 w-5 flex items-center justify-center rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+        >
+          <Trash2 className="h-2.5 w-2.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border bg-primary/10 text-primary/70 border-primary/20">
+        <Terminal className="h-3 w-3" />
+        saved
+      </span>
+      <span
+        className="text-sm text-muted-foreground truncate flex-1"
+        title={cmd.command}
+      >
+        {cmd.name}
+      </span>
+      <button
+        onClick={onStart}
+        disabled={starting || isRunning}
+        className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-30"
+        title={isRunning ? "Already running" : "Start"}
+      >
+        <Play className="h-2.5 w-2.5" />
+      </button>
+    </div>
+  );
 }
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
@@ -236,20 +351,25 @@ function ProcessCard({
     pollInterval: 5000,
   });
   const detectedPort = React.useMemo(() => {
-    if (!outputData?.processOutput?.lines) return null;
-    for (const line of outputData.processOutput.lines) {
-      // Match localhost:PORT, 127.0.0.1:PORT, 0.0.0.0:PORT
-      const urlMatch = line.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/);
-      if (urlMatch) return urlMatch[1];
-      // Match "port XXXX" or "PORT=XXXX" or ":XXXX"
-      const portMatch = line.match(/(?:port|PORT)[=:\s]+(\d{4,5})/i);
-      if (portMatch) return portMatch[1];
-      // Match "listening on XXXX"
-      const listenMatch = line.match(/listening\s+on\s+(?:.*:)?(\d{4,5})/i);
-      if (listenMatch) return listenMatch[1];
+    // First try to detect from process output
+    if (outputData?.processOutput?.lines) {
+      for (const line of outputData.processOutput.lines) {
+        // Match localhost:PORT, 127.0.0.1:PORT, 0.0.0.0:PORT
+        const urlMatch = line.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/);
+        if (urlMatch) return urlMatch[1];
+        // Match "port XXXX" or "PORT=XXXX" or ":XXXX"
+        const portMatch = line.match(/(?:port|PORT)[=:\s]+(\d{4,5})/i);
+        if (portMatch) return portMatch[1];
+        // Match "listening on XXXX"
+        const listenMatch = line.match(/listening\s+on\s+(?:.*:)?(\d{4,5})/i);
+        if (listenMatch) return listenMatch[1];
+      }
     }
+    // Fallback: extract port from command (e.g. "-p 8000", "--port 3000")
+    const cmdMatch = process.command.match(/(?:-p|--port)\s+(\d{2,5})/);
+    if (cmdMatch) return cmdMatch[1];
     return null;
-  }, [outputData]);
+  }, [outputData, process.command]);
 
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -490,10 +610,19 @@ export function RunPanel({ projectId }: RunPanelProps) {
         </div>
       )}
 
-      {/* Detected Servers — exclude PIDs already managed by our processes */}
+      {/* Detected Servers — exclude ports managed by our processes */}
       {(() => {
         const managedPids = new Set(processes.filter(p => p.pid).map(p => p.pid));
-        const filteredPorts = runningPorts.filter(rp => !managedPids.has(rp.pid));
+        // Also extract ports from managed process commands (e.g. "-p 8000", "--port 3000")
+        const managedPorts = new Set<number>();
+        for (const proc of processes) {
+          if (proc.status !== "running") continue;
+          const portMatch = proc.command.match(/(?:-p|--port)\s+(\d{2,5})/);
+          if (portMatch) managedPorts.add(parseInt(portMatch[1], 10));
+        }
+        const filteredPorts = runningPorts.filter(rp =>
+          !managedPids.has(rp.pid) && !managedPorts.has(rp.port)
+        );
         return filteredPorts.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -520,6 +649,15 @@ export function RunPanel({ projectId }: RunPanelProps) {
                 <span className="text-xs text-muted-foreground font-mono truncate flex-1" title={rp.command}>
                   {rp.command.length > 60 ? rp.command.slice(0, 60) + "..." : rp.command}
                 </span>
+                <a
+                  href={`http://localhost:${rp.port}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-6 w-6 flex items-center justify-center rounded text-primary/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                  title={`Open localhost:${rp.port}`}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
                 <button
                   onClick={() => killPort({ variables: { port: rp.port } })}
                   className="h-6 w-6 flex items-center justify-center rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -534,8 +672,8 @@ export function RunPanel({ projectId }: RunPanelProps) {
       );
       })()}
 
-      {/* Saved Commands */}
-      {savedCommands.length > 0 && (
+      {/* Commands — saved + detected, unified compact layout */}
+      {(savedCommands.length > 0 || detectedCommands.length > 0) && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -553,40 +691,50 @@ export function RunPanel({ projectId }: RunPanelProps) {
               <Settings className="h-3 w-3" />
             </button>
           </div>
-          <div className="space-y-1.5">
-            {savedCommands.map((cmd) => {
+          <div className="space-y-1">
+            {/* Saved commands */}
+            {savedCommands.map((cmd) => (
+              <SavedCommandRow
+                key={cmd.id}
+                cmd={cmd}
+                projectId={projectId}
+                setupMode={setupMode}
+                starting={starting}
+                isRunning={runningProcessIds.has(cmd.command)}
+                onStart={() => handleStartSaved(cmd)}
+                onRemove={() => removeRunCommand({ variables: { projectId, commandId: cmd.id } })}
+                onRefetch={() => refetchCmds()}
+              />
+            ))}
+            {/* Detected commands */}
+            {detectedCommands
+              .filter((cmd) => !savedCommands.some((s) => s.command === cmd.command))
+              .map((cmd, i) => {
               const isRunning = runningProcessIds.has(cmd.command);
               return (
                 <div
-                  key={cmd.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card/50 hover:bg-card transition-colors"
+                  key={`${cmd.source}-${i}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted/30 transition-colors"
                 >
-                  <Terminal className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate">{cmd.name}</div>
-                    <div className="text-[11px] text-muted-foreground/50 font-mono truncate">
-                      {cmd.command}
-                    </div>
-                  </div>
-                  {setupMode ? (
-                    <button
-                      onClick={() =>
-                        removeRunCommand({ variables: { projectId, commandId: cmd.id } })
-                      }
-                      className="h-6 w-6 flex items-center justify-center rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleStartSaved(cmd)}
-                      disabled={starting || isRunning}
-                      className="h-6 w-6 flex items-center justify-center rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors disabled:opacity-30"
-                      title={isRunning ? "Already running" : "Start"}
-                    >
-                      <Play className="h-3 w-3" />
-                    </button>
-                  )}
+                  <span
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                      SOURCE_COLORS[cmd.source] ?? "bg-muted text-muted-foreground border-border"
+                    }`}
+                  >
+                    {SOURCE_ICONS[cmd.source] ?? <FileCode className="h-3 w-3" />}
+                    {cmd.source}
+                  </span>
+                  <span className="text-sm text-muted-foreground truncate flex-1">
+                    {cmd.name}
+                  </span>
+                  <button
+                    onClick={() => handleStartDetected(cmd)}
+                    disabled={starting || isRunning}
+                    className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-30"
+                    title={isRunning ? "Already running" : "Start"}
+                  >
+                    <Play className="h-2.5 w-2.5" />
+                  </button>
                 </div>
               );
             })}
@@ -623,49 +771,6 @@ export function RunPanel({ projectId }: RunPanelProps) {
             <Plus className="h-3 w-3" />
             Add
           </button>
-        </div>
-      )}
-
-      {/* Detected Commands */}
-      {detectedCommands.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Detected
-          </h3>
-          <div className="space-y-1">
-            {detectedCommands.map((cmd, i) => {
-              const isRunning = runningProcessIds.has(cmd.command);
-              const isSaved = savedCommands.some((s) => s.command === cmd.command);
-              return (
-                <div
-                  key={`${cmd.source}-${i}`}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted/30 transition-colors"
-                >
-                  <span
-                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                      SOURCE_COLORS[cmd.source] ?? "bg-muted text-muted-foreground border-border"
-                    }`}
-                  >
-                    {SOURCE_ICONS[cmd.source] ?? <FileCode className="h-3 w-3" />}
-                    {cmd.source}
-                  </span>
-                  <span className="text-sm text-muted-foreground truncate flex-1">
-                    {cmd.name}
-                  </span>
-                  {!isSaved && (
-                    <button
-                      onClick={() => handleStartDetected(cmd)}
-                      disabled={starting || isRunning}
-                      className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-30"
-                      title={isRunning ? "Already running" : "Start"}
-                    >
-                      <Play className="h-2.5 w-2.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 

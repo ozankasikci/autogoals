@@ -38,6 +38,17 @@ export function Layout() {
             >
               Projects
             </Link>
+            <Link
+              to="/rules"
+              className={cn(
+                "px-3 py-1.5 text-sm rounded-md transition-colors",
+                location.pathname === "/rules"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Rules
+            </Link>
           </nav>
         </div>
       </header>

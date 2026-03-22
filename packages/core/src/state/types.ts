@@ -104,5 +104,12 @@ export interface ProjectStore {
   getProject(id: string): ProjectRecord | null;
   getProjectByPath(path: string): ProjectRecord | null;
   deleteProject(id: string): boolean;
+
+  // Global rules
+  getGlobalRules(): { id: number; content: string }[];
+  addGlobalRule(content: string): { id: number; content: string };
+  updateGlobalRule(id: number, content: string): void;
+  removeGlobalRule(id: number): void;
+
   close(): void;
 }

@@ -85,6 +85,32 @@ export class SQLiteProjectStore implements ProjectStore {
     return result.changes > 0;
   }
 
+  // Global rules
+  getGlobalRules(): { id: number; content: string }[] {
+    return this.db
+      .prepare("SELECT id, content FROM global_rules ORDER BY id ASC")
+      .all() as { id: number; content: string }[];
+  }
+
+  addGlobalRule(content: string): { id: number; content: string } {
+    const result = this.db
+      .prepare("INSERT INTO global_rules (content) VALUES (?)")
+      .run(content);
+    return { id: Number(result.lastInsertRowid), content };
+  }
+
+  updateGlobalRule(id: number, content: string): void {
+    this.db
+      .prepare("UPDATE global_rules SET content = ? WHERE id = ?")
+      .run(content, id);
+  }
+
+  removeGlobalRule(id: number): void {
+    this.db
+      .prepare("DELETE FROM global_rules WHERE id = ?")
+      .run(id);
+  }
+
   close(): void {
     this.db.close();
   }
