@@ -481,19 +481,22 @@ export function RunPanel({ projectId }: RunPanelProps) {
         </div>
       )}
 
-      {/* Detected Servers */}
-      {runningPorts.length > 0 && (
+      {/* Detected Servers — exclude PIDs already managed by our processes */}
+      {(() => {
+        const managedPids = new Set(processes.filter(p => p.pid).map(p => p.pid));
+        const filteredPorts = runningPorts.filter(rp => !managedPids.has(rp.pid));
+        return filteredPorts.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Detected Servers
             </h3>
             <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-              {runningPorts.length} port{runningPorts.length !== 1 ? "s" : ""}
+              {filteredPorts.length} port{filteredPorts.length !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="space-y-1.5">
-            {runningPorts.map((rp) => (
+            {filteredPorts.map((rp) => (
               <div
                 key={rp.port}
                 className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card/50"
@@ -519,7 +522,8 @@ export function RunPanel({ projectId }: RunPanelProps) {
             ))}
           </div>
         </div>
-      )}
+      );
+      })()}
 
       {/* Saved Commands */}
       {savedCommands.length > 0 && (
