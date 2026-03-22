@@ -259,19 +259,21 @@ export function ChatPanel({
     setLoadingMore(false);
   }, [loadingMore, hasMore, messages, projectId, client]);
 
-  // Detect scroll to top
+  // Detect scroll position
   const isNearBottomRef = useRef(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    // Check if user is near bottom
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollButton(!nearBottom && messages.length > 0);
     // Infinite scroll: load older when near top
     if (scrollTop < 100 && hasMore && !loadingMore) {
       loadOlder();
     }
-  }, [hasMore, loadingMore, loadOlder]);
+  }, [hasMore, loadingMore, loadOlder, messages.length]);
 
   useEffect(() => {
     if (!initialLoadRef.current && isNearBottomRef.current && bottomRef.current) {
@@ -403,6 +405,21 @@ export function ChatPanel({
           </div>
         )}
       </div>
+
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <div className="shrink-0 flex justify-center py-1">
+          <button
+            onClick={() => {
+              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+              setShowScrollButton(false);
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border rounded-full px-3 py-1 transition-colors shadow-sm"
+          >
+            ↓ Scroll to bottom
+          </button>
+        </div>
+      )}
 
       {/* Input area */}
       <div className="shrink-0 px-6 pb-5 pt-2">
