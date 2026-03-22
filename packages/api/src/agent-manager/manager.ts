@@ -267,47 +267,59 @@ export class AgentManager {
               }
               const hasChanges = execSync("git status --porcelain", { cwd: projectPath, encoding: "utf-8" }).trim();
               if (hasChanges) {
-                // Get summary of what changed
-                const changedFiles = hasChanges.split("\n").map((l: string) => l.trim().split(/\s+/).pop()).filter(Boolean);
-                const filesAdded = hasChanges.split("\n").filter((l: string) => l.startsWith("?") || l.startsWith("A")).length;
-                const filesModified = hasChanges.split("\n").filter((l: string) => l.startsWith(" M") || l.startsWith("M")).length;
-                const changesSummary = [
-                  filesModified > 0 ? `${filesModified} modified` : "",
-                  filesAdded > 0 ? `${filesAdded} added` : "",
-                ].filter(Boolean).join(", ");
-
                 execSync("git add -A", { cwd: projectPath });
 
-                // Use approach as description if available, otherwise goal name
-                const description = goalRow.approach
-                  ? goalRow.approach.slice(0, 200)
-                  : goalRow.name;
-                const commitTitle = `[checkpoint] ${goalRow.name.slice(0, 72)}`;
-                const commitBody = [
-                  "",
-                  `Approach: ${description}`,
-                  "",
-                  `Files: ${changesSummary} (${changedFiles.length} total)`,
-                  "",
-                  "Criteria:",
-                  ...criteria.map((c: string) => `- ${c}`),
-                ].join("\n");
+                // Get diff stats AFTER staging
+                let diffStats = "";
+                try {
+                  diffStats = execSync("git diff --cached --stat", { cwd: projectPath, encoding: "utf-8" }).trim();
+                } catch {}
 
+                // Parse diff stat lines: " file.js | 15 ++---" → per-file changes
+                const statLines = diffStats.split("\n").filter(l => l.includes("|"));
+                const fileSummaries = statLines.map(l => {
+                  const parts = l.trim().split("|");
+                  const file = parts[0]?.trim() ?? "";
+                  const changes = parts[1]?.trim() ?? "";
+                  return `${file} (${changes})`;
+                }).slice(0, 10); // max 10 files shown
+
+                // Get total summary line: "3 files changed, 45 insertions(+), 12 deletions(-)"
+                const totalLine = diffStats.split("\n").pop()?.trim() ?? "";
+
+                // Commit
+                const commitTitle = `[checkpoint] ${goalRow.name.slice(0, 72)}`;
                 const msgFile = join(projectPath, ".ss-commit-msg");
-                writeFileSync(msgFile, commitTitle + "\n" + commitBody);
+                writeFileSync(msgFile, commitTitle + "\n\n" + diffStats);
                 execSync(`git commit -F "${msgFile}"`, { cwd: projectPath });
                 unlinkSync(msgFile);
 
                 const commitHash = execSync("git rev-parse --short HEAD", { cwd: projectPath, encoding: "utf-8" }).trim();
+
+                // Get a one-line diff summary for AI description
+                let aiSummary = "";
+                try {
+                  const diffContent = execSync("git diff HEAD~1 --stat", { cwd: projectPath, encoding: "utf-8" }).trim();
+                  // Generate a brief AI summary using haiku (cheap + fast)
+                  const summaryResult = await this.runTask(projectId, projectPath, "", {
+                    prompt: `Summarize this git diff in ONE short sentence (max 15 words). Be specific about what changed, not vague.\n\nGoal: ${goalRow.name}\n\nDiff stats:\n${diffContent}\n\nRespond with ONLY the summary sentence, nothing else.`,
+                    model: "haiku",
+                    maxTurns: 1,
+                  });
+                  aiSummary = summaryResult?.text?.trim().replace(/^["']|["']$/g, "") ?? "";
+                } catch {
+                  aiSummary = goalRow.approach?.slice(0, 100) ?? goalRow.name;
+                }
+
                 const dateStr = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
                 const slug = goalRow.name.slice(0, 40).replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase().replace(/-+/g, "-").replace(/-$/, "");
                 const tagName = `checkpoint/${dateStr}-${slug}`;
                 execSync(`git tag "${tagName}"`, { cwd: projectPath });
 
-                // Store with descriptive message
-                const checkpointMsg = `${goalRow.name} — ${changesSummary}`;
-                store.addCheckpoint(actionable.id, checkpointMsg, commitHash, tagName, description);
-                this.publishLogEvent(projectId, "info", `Checkpoint: ${commitHash} — ${changesSummary}`);
+                // Store: goalName = AI summary, message = file changes
+                const fileChangesText = fileSummaries.join("\n") + (totalLine ? `\n${totalLine}` : "");
+                store.addCheckpoint(actionable.id, aiSummary || goalRow.name, commitHash, tagName, fileChangesText);
+                this.publishLogEvent(projectId, "info", `Checkpoint: ${commitHash} — ${aiSummary || totalLine}`);
               }
             } catch (err: any) {
               this.publishLogEvent(projectId, "warning", `Git commit failed: ${err.message?.slice(0, 100)}`);

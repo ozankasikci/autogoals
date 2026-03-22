@@ -119,11 +119,13 @@ export function HistoryPanel({ projectId }: HistoryPanelProps) {
                   </span>
                 </div>
 
-                {/* Approach/description */}
-                {checkpoint.message && checkpoint.message !== checkpoint.goalName && (
-                  <p className="mt-1 text-xs text-muted-foreground/70 line-clamp-2 leading-relaxed">
-                    {checkpoint.message}
-                  </p>
+                {/* File changes (diff stats) */}
+                {checkpoint.message && (
+                  <div className="mt-1.5 rounded bg-muted/50 px-2 py-1.5">
+                    <pre className="text-[11px] font-mono text-muted-foreground/80 whitespace-pre-wrap leading-relaxed">
+                      {checkpoint.message}
+                    </pre>
+                  </div>
                 )}
 
                 <div className="mt-1.5 flex items-center gap-2">
