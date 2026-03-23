@@ -187,8 +187,3 @@ export async function createServer(port = 17891): Promise<ServerInstance> {
   };
 }
 
-// Auto-start if run directly
-if (!process.env.AUTOGOALS_MANAGED && process.argv[1] && !process.argv[1].includes("vitest")) {
-  const port = parseInt(process.env.AUTOGOALS_PORT ?? "", 10) || 17891;
-  createServer(port).then(({ start }) => start());
-}
