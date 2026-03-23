@@ -19,8 +19,8 @@ export function createProgram(): Command {
     .version("0.1.0");
 
   program
-    .command("start")
-    .description("Start the agent on a project directory")
+    .command("agent")
+    .description("Start the agent on a project directory (terminal mode)")
     .argument("<project-path>", "Path to the project directory")
     .option("-m, --model <model>", "Claude model to use", "sonnet")
     .option("--budget <amount>", "Max total budget in USD", "20")
@@ -77,6 +77,28 @@ export function createProgram(): Command {
 
       store.close();
       console.log("\nAgent stopped. State saved.");
+    });
+
+  program
+    .command("start")
+    .description("Start the AutoGoals server and dashboard on port 17891")
+    .option("-p, --port <port>", "Port to listen on", "17891")
+    .action(async (opts) => {
+      const { createServer } = await import("@autogoals/api");
+      const port = parseInt(opts.port);
+      const server = await createServer(port);
+      await server.start();
+      console.log(`\nAutoGoals running at http://localhost:${port}`);
+      console.log("Press Ctrl+C to stop.\n");
+
+      process.on("SIGINT", async () => {
+        await server.stop();
+        process.exit(0);
+      });
+      process.on("SIGTERM", async () => {
+        await server.stop();
+        process.exit(0);
+      });
     });
 
   program
