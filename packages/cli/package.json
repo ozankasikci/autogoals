@@ -1,8 +1,9 @@
 {
-  "name": "@autogoals/cli",
+  "name": "autogoals",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
+  "files": ["dist/"],
   "bin": {
     "autogoals": "dist/index.js"
   },
