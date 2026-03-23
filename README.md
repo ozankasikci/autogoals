@@ -29,7 +29,8 @@ Define goals with acceptance criteria. The agent picks them up, implements them,
 </p>
 
 ### Two Planning Modes
-**Interview** — the agent analyzes your codebase, asks targeted questions with clickable options, and builds a spec from your answers. **Auto-Plan** — the agent decides everything and starts working immediately.
+- **Interview** — the agent analyzes your codebase, asks targeted questions with clickable options, and builds a spec from your answers.
+- **Auto-Plan** — the agent decides everything and starts working immediately.
 
 ### Real-Time Chat
 Talk to your running agent. See tool usage, file edits, and progress in real time. Send messages to redirect the agent or ask questions.
