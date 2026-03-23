@@ -52,6 +52,7 @@ export const GET_PROJECT = gql`
         retries
         costUsd
         error
+        planningMode
       }
       rules {
         id

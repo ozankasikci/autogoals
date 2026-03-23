@@ -39,6 +39,7 @@ interface Goal {
   retries: number;
   costUsd: number;
   error?: string | null;
+  planningMode?: string | null;
 }
 
 interface GoalDetailProps {
@@ -455,33 +456,40 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
       {/* -- Action bar (status-dependent) -- */}
       {isDraft && (
         <div className="shrink-0 py-3 border-b border-border/50">
-          {refining ? (
+          {goal.planningMode === "interview" ? (
             <div className="flex items-center justify-center gap-2 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20">
               <Loader2 className="h-3.5 w-3.5 text-violet-400 animate-spin" />
-              <span className="text-sm font-medium text-violet-400">Planning...</span>
+              <span className="text-sm font-medium text-violet-400">Interviewing...</span>
+            </div>
+          ) : goal.planningMode === "yolo" ? (
+            <div className="flex items-center justify-center gap-2 h-9 rounded-lg bg-muted/50 border border-border">
+              <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+              <span className="text-sm font-medium text-muted-foreground">Auto-planning...</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleRefineGoal("interview")}
-                disabled={refining}
-                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors disabled:opacity-50"
-              >
-                <Lightbulb className="h-3.5 w-3.5" />
-                Interview
-              </button>
-              <button
-                onClick={() => handleRefineGoal("yolo")}
-                disabled={refining}
-                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                Auto-Plan
-              </button>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleRefineGoal("interview")}
+                  disabled={refining}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors disabled:opacity-50"
+                >
+                  <Lightbulb className="h-3.5 w-3.5" />
+                  Interview
+                </button>
+                <button
+                  onClick={() => handleRefineGoal("yolo")}
+                  disabled={refining}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  Auto-Plan
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground/40 text-center mt-2">
+                Interview asks you questions · Auto-Plan decides everything
+              </p>
+            </>
           )}
-          <p className="text-xs text-muted-foreground/40 text-center mt-2">
-            Interview asks you questions · Auto-Plan decides everything
-          </p>
         </div>
       )}
 
