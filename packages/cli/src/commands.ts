@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { loadConfig, createStore, createProjectStore, createLogger, formatForTerminal } from "@small-singularity/core";
-import type { Logger } from "@small-singularity/core";
+import { loadConfig, createStore, createProjectStore, createLogger, formatForTerminal } from "@autogoals/core";
+import type { Logger } from "@autogoals/core";
 import { Agent } from "./agent.js";
 import { InterviewPhase } from "./phases/interview/index.js";
 import { SpecPhase } from "./phases/spec/index.js";
@@ -14,7 +14,7 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name("small-singularity")
+    .name("autogoals")
     .description("Autonomous project agent")
     .version("0.1.0");
 

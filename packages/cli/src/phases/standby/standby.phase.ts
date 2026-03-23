@@ -1,5 +1,5 @@
-import type { Phase, PhaseResult, AgentContext, Spec } from "@small-singularity/core";
-import { runQuery, STANDBY_TOOLS, createSpinner } from "@small-singularity/core";
+import type { Phase, PhaseResult, AgentContext, Spec } from "@autogoals/core";
+import { runQuery, STANDBY_TOOLS, createSpinner } from "@autogoals/core";
 import * as readline from "readline";
 
 export function buildStandbyPrompt(

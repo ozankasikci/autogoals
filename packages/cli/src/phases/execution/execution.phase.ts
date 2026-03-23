@@ -1,5 +1,5 @@
-import type { Phase, PhaseResult, AgentContext, Logger } from "@small-singularity/core";
-import { GoalTracker, runQuery, EXECUTION_TOOLS, createSpinner } from "@small-singularity/core";
+import type { Phase, PhaseResult, AgentContext, Logger } from "@autogoals/core";
+import { GoalTracker, runQuery, EXECUTION_TOOLS, createSpinner } from "@autogoals/core";
 import { buildExecutionPrompt } from "./planner.js";
 import { verifyGoal } from "./verifier.js";
 import type { ExecutionSummary } from "./types.js";

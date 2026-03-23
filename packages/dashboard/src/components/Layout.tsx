@@ -22,7 +22,7 @@ export function Layout() {
               <Zap className="h-4 w-4 text-white" />
             </div>
             <span className="text-sm font-semibold tracking-tight group-hover:text-foreground transition-colors">
-              Small Singularity
+              AutoGoals
             </span>
           </Link>
 

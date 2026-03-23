@@ -1,5 +1,5 @@
-import type { SpecGoal } from "@small-singularity/core";
-import { runQuery, EXECUTION_TOOLS } from "@small-singularity/core";
+import type { SpecGoal } from "@autogoals/core";
+import { runQuery, EXECUTION_TOOLS } from "@autogoals/core";
 import { buildVerificationPrompt } from "./planner.js";
 
 export interface VerificationResult {

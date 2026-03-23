@@ -1,4 +1,4 @@
-import type { Spec, SpecGoal } from "@small-singularity/core";
+import type { Spec, SpecGoal } from "@autogoals/core";
 
 export function parseSpec(markdown: string): Spec {
   const overview = extractSection(markdown, "## Overview", "##") ?? "";

@@ -6,7 +6,7 @@ import {
   type GoalState,
   type Spec,
   type Message,
-} from "@small-singularity/core";
+} from "@autogoals/core";
 import type Database from "better-sqlite3";
 import { withFilter } from "graphql-subscriptions";
 import { randomUUID } from "crypto";
@@ -1009,7 +1009,7 @@ export function createResolvers(
         if (!agentManager) throw new Error("Agent manager not available");
 
         // Use the agent to analyze the project
-        const { AgentSession } = await import("@small-singularity/core");
+        const { AgentSession } = await import("@autogoals/core");
         const { execSync: exec } = await import("child_process");
 
         let claudePath: string;

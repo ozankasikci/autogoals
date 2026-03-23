@@ -1,5 +1,5 @@
 {
-  "name": "@small-singularity/api",
+  "name": "@autogoals/api",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
   "dependencies": {
     "@apollo/server": "^4.11.0",
     "@graphql-tools/schema": "^10.0.0",
-    "@small-singularity/core": "workspace:*",
+    "@autogoals/core": "workspace:*",
     "@types/multer": "^2.1.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",

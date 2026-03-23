@@ -12,7 +12,7 @@ import { mkdirSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 import multer from "multer";
-import { SCHEMA_SQL, SQLiteProjectStore, SQLiteStore } from "@small-singularity/core";
+import { SCHEMA_SQL, SQLiteProjectStore, SQLiteStore } from "@autogoals/core";
 import { typeDefs, createResolvers } from "./schema/index.js";
 import { AgentManager } from "./agent-manager/index.js";
 import { ProcessManager } from "./process-manager/index.js";
@@ -35,7 +35,7 @@ export interface ServerInstance {
 }
 
 function getDatabase(): Database.Database {
-  const dir = join(homedir(), ".small-singularity");
+  const dir = join(homedir(), ".autogoals");
   mkdirSync(dir, { recursive: true });
   const dbPath = join(dir, "db.sqlite");
   const db = new Database(dbPath);
@@ -96,7 +96,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
         const record = projectStore.getProject(projectId);
         if (!record) return cb(new Error("Project not found"), "");
         const resolvedBase = resolvePath(record.path);
-        const screenshotDir = join(resolvedBase, ".small-singularity", "screenshots", goalId);
+        const screenshotDir = join(resolvedBase, ".autogoals", "screenshots", goalId);
         mkdirSync(screenshotDir, { recursive: true });
         cb(null, screenshotDir);
       },
@@ -134,7 +134,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
     const record = projectStore.getProject(projectId);
     if (!record) return res.status(404).send("Not found");
     const resolvedBase = resolvePath(record.path);
-    const filePath = join(resolvedBase, ".small-singularity", "screenshots", goalId, filename);
+    const filePath = join(resolvedBase, ".autogoals", "screenshots", goalId, filename);
     res.sendFile(filePath);
   });
 

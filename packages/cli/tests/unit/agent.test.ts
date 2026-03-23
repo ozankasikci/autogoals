@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import Database from "better-sqlite3";
 import { Agent } from "../../src/agent.js";
-import type { Phase, PhaseResult, AgentContext } from "@small-singularity/core";
-import { SQLiteStore, SQLiteProjectStore, SCHEMA_SQL, loadConfig, createLogger } from "@small-singularity/core";
-import type { StateStore } from "@small-singularity/core";
+import type { Phase, PhaseResult, AgentContext } from "@autogoals/core";
+import { SQLiteStore, SQLiteProjectStore, SCHEMA_SQL, loadConfig, createLogger } from "@autogoals/core";
+import type { StateStore } from "@autogoals/core";
 
 function createMemoryStore(): StateStore {
   const db = new Database(":memory:");

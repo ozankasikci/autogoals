@@ -1,5 +1,5 @@
-import type { Phase, PhaseResult, AgentContext } from "@small-singularity/core";
-import { runQuery, INTERVIEW_TOOLS, createSpinner } from "@small-singularity/core";
+import type { Phase, PhaseResult, AgentContext } from "@autogoals/core";
+import { runQuery, INTERVIEW_TOOLS, createSpinner } from "@autogoals/core";
 import { buildInterviewPrompt } from "./question-builder.js";
 import type { InterviewResult } from "./types.js";
 import * as readline from "readline";

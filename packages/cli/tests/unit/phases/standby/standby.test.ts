@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildStandbyPrompt } from "../../../../src/phases/standby/index.js";
-import type { Spec } from "@small-singularity/core";
+import type { Spec } from "@autogoals/core";
 
 describe("standby", () => {
   it("builds standby prompt with spec summary", () => {

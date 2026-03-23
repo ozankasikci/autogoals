@@ -1,4 +1,4 @@
-import { AgentSession, SQLiteStore, SQLiteProjectStore, type AgentEvent } from "@small-singularity/core";
+import { AgentSession, SQLiteStore, SQLiteProjectStore, type AgentEvent } from "@autogoals/core";
 import type Database from "better-sqlite3";
 import { basename, join } from "path";
 import { writeFileSync, unlinkSync } from "fs";

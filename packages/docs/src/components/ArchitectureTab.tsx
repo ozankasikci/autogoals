@@ -75,7 +75,7 @@ const packages: PackageInfo[] = [
     modules: [
       { name: "Commands", description: "init, start, goals, chat CLI commands" },
       { name: "Interactive Mode", description: "Terminal-based goal refinement" },
-      { name: "Config Loader", description: "Reads .small-singularity/ project config" },
+      { name: "Config Loader", description: "Reads .autogoals/ project config" },
     ],
     x: 680,
     y: 40,
@@ -105,7 +105,7 @@ const packages: PackageInfo[] = [
   {
     id: "sqlite",
     name: "SQLite DB",
-    subtitle: "~/.small-singularity/",
+    subtitle: "~/.autogoals/",
     color: "amber",
     borderColor: "border-amber-500/40",
     glowClass: "glow-amber",
@@ -240,7 +240,7 @@ export function ArchitectureTab() {
           {/* Background frame */}
           <div className="absolute inset-0 rounded-xl border border-border/30 bg-gradient-to-b from-muted/20 to-transparent">
             <div className="absolute top-4 left-6 text-xs font-mono text-muted-foreground/60">
-              Small Singularity
+              AutoGoals
             </div>
           </div>
 

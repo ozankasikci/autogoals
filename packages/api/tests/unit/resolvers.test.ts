@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
-import { SCHEMA_SQL, SQLiteStore } from "@small-singularity/core";
+import { SCHEMA_SQL, SQLiteStore } from "@autogoals/core";
 import { createResolvers } from "../../src/schema/resolvers.js";
 
 function createTestDb() {

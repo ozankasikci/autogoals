@@ -30,7 +30,7 @@ function App() {
                 <span className="text-white text-xs font-bold">SS</span>
               </div>
               <span className="text-sm font-semibold text-foreground">
-                Small Singularity
+                AutoGoals
               </span>
               <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
                 system docs

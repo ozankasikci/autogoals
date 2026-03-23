@@ -382,7 +382,7 @@ export function DatabaseTab() {
           {/* Background frame */}
           <div className="absolute inset-0 rounded-xl border border-border/30 bg-gradient-to-b from-muted/20 to-transparent">
             <div className="absolute top-3 left-5 text-xs font-mono text-muted-foreground/60">
-              ~/.small-singularity/state.db
+              ~/.autogoals/state.db
             </div>
           </div>
 

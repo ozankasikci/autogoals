@@ -1,4 +1,4 @@
-import type { Phase, PhaseName, PhaseResult, AgentContext, Logger } from "@small-singularity/core";
+import type { Phase, PhaseName, PhaseResult, AgentContext, Logger } from "@autogoals/core";
 
 export interface PhaseMap {
   interview: Phase;

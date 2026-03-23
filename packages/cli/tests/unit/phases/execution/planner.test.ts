@@ -3,7 +3,7 @@ import {
   buildExecutionPrompt,
   buildVerificationPrompt,
 } from "../../../../src/phases/execution/planner.js";
-import type { SpecGoal } from "@small-singularity/core";
+import type { SpecGoal } from "@autogoals/core";
 
 const goal: SpecGoal = {
   id: "1",

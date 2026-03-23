@@ -1,5 +1,5 @@
-import type { Phase, PhaseResult, AgentContext, Spec } from "@small-singularity/core";
-import { runQuery, SPEC_TOOLS, createSpinner } from "@small-singularity/core";
+import type { Phase, PhaseResult, AgentContext, Spec } from "@autogoals/core";
+import { runQuery, SPEC_TOOLS, createSpinner } from "@autogoals/core";
 import { parseSpec } from "./spec-parser.js";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";

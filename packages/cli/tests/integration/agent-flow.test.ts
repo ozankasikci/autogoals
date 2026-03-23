@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
 import { Agent } from "../../src/agent.js";
-import { GoalTracker, SQLiteStore, SQLiteProjectStore, SCHEMA_SQL, loadConfig, createLogger } from "@small-singularity/core";
-import type { StateStore, Phase, PhaseResult } from "@small-singularity/core";
+import { GoalTracker, SQLiteStore, SQLiteProjectStore, SCHEMA_SQL, loadConfig, createLogger } from "@autogoals/core";
+import type { StateStore, Phase, PhaseResult } from "@autogoals/core";
 import { parseSpec } from "../../src/phases/spec/index.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";

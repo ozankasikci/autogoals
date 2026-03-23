@@ -1,6 +1,6 @@
 export function printBanner(): string {
   return `
- Small Singularity
+ AutoGoals
  Autonomous Project Agent
 `;
 }

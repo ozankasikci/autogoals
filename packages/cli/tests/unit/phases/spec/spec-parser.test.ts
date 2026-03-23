@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseSpec, renderSpec } from "../../../../src/phases/spec/index.js";
-import type { Spec } from "@small-singularity/core";
+import type { Spec } from "@autogoals/core";
 
 const sampleSpec: Spec = {
   overview: "A todo app with auth",

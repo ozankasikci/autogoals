@@ -1,4 +1,4 @@
-import type { SpecGoal } from "@small-singularity/core";
+import type { SpecGoal } from "@autogoals/core";
 
 export function buildExecutionPrompt(
   goal: SpecGoal,

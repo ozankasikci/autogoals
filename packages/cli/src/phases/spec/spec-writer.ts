@@ -1,4 +1,4 @@
-import type { Spec } from "@small-singularity/core";
+import type { Spec } from "@autogoals/core";
 
 export function renderSpec(spec: Spec): string {
   const lines: string[] = [];

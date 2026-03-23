@@ -9,7 +9,7 @@ import type { StateStore } from "./types.js";
 import type { ProjectStore } from "./types.js";
 
 function getDb(): Database.Database {
-  const dir = join(homedir(), ".small-singularity");
+  const dir = join(homedir(), ".autogoals");
   mkdirSync(dir, { recursive: true });
   const dbPath = join(dir, "db.sqlite");
   const db = new Database(dbPath);
