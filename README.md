@@ -72,7 +72,6 @@ packages/
 
 ### Prerequisites
 - Node.js 20+
-- pnpm
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
 
 ### Install & Run
@@ -80,13 +79,13 @@ packages/
 ```bash
 git clone https://github.com/ozankasikci/autogoals.git
 cd autogoals
-pnpm install
+npm install
 
 # Terminal 1: API server
-cd packages/api && pnpm dev
+npm run dev:api
 
 # Terminal 2: Dashboard
-cd packages/dashboard && pnpm dev
+npm run dev:dashboard
 ```
 
 Open `http://localhost:5173` and create your first project.
@@ -95,20 +94,37 @@ Open `http://localhost:5173` and create your first project.
 
 ## How It Works
 
+```
+You (goals · rules · chat)
+          │
+          ▼
+┌──────────────────────────────┐
+│       Supervisor Loop        │
+│    (continuous, per project) │
+└──────────────┬───────────────┘
+               │
+               ├─ Refine goals (Interview or Auto-Plan)
+               │
+               ├─ Execute goal ──► Claude Code SDK ──► your codebase
+               │
+               ├─ Verify against acceptance criteria
+               │
+               ├─ Enforce rules compliance
+               │
+               └─ Auto-commit git checkpoint ──► (loop)
+
+┌──────────────────────────────┐
+│    Dashboard  (real-time)    │
+│  agent output · chat · git   │
+└──────────────────────────────┘
+```
+
 1. **Create a project** — point it at a directory on your filesystem
 2. **Add goals** — describe what needs to be built
 3. **Choose a planning mode** — Interview (agent asks questions) or Auto-Plan (agent decides)
 4. **Start the agent** — it continuously works through goals in priority order
 5. **Chat and steer** — send messages to redirect, clarify, or ask questions
 6. **Review and approve** — refined goals need your approval before execution starts
-
-The agent runs a continuous supervisor loop:
-- Check for user messages
-- Refine draft goals (interview or auto-plan)
-- Execute the next pending goal with a fresh context
-- Verify completed goals
-- Check rules compliance
-- Sleep and repeat
 
 ---
 

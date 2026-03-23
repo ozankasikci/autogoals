@@ -1,20 +1,18 @@
 {
   "name": "autogoals",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "pnpm -r run build",
-    "test": "pnpm -r run test",
-    "dev:cli": "pnpm --filter @autogoals/cli dev",
-    "dev:api": "COREPACK_ENABLE_STRICT=0 pnpm --filter @autogoals/api dev",
-    "dev:dashboard": "COREPACK_ENABLE_STRICT=0 pnpm --filter @autogoals/dashboard dev",
-    "dev:docs": "COREPACK_ENABLE_STRICT=0 pnpm --filter @autogoals/docs dev"
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:cli": "npm run dev --workspace=packages/cli",
+    "dev:api": "npm run dev --workspace=packages/api",
+    "dev:dashboard": "npm run dev --workspace=packages/dashboard",
+    "dev:docs": "npm run dev --workspace=packages/docs"
   },
   "engines": {
     "node": ">=18"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ]
   }
 }
