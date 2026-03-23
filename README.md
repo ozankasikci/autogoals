@@ -25,7 +25,7 @@ It uses [Claude Code SDK](https://github.com/anthropics/claude-code-sdk) under t
 Define goals with acceptance criteria. The agent picks them up, implements them, verifies completion, and auto-commits a checkpoint.
 
 <p align="center">
-  <img src="screenshots/goal-detail-view.png" alt="Goal Detail" width="700" />
+  <img src="screenshots/goal-detail.png" alt="Goal Detail" width="700" />
 </p>
 
 ### Two Planning Modes
