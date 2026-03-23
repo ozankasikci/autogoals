@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="screenshots/autogoals-logo.png" alt="AutoGoals" width="80" />
-</p>
-
 <h1 align="center">AutoGoals</h1>
 
 <p align="center">
@@ -35,10 +31,6 @@ Define goals with acceptance criteria. The agent picks them up, implements them,
 ### Two Planning Modes
 **Interview** — the agent analyzes your codebase, asks targeted questions with clickable options, and builds a spec from your answers. **Auto-Plan** — the agent decides everything and starts working immediately.
 
-<p align="center">
-  <img src="screenshots/options-picker.png" alt="Interview Mode" width="700" />
-</p>
-
 ### Real-Time Chat
 Talk to your running agent. See tool usage, file edits, and progress in real time. Send messages to redirect the agent or ask questions.
 
@@ -48,10 +40,6 @@ Talk to your running agent. See tool usage, file edits, and progress in real tim
 
 ### Rules System
 Define global rules (applied to every project) and project-specific rules. Agents must follow all rules. Periodic compliance checks catch violations automatically.
-
-<p align="center">
-  <img src="screenshots/rules-page.png" alt="Global Rules" width="700" />
-</p>
 
 ### Process Management
 Start, stop, and monitor dev servers directly from the dashboard. Auto-detect commands from package.json and Makefile. Port detection with one-click "Open in Browser".
