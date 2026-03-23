@@ -84,6 +84,7 @@ export function createProgram(): Command {
     .description("Start the AutoGoals server and dashboard on port 17891")
     .option("-p, --port <port>", "Port to listen on", "17891")
     .action(async (opts) => {
+      process.env.AUTOGOALS_MANAGED = "1";
       const { createServer } = await import("@autogoals/api");
       const port = parseInt(opts.port);
       const server = await createServer(port);
