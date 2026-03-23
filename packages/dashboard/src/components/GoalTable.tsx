@@ -413,6 +413,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
               }}
               onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleQuickAdd("yolo"); }
                 if (e.key === "Escape") { setQuickAddValue(""); setQuickAddOpen(false); }
               }}
               onBlur={() => { if (!quickAddValue.trim()) setQuickAddOpen(false); }}
@@ -423,7 +424,7 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
             />
             <div className="flex items-center justify-between px-3 pb-2.5">
               <span className="text-xs text-muted-foreground/40">
-                Esc to cancel
+                Enter to auto-plan · Esc to cancel
               </span>
               <div className="flex items-center gap-1.5">
                 <button
@@ -433,14 +434,6 @@ export function GoalTable({ goals, projectId, compact = false, onSelectGoal }: G
                 >
                   <Lightbulb className="h-3 w-3" />
                   Interview
-                </button>
-                <button
-                  onClick={() => handleQuickAdd("yolo")}
-                  disabled={quickAddSubmitting || !quickAddValue.trim()}
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md text-muted-foreground border border-border hover:bg-muted/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                >
-                  <Zap className="h-3 w-3" />
-                  Auto-Plan
                 </button>
               </div>
             </div>
