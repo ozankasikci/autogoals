@@ -111,7 +111,7 @@ export function createProgram(): Command {
       const projectStore = createProjectStore();
       const project = projectStore.getProjectByPath(resolvedPath);
       if (!project) {
-        console.log("No project found. Run 'start' first.");
+        console.log("No project found. Run 'agent' first.");
         projectStore.close();
         return;
       }
