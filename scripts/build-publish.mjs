@@ -10,9 +10,9 @@ function run(cmd, cwd = root, opts = {}) {
   execSync(cmd, { stdio: "inherit", cwd, ...opts });
 }
 
-// 1. Build core (needed for type resolution)
-// Use root-level tsc since workspace package symlinks may be stale
+// 1. Build core and API (esbuild bundles their compiled output)
 run(join(root, "node_modules/.bin/tsc") + " --build", join(root, "packages/core"));
+run(join(root, "node_modules/.bin/tsc") + " --build", join(root, "packages/api"));
 
 // 2. Build dashboard with port baked in
 // Use root-level vite since workspace package symlinks may be stale
