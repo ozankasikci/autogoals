@@ -8,8 +8,9 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import { WebSocketServer } from "ws";
 import { useServer } from "graphql-ws/use/ws";
 import Database from "better-sqlite3";
-import { mkdirSync } from "fs";
-import { join, resolve } from "path";
+import { mkdirSync, existsSync } from "fs";
+import { join, resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { homedir } from "os";
 import multer from "multer";
 import { SCHEMA_SQL, SQLiteProjectStore, SQLiteStore } from "@autogoals/core";
@@ -44,7 +45,7 @@ function getDatabase(): Database.Database {
   return db;
 }
 
-export async function createServer(port = 4000): Promise<ServerInstance> {
+export async function createServer(port = 17891): Promise<ServerInstance> {
   const app = express();
   const httpServer = createHttpServer(app);
 
@@ -114,6 +115,14 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
 
   app.use(cors());
 
+  // Serve pre-built dashboard if available
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const dashboardPath = join(__dirname, "public");
+  if (existsSync(dashboardPath)) {
+    app.use(express.static(dashboardPath));
+  }
+
   app.post(
     "/api/projects/:projectId/goals/:goalId/screenshots",
     upload.array("screenshots", 10),
@@ -147,6 +156,13 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
 
   app.get("/health", (_, res) => res.json({ status: "ok" }));
 
+  // SPA fallback — serve index.html for all unmatched GET routes
+  if (existsSync(dashboardPath)) {
+    app.get("*", (_, res) => {
+      res.sendFile(join(dashboardPath, "index.html"));
+    });
+  }
+
   return {
     app,
     httpServer,
@@ -172,6 +188,7 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
 }
 
 // Auto-start if run directly
-if (process.argv[1] && !process.argv[1].includes("vitest")) {
-  createServer().then(({ start }) => start());
+if (!process.env.AUTOGOALS_MANAGED && process.argv[1] && !process.argv[1].includes("vitest")) {
+  const port = parseInt(process.env.AUTOGOALS_PORT ?? "", 10) || 17891;
+  createServer(port).then(({ start }) => start());
 }

@@ -71,10 +71,24 @@ packages/
 ## Quick Start
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 18+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
 
-### Install & Run
+### Install
+
+```bash
+npm install -g autogoals
+```
+
+### Run
+
+```bash
+autogoals start
+```
+
+Open [http://localhost:17891](http://localhost:17891).
+
+### Development (contributing)
 
 ```bash
 git clone https://github.com/ozankasikci/autogoals.git
@@ -87,8 +101,6 @@ npm run dev:api
 # Terminal 2: Dashboard
 npm run dev:dashboard
 ```
-
-Open `http://localhost:5173` and create your first project.
 
 ---
 

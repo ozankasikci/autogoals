@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:publish": "node scripts/build-publish.mjs",
     "test": "npm run test --workspaces --if-present",
     "dev:cli": "npm run dev --workspace=packages/cli",
     "dev:api": "npm run dev --workspace=packages/api",
@@ -14,5 +15,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.4"
   }
 }
