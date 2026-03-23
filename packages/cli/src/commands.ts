@@ -7,8 +7,12 @@ import { SpecPhase } from "./phases/spec/index.js";
 import { ExecutionPhase } from "./phases/execution/index.js";
 import { StandbyPhase } from "./phases/standby/index.js";
 import { printBanner } from "./output.js";
-import { resolve } from "path";
-import { mkdirSync } from "fs";
+import { resolve, dirname } from "path";
+import { mkdirSync, readFileSync } from "fs";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const { version } = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8"));
 
 export function createProgram(): Command {
   const program = new Command();
@@ -16,7 +20,7 @@ export function createProgram(): Command {
   program
     .name("autogoals")
     .description("Autonomous project agent")
-    .version("0.1.0");
+    .version(version);
 
   program
     .command("agent")

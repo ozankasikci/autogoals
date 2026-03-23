@@ -7,6 +7,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:publish": "node scripts/build-publish.mjs",
+    "publish:patch": "node scripts/publish.mjs patch",
+    "publish:minor": "node scripts/publish.mjs minor",
     "test": "npm run test --workspaces --if-present",
     "dev:cli": "npm run dev --workspace=packages/cli",
     "dev:api": "npm run dev --workspace=packages/api",

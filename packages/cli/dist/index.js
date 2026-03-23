@@ -36679,7 +36679,7 @@ var require_view = __commonJS({
     var debug = require_src3()("express:view");
     var path = __require("path");
     var fs = __require("fs");
-    var dirname = path.dirname;
+    var dirname3 = path.dirname;
     var basename2 = path.basename;
     var extname = path.extname;
     var join9 = path.join;
@@ -36718,7 +36718,7 @@ var require_view = __commonJS({
       for (var i2 = 0; i2 < roots.length && !path2; i2++) {
         var root = roots[i2];
         var loc = resolve4(root, name);
-        var dir = dirname(loc);
+        var dir = dirname3(loc);
         var file = basename2(loc);
         path2 = this.resolve(dir, file);
       }
@@ -42740,8 +42740,8 @@ var require_version = __commonJS({
       value: true
     });
     exports2.versionInfo = exports2.version = void 0;
-    var version = "16.13.1";
-    exports2.version = version;
+    var version2 = "16.13.1";
+    exports2.version = version2;
     var versionInfo3 = Object.freeze({
       major: 16,
       minor: 13,
@@ -86036,19 +86036,19 @@ __export(default_exports, {
   DEFAULT_EMBEDDED_SANDBOX_VERSION: () => DEFAULT_EMBEDDED_SANDBOX_VERSION
 });
 function ApolloServerPluginLandingPageLocalDefault(options = {}) {
-  const { version, __internal_apolloStudioEnv__, ...rest } = {
+  const { version: version2, __internal_apolloStudioEnv__, ...rest } = {
     embed: true,
     ...options
   };
-  return ApolloServerPluginLandingPageDefault(version, {
+  return ApolloServerPluginLandingPageDefault(version2, {
     isProd: false,
     apolloStudioEnv: __internal_apolloStudioEnv__,
     ...rest
   });
 }
 function ApolloServerPluginLandingPageProductionDefault(options = {}) {
-  const { version, __internal_apolloStudioEnv__, ...rest } = options;
-  return ApolloServerPluginLandingPageDefault(version, {
+  const { version: version2, __internal_apolloStudioEnv__, ...rest } = options;
+  return ApolloServerPluginLandingPageDefault(version2, {
     isProd: true,
     apolloStudioEnv: __internal_apolloStudioEnv__,
     ...rest
@@ -94822,7 +94822,7 @@ var require_websocket_server = __commonJS({
         socket.on("error", socketOnError);
         const key = req.headers["sec-websocket-key"];
         const upgrade = req.headers.upgrade;
-        const version = +req.headers["sec-websocket-version"];
+        const version2 = +req.headers["sec-websocket-version"];
         if (req.method !== "GET") {
           const message = "Invalid HTTP method";
           abortHandshakeOrEmitwsClientError(this, req, socket, 405, message);
@@ -94838,7 +94838,7 @@ var require_websocket_server = __commonJS({
           abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
           return;
         }
-        if (version !== 13 && version !== 8) {
+        if (version2 !== 13 && version2 !== 8) {
           const message = "Missing or invalid Sec-WebSocket-Version header";
           abortHandshakeOrEmitwsClientError(this, req, socket, 400, message, {
             "Sec-WebSocket-Version": "13, 8"
@@ -94882,7 +94882,7 @@ var require_websocket_server = __commonJS({
         }
         if (this.options.verifyClient) {
           const info = {
-            origin: req.headers[`${version === 8 ? "sec-websocket-origin" : "origin"}`],
+            origin: req.headers[`${version2 === 8 ? "sec-websocket-origin" : "origin"}`],
             secure: !!(req.socket.authorized || req.socket.encrypted),
             req
           };
@@ -106018,8 +106018,9 @@ __export(dist_exports2, {
 });
 import { createServer as createHttpServer } from "http";
 import Database2 from "better-sqlite3";
-import { mkdirSync as mkdirSync5 } from "fs";
-import { join as join8, resolve as resolve2 } from "path";
+import { mkdirSync as mkdirSync5, existsSync as existsSync4 } from "fs";
+import { join as join8, resolve as resolve2, dirname } from "path";
+import { fileURLToPath } from "url";
 import { homedir as homedir3 } from "os";
 function resolvePath2(p2) {
   if (p2.startsWith("~/") || p2 === "~") {
@@ -106036,7 +106037,7 @@ function getDatabase() {
   db.exec(SCHEMA_SQL);
   return db;
 }
-async function createServer(port = 4e3) {
+async function createServer(port = 17891) {
   const app = (0, import_express.default)();
   const httpServer = createHttpServer(app);
   const db = getDatabase();
@@ -106093,6 +106094,12 @@ async function createServer(port = 4e3) {
     }
   });
   app.use((0, import_cors.default)());
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname2 = dirname(__filename);
+  const dashboardPath = join8(__dirname2, "public");
+  if (existsSync4(dashboardPath)) {
+    app.use(import_express.default.static(dashboardPath));
+  }
   app.post("/api/projects/:projectId/goals/:goalId/screenshots", upload.array("screenshots", 10), (req, res) => {
     const projectId = req.params.projectId;
     const goalId = req.params.goalId;
@@ -106113,6 +106120,11 @@ async function createServer(port = 4e3) {
   });
   app.use("/graphql", (0, import_cors.default)(), import_express.default.json(), expressMiddleware(apolloServer));
   app.get("/health", (_2, res) => res.json({ status: "ok" }));
+  if (existsSync4(dashboardPath)) {
+    app.get("*", (_2, res) => {
+      res.sendFile(join8(dashboardPath, "index.html"));
+    });
+  }
   return {
     app,
     httpServer,
@@ -106153,9 +106165,6 @@ var init_dist2 = __esm({
     init_schema();
     init_agent_manager();
     init_process_manager();
-    if (process.argv[1] && !process.argv[1].includes("vitest")) {
-      createServer().then(({ start }) => start());
-    }
   }
 });
 
@@ -106867,11 +106876,14 @@ function printBanner() {
 }
 
 // packages/cli/src/commands.ts
-import { resolve as resolve3 } from "path";
-import { mkdirSync as mkdirSync6 } from "fs";
+import { resolve as resolve3, dirname as dirname2 } from "path";
+import { mkdirSync as mkdirSync6, readFileSync as readFileSync4 } from "fs";
+import { fileURLToPath as fileURLToPath2 } from "url";
+var __dirname = dirname2(fileURLToPath2(import.meta.url));
+var { version } = JSON.parse(readFileSync4(resolve3(__dirname, "../package.json"), "utf-8"));
 function createProgram() {
   const program3 = new Command();
-  program3.name("autogoals").description("Autonomous project agent").version("0.1.0");
+  program3.name("autogoals").description("Autonomous project agent").version(version);
   program3.command("agent").description("Start the agent on a project directory (terminal mode)").argument("<project-path>", "Path to the project directory").option("-m, --model <model>", "Claude model to use", "sonnet").option("--budget <amount>", "Max total budget in USD", "20").option("--budget-per-goal <amount>", "Max budget per goal in USD", "2").option("-v, --verbose", "Verbose logging", false).action(async (projectPath, opts) => {
     const resolvedPath = resolve3(projectPath);
     mkdirSync6(resolvedPath, { recursive: true });
