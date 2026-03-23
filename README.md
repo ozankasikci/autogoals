@@ -149,6 +149,7 @@ You (goals · rules · chat)
 4. **Start the agent** — it continuously works through goals in priority order
 5. **Chat and steer** — send messages to redirect, clarify, or ask questions
 6. **Review and approve** — refined goals need your approval before execution starts
+7. **Mark goals as recurring** — the agent re-executes them every cycle for continuous testing, linting, or monitoring
 
 ---
 
