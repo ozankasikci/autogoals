@@ -96,7 +96,7 @@ export function ProjectList() {
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">
             Failed to load projects. Make sure the API server is running at
-            localhost:4000.
+            localhost:17891.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             {error.message}

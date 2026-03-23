@@ -4,6 +4,8 @@ import { UPDATE_GOAL, REMOVE_GOAL, REFINE_GOAL, APPROVE_GOAL, GET_PROJECT, GET_G
 import { formatCost } from "@/lib/utils";
 import { ChevronLeft, X, Trash2, ChevronDown, Plus, Check, Lightbulb, Loader2, ImagePlus } from "lucide-react";
 
+const apiBase = `http://localhost:${(import.meta as any).env?.VITE_API_PORT || "17891"}`;
+
 /* -- Saved indicator hook -- */
 
 function useSavedIndicator() {
@@ -288,7 +290,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
     try {
       const formData = new FormData();
       filesToUpload.forEach(f => formData.append("screenshots", f));
-      await fetch(`http://localhost:4000/api/projects/${projectId}/goals/${goal.id}/screenshots`, {
+      await fetch(`${apiBase}/api/projects/${projectId}/goals/${goal.id}/screenshots`, {
         method: "POST",
         body: formData,
       });
@@ -649,7 +651,7 @@ export function GoalDetail({ goal, projectId, allGoals, onBack, onNavigateToGoal
                   const fileName = parts[parts.length - 1];
                   const goalIdFromPath = parts[parts.length - 2];
                   const projectIdForUrl = projectId;
-                  const thumbUrl = `http://localhost:4000/api/screenshots/${projectIdForUrl}/${goalIdFromPath}/${fileName}`;
+                  const thumbUrl = `${apiBase}/api/screenshots/${projectIdForUrl}/${goalIdFromPath}/${fileName}`;
                   return (
                     <div key={s.id} className="group relative rounded-lg border border-border overflow-hidden aspect-square bg-muted/50">
                       <img
