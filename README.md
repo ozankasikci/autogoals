@@ -11,6 +11,18 @@
 
 ---
 
+## Table of Contents
+
+- [What is AutoGoals?](#what-is-autogoals)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Key Concepts](#key-concepts)
+- [License](#license)
+
+---
+
 ## What is AutoGoals?
 
 AutoGoals is an open-source platform that manages autonomous AI coding agents. You define goals for your project, and AI agents continuously work on them: planning approaches, writing code, running verifications, committing checkpoints, and moving to the next goal. All managed through a real-time dashboard.
