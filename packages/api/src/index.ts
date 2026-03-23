@@ -158,7 +158,7 @@ export async function createServer(port = 17891): Promise<ServerInstance> {
 
   // SPA fallback — serve index.html for all unmatched GET routes
   if (existsSync(dashboardPath)) {
-    app.get("*", (_, res) => {
+    app.get(["*", "/"], (_, res) => {
       res.sendFile(join(dashboardPath, "index.html"));
     });
   }
