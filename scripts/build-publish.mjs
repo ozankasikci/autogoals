@@ -37,10 +37,11 @@ await build({
   format: "esm",
   outfile: join(root, "packages/cli/dist/index.js"),
   external: ["better-sqlite3", "fsevents"],
-  // Inject a createRequire shim so CJS packages (like commander) work in ESM output.
-  // The CLI source (index.ts) already contains #!/usr/bin/env node on line 1.
+  // Shebang + createRequire shim so CJS packages work in ESM output.
+  // esbuild strips shebangs from source, so we must add it here.
   banner: {
     js: [
+      "#!/usr/bin/env node",
       "import { createRequire } from 'module';",
       "const require = createRequire(import.meta.url);",
     ].join("\n"),
