@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@apollo/client";
+const apiPort = (import.meta as any).env?.VITE_API_PORT || "17891";
 import { Link } from "react-router-dom";
 import { GET_PROJECTS, START_ALL_AGENTS, STOP_ALL_AGENTS } from "@/graphql/operations";
 import { ProjectCard } from "@/components/ProjectCard";
@@ -95,8 +96,7 @@ export function ProjectList() {
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">
-            Failed to load projects. Make sure the API server is running at
-            localhost:17891.
+            Failed to load projects. Make sure the API server is running at localhost:{apiPort}.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             {error.message}
