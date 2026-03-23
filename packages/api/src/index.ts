@@ -44,7 +44,7 @@ function getDatabase(): Database.Database {
   return db;
 }
 
-export async function createServer(port = 4000): Promise<ServerInstance> {
+export async function createServer(port = 17891): Promise<ServerInstance> {
   const app = express();
   const httpServer = createHttpServer(app);
 
@@ -173,5 +173,6 @@ export async function createServer(port = 4000): Promise<ServerInstance> {
 
 // Auto-start if run directly
 if (process.argv[1] && !process.argv[1].includes("vitest")) {
-  createServer().then(({ start }) => start());
+  const port = process.env.AUTOGOALS_PORT ? parseInt(process.env.AUTOGOALS_PORT) : 17891;
+  createServer(port).then(({ start }) => start());
 }
